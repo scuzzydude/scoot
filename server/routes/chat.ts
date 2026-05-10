@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "../db/index.js";
+import { db, pool } from "../db/index.js";
 import { chatRooms, messages, roomMembers, users } from "../db/schema.js";
 import { eq, lt, desc, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
@@ -10,9 +10,39 @@ const router = Router();
 router.use(requireAuth);
 
 router.get("/rooms", async (_req, res) => {
-  const rooms = await db.query.chatRooms.findMany({
-    orderBy: (r, { desc }) => [desc(r.createdAt)],
-  });
+  const { rows } = await pool.query<{
+    id: number;
+    name: string;
+    created_by: number;
+    created_at: Date;
+    last_content: string | null;
+    last_at: Date | null;
+  }>(`
+    SELECT
+      r.id, r.name, r.created_by, r.created_at,
+      lm.content AS last_content,
+      lm.created_at AS last_at
+    FROM chat_rooms r
+    LEFT JOIN LATERAL (
+      SELECT content, created_at
+      FROM messages
+      WHERE room_id = r.id
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) lm ON true
+    ORDER BY COALESCE(lm.created_at, r.created_at) DESC
+  `);
+
+  const rooms = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+    lastMessage: r.last_content
+      ? { content: r.last_content, createdAt: r.last_at }
+      : null,
+  }));
+
   res.json({ ok: true, data: rooms });
 });
 

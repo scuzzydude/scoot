@@ -1,7 +1,9 @@
 import { Switch, Route, Redirect } from "wouter";
 import { Header } from "./components/layout/header.js";
+import { BottomNav } from "./components/layout/bottom-nav.js";
 import { Toaster } from "./components/ui/toaster.js";
 import { ProtectedRoute } from "./lib/protected-route.js";
+import { useAuth } from "./hooks/use-auth.js";
 import AuthPage from "./pages/auth-page.js";
 import ChatPage from "./pages/chat-page.js";
 import WalletPage from "./pages/wallet-page.js";
@@ -9,10 +11,12 @@ import BotPage from "./pages/bot-page.js";
 import NotFound from "./pages/not-found.js";
 
 export default function App() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-black text-white">
       <Header />
-      <main className="pt-14">
+      <main className={`pt-14 ${user ? "pb-16" : ""}`}>
         <Switch>
           <Route path="/" component={() => <Redirect to="/chat" />} />
           <Route path="/auth" component={AuthPage} />
@@ -28,6 +32,7 @@ export default function App() {
           <Route component={NotFound} />
         </Switch>
       </main>
+      {user && <BottomNav />}
       <Toaster />
     </div>
   );

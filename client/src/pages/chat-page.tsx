@@ -9,23 +9,27 @@ import { useAuth } from "../hooks/use-auth.js";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
-import { Separator } from "../components/ui/separator.js";
 import { Avatar, AvatarFallback } from "../components/ui/avatar.js";
-import { Plus, Send } from "lucide-react";
+import { ChevronLeft, Plus, Send } from "lucide-react";
+
+// header + bottom nav = 3.5rem + 4rem = 7.5rem
+const FULL_H = "h-[calc(100vh-7.5rem)]";
 
 function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
   return (
     <div className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
       {!isOwn && (
-        <Avatar className="h-7 w-7 shrink-0">
-          <AvatarFallback className="text-[10px]">{msg.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarFallback className="text-xs">{msg.username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       )}
-      <div className={`flex flex-col gap-0.5 max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
-        {!isOwn && <span className="text-[11px] text-white/50 px-1">{msg.username}</span>}
+      <div className={`flex flex-col gap-0.5 max-w-[75%] ${isOwn ? "items-end" : "items-start"}`}>
+        {!isOwn && <span className="text-xs text-white/45 px-1">{msg.username}</span>}
         <div
-          className={`rounded-lg px-3 py-2 text-sm ${
-            isOwn ? "bg-primary text-primary-foreground" : "bg-muted text-white"
+          className={`rounded-2xl px-4 py-2 text-sm leading-relaxed ${
+            isOwn
+              ? "bg-white text-black rounded-br-sm"
+              : "bg-zinc-800 text-white rounded-bl-sm"
           }`}
         >
           {msg.content}
@@ -47,6 +51,9 @@ function MessageList({ roomId }: { roomId: number }) {
   return (
     <ScrollArea className="flex-1 px-4 py-3">
       <div className="flex flex-col gap-3">
+        {messages.length === 0 && (
+          <p className="text-center text-white/30 text-sm py-8">No messages yet. Say hello!</p>
+        )}
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} isOwn={msg.userId === user?.id} />
         ))}
@@ -74,15 +81,15 @@ function MessageInput({ roomId }: { roomId: number }) {
   return (
     <form
       onSubmit={handleSubmit((d) => sendMutation.mutate(d))}
-      className="flex gap-2 p-3 border-t border-border"
+      className="flex gap-2 p-3 border-t border-border bg-black"
     >
       <Input
         {...register("content")}
         placeholder="Message…"
-        className="flex-1"
+        className="flex-1 rounded-full bg-zinc-900 border-zinc-700 focus-visible:ring-zinc-600"
         autoComplete="off"
       />
-      <Button type="submit" size="icon" disabled={sendMutation.isPending}>
+      <Button type="submit" size="icon" className="rounded-full shrink-0" disabled={sendMutation.isPending}>
         <Send className="h-4 w-4" />
       </Button>
     </form>
@@ -107,11 +114,41 @@ function NewRoomForm({ onCreated }: { onCreated: (room: Room) => void }) {
       onSubmit={handleSubmit((d) => mutation.mutate(d))}
       className="flex gap-2 p-3 border-t border-border"
     >
-      <Input {...register("name")} placeholder="New room…" className="flex-1 h-8 text-sm" />
-      <Button type="submit" size="icon" className="h-8 w-8">
-        <Plus className="h-3 w-3" />
+      <Input
+        {...register("name")}
+        placeholder="New room…"
+        className="flex-1 h-9 text-sm"
+      />
+      <Button type="submit" size="icon" className="h-9 w-9 shrink-0">
+        <Plus className="h-4 w-4" />
       </Button>
     </form>
+  );
+}
+
+function RoomRow({
+  room,
+  active,
+  onClick,
+}: {
+  room: Room;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-4 py-3 flex flex-col gap-0.5 border-b border-border/40 transition-colors hover:bg-zinc-900 ${
+        active ? "bg-zinc-900" : ""
+      }`}
+    >
+      <span className="text-sm font-medium text-white"># {room.name}</span>
+      {room.lastMessage ? (
+        <span className="text-xs text-white/40 truncate">{room.lastMessage.content}</span>
+      ) : (
+        <span className="text-xs text-white/25 italic">No messages yet</span>
+      )}
+    </button>
   );
 }
 
@@ -127,44 +164,64 @@ export default function ChatPage() {
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)]">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-border flex flex-col">
-        <div className="px-4 py-3">
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">Rooms</p>
+    <div className={`flex ${FULL_H} overflow-hidden`}>
+      {/* Sidebar / Room list */}
+      <aside
+        className={`${
+          activeRoomId !== null ? "hidden md:flex" : "flex"
+        } w-full md:w-72 md:shrink-0 flex-col border-r border-border bg-black`}
+      >
+        <div className="px-4 py-3 border-b border-border">
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">Rooms</p>
         </div>
         <ScrollArea className="flex-1">
+          {rooms.length === 0 && (
+            <p className="text-sm text-white/30 text-center py-8">No rooms yet</p>
+          )}
           {rooms.map((room) => (
-            <button
+            <RoomRow
               key={room.id}
+              room={room}
+              active={room.id === activeRoomId}
               onClick={() => setActiveRoomId(room.id)}
-              className={`w-full text-left px-4 py-2 text-sm transition-colors hover:bg-accent ${
-                room.id === activeRoomId ? "bg-accent text-white" : "text-white/70"
-              }`}
-            >
-              # {room.name}
-            </button>
+            />
           ))}
         </ScrollArea>
-        <NewRoomForm onCreated={(room) => {
-          qc.setQueryData<Room[]>(["chat", "rooms"], (prev) => prev ? [...prev, room] : [room]);
-          setActiveRoomId(room.id);
-        }} />
+        <NewRoomForm
+          onCreated={(room) => {
+            qc.setQueryData<Room[]>(["chat", "rooms"], (prev) =>
+              prev ? [room, ...prev] : [room]
+            );
+            setActiveRoomId(room.id);
+          }}
+        />
       </aside>
 
       {/* Chat area */}
-      <div className="flex flex-1 flex-col">
+      <div
+        className={`${
+          activeRoomId !== null ? "flex" : "hidden md:flex"
+        } flex-1 flex-col bg-black`}
+      >
         {activeRoom ? (
           <>
-            <div className="px-4 py-3 border-b border-border">
-              <p className="font-semibold"># {activeRoom.name}</p>
+            {/* Room header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+              <button
+                onClick={() => setActiveRoomId(null)}
+                className="md:hidden text-white/60 hover:text-white transition-colors"
+                aria-label="Back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <p className="font-semibold text-sm"># {activeRoom.name}</p>
             </div>
             <MessageList roomId={activeRoom.id} />
             <MessageInput roomId={activeRoom.id} />
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-white/40 text-sm">
-            Select a room or create one
+          <div className="flex flex-1 items-center justify-center text-white/25 text-sm">
+            Select a room
           </div>
         )}
       </div>

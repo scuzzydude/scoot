@@ -5,6 +5,7 @@ export interface Room {
   name: string;
   createdBy: number;
   createdAt: string;
+  lastMessage: { content: string; createdAt: string } | null;
 }
 
 export interface Message {
