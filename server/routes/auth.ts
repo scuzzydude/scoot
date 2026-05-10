@@ -1,40 +1,10 @@
 import { Router } from "express";
 import passport from "passport";
-import bcrypt from "bcryptjs";
-import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
-import { registerSchema } from "../../shared/schema.js";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {
-  const parsed = registerSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
-    return;
-  }
-
-  const { username, email, password } = parsed.data;
-
-  const existing = await db.query.users.findFirst({
-    where: eq(users.username, username),
-  });
-  if (existing) {
-    res.status(409).json({ ok: false, error: "Username already taken" });
-    return;
-  }
-
-  const passwordHash = await bcrypt.hash(password, 12);
-  const [user] = await db.insert(users).values({ username, email, passwordHash }).returning();
-
-  req.login(user, (err) => {
-    if (err) {
-      res.status(500).json({ ok: false, error: "Login after register failed" });
-      return;
-    }
-    res.status(201).json({ ok: true, data: { id: user.id, username: user.username, email: user.email } });
-  });
+router.post("/register", (_req, res) => {
+  res.status(403).json({ ok: false, error: "Registration is not open" });
 });
 
 router.post("/login", (req, res, next) => {
