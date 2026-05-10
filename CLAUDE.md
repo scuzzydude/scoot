@@ -23,6 +23,35 @@ Read `SPEC.md` for full detail on architecture, endpoints, folder structure, and
 - Not writing much code manually — Claude Code does the heavy lifting.
 - Development environment: **WSL (Ubuntu on Windows)**, will deploy to Linux server.
 - Target: web first, iPhone second, Android third.
+- Claude Code runs with `--dangerously-skip-permissions` — full sudo access is expected and allowed.
+
+---
+
+## Git Commit Rules — CRITICAL
+
+Claude Code must commit and push after EVERY meaningful change, including:
+- After completing any feature or sub-feature
+- After fixing any bug
+- After any refactor
+- After every debugging checkpoint, even if the problem is not yet solved
+- Before switching tasks or files
+
+**The developer works across 3 machines (laptop, home, work) and must be able to pull and continue from any machine at any time without losing work. Never leave uncommitted changes.**
+
+Commit format:
+```bash
+git add .
+git commit -m "short description of what changed"
+git push
+```
+
+Use descriptive messages — examples:
+- `"auth: fix session expiry on logout"`
+- `"chat: add WebSocket reconnect logic"`
+- `"debug checkpoint: scootd socket connection failing"`
+- `"Phase 1 complete: auth + chat stubs running"`
+
+Never batch up multiple sessions of work into one commit. Commit little and often. If in doubt — commit and push.
 
 ---
 
