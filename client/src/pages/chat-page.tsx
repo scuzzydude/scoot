@@ -18,15 +18,18 @@ function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
     <div className={`flex items-end gap-2 ${isOwn ? "flex-row-reverse" : ""}`}>
       {!isOwn && (
         <Avatar className="h-7 w-7 shrink-0">
-          <AvatarFallback className="text-[10px]">{msg.userId.toString().slice(0, 2)}</AvatarFallback>
+          <AvatarFallback className="text-[10px]">{msg.username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       )}
-      <div
-        className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
-          isOwn ? "bg-primary text-primary-foreground" : "bg-muted text-white"
-        }`}
-      >
-        {msg.content}
+      <div className={`flex flex-col gap-0.5 max-w-[70%] ${isOwn ? "items-end" : "items-start"}`}>
+        {!isOwn && <span className="text-[11px] text-white/50 px-1">{msg.username}</span>}
+        <div
+          className={`rounded-lg px-3 py-2 text-sm ${
+            isOwn ? "bg-primary text-primary-foreground" : "bg-muted text-white"
+          }`}
+        >
+          {msg.content}
+        </div>
       </div>
     </div>
   );

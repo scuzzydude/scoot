@@ -6,7 +6,9 @@ interface WsMessage {
   roomId: number;
   message: {
     id: number;
+    roomId: number;
     userId: number;
+    username: string;
     content: string;
     mediaUrl: string | null;
     createdAt: string;

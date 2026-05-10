@@ -1,13 +1,13 @@
 import "dotenv/config";
 import http from "http";
-import { app } from "./app.js";
+import { app, sessionMiddleware } from "./app.js";
 import { setupChatWS } from "./ws/chat-ws.js";
 import { initProvider } from "./llm/provider.js";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
 const server = http.createServer(app);
-setupChatWS(server);
+setupChatWS(server, sessionMiddleware);
 
 try {
   await initProvider();

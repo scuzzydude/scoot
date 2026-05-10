@@ -1,11 +1,11 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import type { Server } from "http";
+import type { RequestHandler } from "express";
 
 interface RoomClient {
   ws: WebSocket;
   userId: number;
-  username: string;
 }
 
 const rooms = new Map<number, Set<RoomClient>>();
@@ -25,35 +25,45 @@ export function broadcast(roomId: number, payload: unknown) {
   }
 }
 
-export function setupChatWS(server: Server) {
-  const wss = new WebSocketServer({ server, path: "/ws/chat" });
+export function setupChatWS(server: Server, sessionMiddleware: RequestHandler) {
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on("upgrade", (req, socket, head) => {
+    const url = new URL(req.url ?? "/", "http://localhost");
+    if (!url.pathname.startsWith("/ws/chat/")) {
+      socket.destroy();
+      return;
+    }
+
+    sessionMiddleware(
+      req as Parameters<RequestHandler>[0],
+      {} as Parameters<RequestHandler>[1],
+      () => {
+        wss.handleUpgrade(req, socket, head, (ws) => {
+          wss.emit("connection", ws, req);
+        });
+      }
+    );
+  });
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
-    // URL: /ws/chat/:roomId  — roomId extracted from query or path
-    const url = new URL(req.url ?? "/", "ws://localhost");
+    const url = new URL(req.url ?? "/", "http://localhost");
     const parts = url.pathname.split("/");
     const roomId = parseInt(parts[parts.length - 1]);
 
-    // Auth: session user attached by express-session — we use a simpler approach
-    // The session cookie is parsed by the HTTP handler; for WS we read the user
-    // from the upgrade request's session (attached by the session middleware).
-    const session = (req as IncomingMessage & { session?: { passport?: { user?: number }; username?: string } }).session;
+    const session = (req as IncomingMessage & { session?: { passport?: { user?: number } } }).session;
     const userId = session?.passport?.user;
+
     if (!userId || isNaN(roomId)) {
       ws.close(1008, "Unauthorized");
       return;
     }
 
-    const client: RoomClient = { ws, userId, username: "" };
+    const client: RoomClient = { ws, userId };
     getRoomClients(roomId).add(client);
 
-    ws.on("close", () => {
-      getRoomClients(roomId).delete(client);
-    });
-
-    ws.on("error", () => {
-      getRoomClients(roomId).delete(client);
-    });
+    ws.on("close", () => getRoomClients(roomId).delete(client));
+    ws.on("error", () => getRoomClients(roomId).delete(client));
   });
 
   return wss;
