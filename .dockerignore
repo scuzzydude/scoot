@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+client/dist
+.env
+.env.local
+*.log
+core/bin
+core/obj
+core/*.o
+.git
