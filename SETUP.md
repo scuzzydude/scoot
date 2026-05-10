@@ -1,0 +1,100 @@
+# Scoot — Dev Environment Setup
+
+## Prerequisites
+
+Install these on the new machine before anything else.
+
+- **Git** — https://git-scm.com
+- **Docker Desktop** (Windows/Mac) or **Docker Engine + Docker Compose** (Linux/WSL)
+  - WSL: https://docs.docker.com/engine/install/ubuntu/
+  - Windows: https://www.docker.com/products/docker-desktop/
+- A GitHub account with access to `scuzzydude/scoot`
+
+## First-time setup
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/scuzzydude/scoot.git
+cd scoot
+
+# 2. Create your local env file
+cp .env.example .env
+```
+
+Open `.env` and fill in the required values:
+
+| Variable | What to set |
+|---|---|
+| `SESSION_SECRET` | Any 64-character random string |
+| `LLM_API_KEY` | Your Anthropic API key (or leave blank if using vLLM) |
+| `MEDIA_DIR` | A local path for uploaded files, e.g. `/tmp/scoot-media` |
+
+Leave `DATABASE_URL` as-is — Docker Compose overrides it automatically to point at the containerized Postgres.
+
+```bash
+# 3. Build and start the containers
+docker compose up --build -d
+
+# 4. Push the database schema (first run only)
+docker compose exec app npm run db:push
+```
+
+## Done
+
+Open http://localhost:5173 in your browser.
+
+- Frontend (Vite) → port 5173
+- API (Express) → port 3000
+- Postgres → port 5432
+
+## Day-to-day use
+
+```bash
+# Start everything
+docker compose up -d
+
+# Stop everything
+docker compose down
+
+# View logs
+docker compose logs -f
+
+# Pull latest code and restart
+git pull && docker compose up -d --build
+```
+
+## Switching machines mid-session
+
+All work is committed and pushed after every change (see CLAUDE.md). On the new machine:
+
+```bash
+git pull
+docker compose up -d
+```
+
+No rebuild needed unless `package.json` or `Dockerfile.dev` changed. If you're unsure, add `--build`.
+
+## Troubleshooting
+
+**Port already in use (5432, 3000, or 5173)**
+Something else is using that port. Find and stop it:
+```bash
+# See what's on a port
+sudo ss -tlnp | grep 5432
+
+# Or stop all running Docker containers
+docker stop $(docker ps -q)
+```
+
+**Containers started but can't reach each other**
+This can happen if a previous failed start left containers without proper networking. Fix:
+```bash
+docker compose down
+docker compose up -d
+```
+
+**Schema changes after a pull**
+If a teammate (or Claude) updated the database schema:
+```bash
+docker compose exec app npm run db:push
+```
