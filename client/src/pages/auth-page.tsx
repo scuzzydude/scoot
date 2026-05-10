@@ -112,12 +112,12 @@ export default function AuthPage() {
   if (user) return <Redirect to="/chat" />;
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)]">
+    <div className="flex h-[calc(100vh-3.5rem)]">
       {/* Left panel — gradient split screen */}
       <div className="hidden lg:flex lg:w-1/2 items-center justify-center bg-gradient-to-br from-primary to-primary/50 p-12">
         <div className="text-center space-y-4">
-          <img src="/assets/white_on_transparent_scoot.png" alt="Scoot" className="h-16 mx-auto invert" />
-          <p className="text-black/70 text-lg max-w-xs">
+          <h1 className="text-5xl font-bold text-primary-foreground tracking-tight">Scoot</h1>
+          <p className="text-primary-foreground/70 text-lg max-w-xs">
             Chat. Transact. Connect.
           </p>
         </div>
