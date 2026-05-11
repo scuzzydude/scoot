@@ -26,10 +26,15 @@ Open `.env` and fill in the required values:
 | Variable | What to set |
 |---|---|
 | `SESSION_SECRET` | Any 64-character random string |
+| `DEFAULT_USERNAME` | Username for the initial admin account (e.g. `admin`) |
+| `DEFAULT_PASSWORD` | Password for the initial admin account |
+| `DEFAULT_EMAIL` | Email for the initial admin account |
 | `LLM_API_KEY` | Your Anthropic API key (or leave blank if using vLLM) |
 | `MEDIA_DIR` | A local path for uploaded files, e.g. `/tmp/scoot-media` |
 
 Leave `DATABASE_URL` as-is — Docker Compose overrides it automatically to point at the containerized Postgres.
+
+The `DEFAULT_*` vars exist because public registration is disabled. On first startup, if the `users` table is empty, the server seeds one account from these values so you can log in. If the table already has users, these vars are ignored — change the password in-app, not by editing `.env`.
 
 ```bash
 # 3. Build and start the containers
@@ -41,7 +46,7 @@ docker compose exec app npm run db:push
 
 ## Done
 
-Open http://localhost:5173 in your browser.
+Open http://localhost:5173 in your browser and log in with the `DEFAULT_USERNAME` / `DEFAULT_PASSWORD` you set in `.env`.
 
 - Frontend (Vite) → port 5173
 - API (Express) → port 3000
