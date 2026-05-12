@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useAuth } from "../../hooks/use-auth.js";
 import { Button } from "../ui/button.js";
 import {
@@ -11,32 +11,27 @@ import {
 import { Avatar, AvatarFallback } from "../ui/avatar.js";
 import { LogOut } from "lucide-react";
 
-const pageTitles: Record<string, string> = {
-  "/chat": "Chat",
-  "/wallet": "Wallet",
-  "/bot": "Bot",
-  "/auth": "Sign in",
-};
-
 export function Header() {
   const { user, logout } = useAuth();
-  const [location] = useLocation();
-
-  const title =
-    Object.entries(pageTitles).find(([path]) => location.startsWith(path))?.[1] ?? "Scoot";
 
   return (
     <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-14 w-full max-w-[640px] bg-black border-b border-border flex items-center px-4 gap-3">
-      <Link href="/" className="shrink-0">
+      <Link href="/" className="shrink-0 flex items-center gap-2">
         <img
           src="/assets/white_on_transparent_scoot.png"
           alt="Scoot"
           className="h-7 w-auto"
-          style={{ maxWidth: 48 }}
+          style={{ maxWidth: 40 }}
         />
+        <div className="flex flex-col leading-none">
+          <span className="text-sm font-semibold tracking-wide">SCOOT</span>
+          <span className="text-[9px] text-white/40 tracking-[0.18em] uppercase mt-0.5">
+            Fairchild Labs
+          </span>
+        </div>
       </Link>
 
-      <span className="flex-1 text-center text-sm font-semibold">{title}</span>
+      <div className="flex-1" />
 
       <div className="shrink-0 w-8 flex justify-end">
         {user ? (
