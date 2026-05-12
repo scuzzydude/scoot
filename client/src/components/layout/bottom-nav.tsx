@@ -11,7 +11,7 @@ export function BottomNav() {
   const [location] = useLocation();
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 h-16 bg-black border-t border-border flex">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 h-16 w-full max-w-[640px] bg-black border-t border-border flex">
       {navItems.map(({ href, label, icon: Icon }) => {
         const active = location.startsWith(href);
         return (

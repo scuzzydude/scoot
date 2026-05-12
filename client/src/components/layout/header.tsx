@@ -26,7 +26,7 @@ export function Header() {
     Object.entries(pageTitles).find(([path]) => location.startsWith(path))?.[1] ?? "Scoot";
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 h-14 bg-black border-b border-border flex items-center px-4 gap-3">
+    <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-14 w-full max-w-[640px] bg-black border-b border-border flex items-center px-4 gap-3">
       <Link href="/" className="shrink-0">
         <img
           src="/assets/white_on_transparent_scoot.png"
