@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMProvider } from "./provider.js";
+import type { LLMProvider, ChatOptions } from "./provider.js";
 
 export class AnthropicProvider implements LLMProvider {
   private client: Anthropic;
@@ -10,11 +10,14 @@ export class AnthropicProvider implements LLMProvider {
     this.model = process.env.LLM_MODEL ?? "claude-sonnet-4-20250514";
   }
 
-  async chat(messages: { role: string; content: string }[], system?: string): Promise<string> {
+  async chat(
+    messages: { role: string; content: string }[],
+    options: ChatOptions = {}
+  ): Promise<string> {
     const response = await this.client.messages.create({
       model: this.model,
-      max_tokens: 2048,
-      system,
+      max_tokens: options.maxTokens ?? 2048,
+      system: options.system,
       messages: messages as Anthropic.MessageParam[],
     });
     const block = response.content[0];

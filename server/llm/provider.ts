@@ -1,5 +1,10 @@
+export interface ChatOptions {
+  system?: string;
+  maxTokens?: number;
+}
+
 export interface LLMProvider {
-  chat(messages: { role: string; content: string }[], system?: string): Promise<string>;
+  chat(messages: { role: string; content: string }[], options?: ChatOptions): Promise<string>;
 }
 
 let _provider: LLMProvider | null = null;

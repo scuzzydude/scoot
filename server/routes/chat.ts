@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { db, pool } from "../db/index.js";
-import { chatRooms, messages, roomMembers, users } from "../db/schema.js";
+import { chatRooms, messages, roomMembers, users, bots } from "../db/schema.js";
 import { eq, lt, desc, and } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { createRoomSchema, sendMessageSchema } from "../../shared/schema.js";
 import { broadcast } from "../ws/chat-ws.js";
+import { handleMentions } from "../services/bot-mentions.js";
+import { log } from "../log.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -55,6 +57,19 @@ router.post("/rooms", async (req, res) => {
   const userId = (req.user as { id: number }).id;
   const [room] = await db.insert(chatRooms).values({ name: parsed.data.name, createdBy: userId }).returning();
   await db.insert(roomMembers).values({ roomId: room.id, userId });
+
+  const autoJoinBots = await db
+    .select({ userId: bots.userId })
+    .from(bots)
+    .innerJoin(users, eq(users.id, bots.userId))
+    .where(and(eq(bots.autoJoinNewRooms, true), eq(bots.enabled, true), eq(users.isBot, true)));
+
+  if (autoJoinBots.length > 0) {
+    await db
+      .insert(roomMembers)
+      .values(autoJoinBots.map((b) => ({ roomId: room.id, userId: b.userId })));
+  }
+
   res.status(201).json({ ok: true, data: room });
 });
 
@@ -79,6 +94,8 @@ router.get("/rooms/:id/messages", async (req, res) => {
       roomId: messages.roomId,
       userId: messages.userId,
       username: users.username,
+      displayName: users.displayName,
+      isBot: users.isBot,
       content: messages.content,
       mediaUrl: messages.mediaUrl,
       createdAt: messages.createdAt,
@@ -102,7 +119,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
     res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
     return;
   }
-  const user = req.user as { id: number; username: string };
+  const user = req.user as { id: number; username: string; displayName: string | null; isBot: boolean };
   const roomId = parseInt(req.params.id);
 
   const [msg] = await db
@@ -115,6 +132,8 @@ router.post("/rooms/:id/messages", async (req, res) => {
     roomId: msg.roomId,
     userId: msg.userId,
     username: user.username,
+    displayName: user.displayName,
+    isBot: user.isBot,
     content: msg.content,
     mediaUrl: msg.mediaUrl,
     createdAt: msg.createdAt.toISOString(),
@@ -122,6 +141,13 @@ router.post("/rooms/:id/messages", async (req, res) => {
 
   broadcast(roomId, { type: "message", roomId, message: msgPayload });
   res.status(201).json({ ok: true, data: msgPayload });
+
+  void handleMentions({
+    roomId,
+    authorId: user.id,
+    authorIsBot: user.isBot,
+    content: msg.content,
+  }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "handleMentions threw"));
 });
 
 export default router;

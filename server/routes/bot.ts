@@ -22,7 +22,7 @@ router.post("/message", async (req, res) => {
 
   try {
     const provider = getProvider();
-    const reply = await provider.chat(history, "You are a helpful assistant on the Scoot platform.");
+    const reply = await provider.chat(history, { system: "You are a helpful assistant on the Scoot platform." });
     history.push({ role: "assistant", content: reply });
     sessionHistory.set(sessionId, history);
     res.json({ ok: true, data: { reply } });
