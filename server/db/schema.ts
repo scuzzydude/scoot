@@ -5,6 +5,16 @@ export const users = pgTable("users", {
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  displayName: text("display_name"),
+  isBot: boolean("is_bot").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const bots = pgTable("bots", {
+  userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  systemPrompt: text("system_prompt").notNull(),
+  autoJoinNewRooms: boolean("auto_join_new_rooms").notNull().default(false),
+  enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -42,5 +52,7 @@ export const media = pgTable("media", {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type Bot = typeof bots.$inferSelect;
+export type NewBot = typeof bots.$inferInsert;
 export type ChatRoom = typeof chatRooms.$inferSelect;
 export type Message = typeof messages.$inferSelect;
