@@ -16,8 +16,8 @@ router.post("/login", (req, res, next) => {
     }
     req.login(user, (loginErr) => {
       if (loginErr) return next(loginErr);
-      const u = user as { id: number; username: string; email: string };
-      res.json({ ok: true, data: { id: u.id, username: u.username, email: u.email } });
+      const u = user as { id: number; username: string; email: string; displayName: string | null; isBot: boolean };
+      res.json({ ok: true, data: { id: u.id, username: u.username, email: u.email, displayName: u.displayName, isBot: u.isBot } });
     });
   })(req, res, next);
 });
@@ -33,8 +33,8 @@ router.get("/me", (req, res) => {
     res.status(401).json({ ok: false, error: "Not authenticated" });
     return;
   }
-  const u = req.user as { id: number; username: string; email: string };
-  res.json({ ok: true, data: { id: u.id, username: u.username, email: u.email } });
+  const u = req.user as { id: number; username: string; email: string; displayName: string | null; isBot: boolean };
+  res.json({ ok: true, data: { id: u.id, username: u.username, email: u.email, displayName: u.displayName, isBot: u.isBot } });
 });
 
 export default router;

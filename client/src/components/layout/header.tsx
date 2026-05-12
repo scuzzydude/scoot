@@ -34,14 +34,14 @@ export function Header() {
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full p-0">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="text-xs bg-white/10">
-                    {user.username.slice(0, 2).toUpperCase()}
+                    {(user.displayName ?? user.username).slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[160px]">
-              <div className="px-2 py-1.5 text-sm font-medium">{user.username}</div>
-              <div className="px-2 pb-1.5 text-xs text-white/50">{user.email}</div>
+              <div className="px-2 py-1.5 text-sm font-medium">{user.displayName ?? user.username}</div>
+              <div className="px-2 pb-1.5 text-xs text-white/50">@{user.username} · {user.email}</div>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => logout()}>
                 <LogOut className="mr-2 h-4 w-4" />

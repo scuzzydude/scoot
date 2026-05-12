@@ -4,6 +4,8 @@ interface UserData {
   id: number;
   username: string;
   email: string;
+  displayName: string | null;
+  isBot: boolean;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {

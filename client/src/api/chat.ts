@@ -13,6 +13,8 @@ export interface Message {
   roomId: number;
   userId: number;
   username: string;
+  displayName: string | null;
+  isBot: boolean;
   content: string;
   mediaUrl: string | null;
   createdAt: string;
