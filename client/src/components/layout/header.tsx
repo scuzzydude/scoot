@@ -16,19 +16,13 @@ export function Header() {
 
   return (
     <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-14 w-full max-w-[640px] bg-black border-b border-border flex items-center px-4 gap-3">
-      <Link href="/" className="shrink-0 flex items-center gap-2">
+      <Link href="/" className="shrink-0 flex items-center">
         <img
           src="/assets/white_on_transparent_scoot.png"
           alt="Scoot"
-          className="h-7 w-auto"
-          style={{ maxWidth: 40 }}
+          className="h-8 w-auto"
+          style={{ maxWidth: 44 }}
         />
-        <div className="flex flex-col leading-none">
-          <span className="text-sm font-semibold tracking-wide">SCOOT</span>
-          <span className="text-[9px] text-white/40 tracking-[0.18em] uppercase mt-0.5">
-            Fairchild Labs
-          </span>
-        </div>
       </Link>
 
       <div className="flex-1" />
