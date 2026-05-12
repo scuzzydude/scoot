@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { db } from "./index.js";
 import { users } from "./schema.js";
 
@@ -9,8 +10,8 @@ export async function seedDefaultUser(): Promise<void> {
 
   if (!username || !password || !email) return;
 
-  const existing = await db.query.users.findFirst();
-  if (existing) return;
+  const existingHuman = await db.query.users.findFirst({ where: eq(users.isBot, false) });
+  if (existingHuman) return;
 
   const passwordHash = await bcrypt.hash(password, 12);
   await db.insert(users).values({ username, email, passwordHash });
