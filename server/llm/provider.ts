@@ -14,6 +14,15 @@ export function getProvider(): LLMProvider {
   return _provider;
 }
 
+// Test hook: inject a mock provider. Returns a restore function.
+export function setProvider(p: LLMProvider): () => void {
+  const prev = _provider;
+  _provider = p;
+  return () => {
+    _provider = prev;
+  };
+}
+
 export async function initProvider(): Promise<void> {
   const type = process.env.LLM_PROVIDER ?? "anthropic";
   if (type === "anthropic") {
