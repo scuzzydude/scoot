@@ -17,6 +17,19 @@ Read `SPEC.md` for full detail on architecture, endpoints, folder structure, and
 
 ---
 
+## Reference Material — Read This Before Designing Scoot Features
+
+`docs/reference/asimov_v2.13.{pdf,md}` — Brandon's book defining the Scoot / Foundation / asimov system. The MD is grep-friendly text extraction (335 pages → ~12k lines). Read it when working on identity, governance, wallet, social-graph, or any feature involving Scoot semantics. Key spots:
+
+- **Scoot Primer** (~MD line 737) — conceptual overview and vocabulary (pledge, scootage, trustee, scoot, asimov)
+- **Appendix D — System Technical Description** (~MD line 8571) — domains, scootchain, responsibility/value, conformance rules
+
+**Current build target: Scoot(34) = The Dream Laboratory (Fonde Brotherhood).** It is the first and currently only Scoot — but the app must be structured to host many Scoots, not be hardwired to one. A pickleball Scoot is the likely next.
+
+**Vocabulary rule:** code, schema, and API use canonical Scoot terms (`pledge`, `scootage`, `trustee`, `scoot(X)`, `asimov`). User-facing strings render via a per-Scoot label map (e.g. Scoot(34) shows "Starter" for trustee, "Fonde Brotherhood" for scootage). Default to canonical when no override exists. Each Scoot eventually defines its terms in its charter.
+
+---
+
 ## Developer Context
 
 - Primary developer is a C programmer. C-like syntax (JS/TS) is comfortable.
