@@ -12,6 +12,7 @@
     "bot:create": "tsx server/scripts/bot-create.ts",
     "bot:edit": "tsx server/scripts/bot-edit.ts",
     "bot:invite": "tsx server/scripts/bot-invite.ts",
+    "session:save": "node scripts/save-session.cjs",
     "test": "node --import tsx --test 'server/**/*.test.ts'"
   },
   "dependencies": {

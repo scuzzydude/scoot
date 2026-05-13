@@ -17,6 +17,12 @@ Read `SPEC.md` for full detail on architecture, endpoints, folder structure, and
 
 ---
 
+## Saving Conversation Transcripts
+
+Worth-keeping conversations can be saved to the repo via `npm run session:save` (wraps `scripts/save-session.cjs`). With no args, it grabs the latest session. Pass `--title="..."` to override the slug. Output goes to `docs/sessions/YYYY-MM-DD-<slug>.{jsonl,md}` — raw JSONL for fidelity, a stripped markdown transcript for human reading. The repo is public/copyleft (per Brandon) so transcripts are share-friendly.
+
+---
+
 ## Reference Material — Read This Before Designing Scoot Features
 
 `docs/reference/asimov_v2.13.{pdf,md}` — Brandon's book defining the Scoot / Foundation / asimov system. The MD is grep-friendly text extraction (335 pages → ~12k lines). Read it when working on identity, governance, wallet, social-graph, or any feature involving Scoot semantics. Key spots:
