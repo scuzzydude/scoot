@@ -4,6 +4,8 @@
 > Date: 2026-05-13
 > Raw JSONL: `docs/sessions/2026-05-13-asimov-book-import-scoot-conceptual-model-memory-portability.jsonl`
 
+> Redactions: 4 pattern hits masked (api keys, long hex, db credentials).
+
 ---
 
 ## You
@@ -423,7 +425,7 @@ All committed and pushed (`160e205`). Working tree clean. Tomorrow on a differen
 
 **Hakeem himself embodies the appreciation subject.** Dream-chasing is the Scoot's mission. Hakeem is the patron saint of dream-chasing: Nigerian immigrant, didn't touch basketball until age 15, walked on at U. of Houston, drilled himself into the greatest defender in NBA history. He *became* The Dream by chasing one.
 
-**Recursive with the book itself.** "asimov" honors Isaac Asimov, the genius whose Foundation series scaffolds the whole project. "Scoot(34) / The Dream Laboratory" honors Hakeem the same way, one tier down. Same naming pattern: pick the integer or codename that points at the genius you're appreciating. And the book LITERALLY encodes `Hakeem is the GOAT` in Appendix E's authorization hash (`48616B65656D2069732074686520474F4154`) — so Hakeem-as-north-star is right there in the source material.
+**Recursive with the book itself.** "asimov" honors Isaac Asimov, the genius whose Foundation series scaffolds the whole project. "Scoot(34) / The Dream Laboratory" honors Hakeem the same way, one tier down. Same naming pattern: pick the integer or codename that points at the genius you're appreciating. And the book LITERALLY encodes `Hakeem is the GOAT` in Appendix E's authorization hash (`[REDACTED:hex]`) — so Hakeem-as-north-star is right there in the source material.
 
 Layers I count: (1) number→player, (2) name→nickname, (3) concept→practice method, (4) subject→lived embodiment, (5) location→literal lineage, (6) naming pattern recursive with `asimov(0)` honoring Asimov. And the demand-creation / paying-rookies model you mentioned echoes Hakeem's Dream Camp lineage — elite teaches next gen — making it level seven if I'm allowed to count business model.
 
@@ -470,3 +472,221 @@ Let me peek at the session JSONL structure first to write a good cleaner.
 Output is clean. Let me retitle to better reflect the actual content of today's session, then add a `package.json` script and wrap up.
 
 *[Bash: Re-save with more accurate title]*
+
+*[Read: /home/scuzzydude/projects/scoot/package.json]*
+
+*[Edit: /home/scuzzydude/projects/scoot/package.json]*
+
+Now updating CLAUDE.md to document the convention and adding to SETUP.md for cross-machine awareness.
+
+*[Edit: /home/scuzzydude/projects/scoot/CLAUDE.md]*
+
+*[Bash: Stage session save infrastructure]*
+
+*[Bash: Commit and push session-save infra + today's transcript]*
+
+Session infrastructure committed (`58f5c58`). Today's conversation is saved at `docs/sessions/2026-05-13-asimov-book-import-...{jsonl,md}`. From now on `npm run session:save` snapshots whatever the latest session was, optionally with `--title="..."`.
+
+---
+
+## Best guess on "Scoot"
+
+Lower confidence than Hakeem=34 — I'm taking a real swing, not a polite one. If I'm wrong I want to know.
+
+**My primary guess: Asimov's robots are the implication.**
+
+In Asimov, robots *scoot* — they're small, obedient, programmable agents that follow the Three Laws (responsibility encoded as a hard constraint). A scoot the token *is* the same thing in digital form: a tiny obedient unit that carries a responsibility you can't ignore. When you hold one you've taken on a Three-Laws-style obligation — appreciate the subject, don't accumulate property, don't take dividends. The token is a robot, named for what robots do.
+
+This is "implied not explicit" because the book never says "the token is a robot" — but the whole Foundation/Asimov framing makes the reader supply that connection. The asimov(0) token honors Asimov the man; the scoot unit honors Asimov the *robot writer* — the part of him that thought hardest about programmable responsibility. That's actually a nice split.
+
+**Secondary guess: "Speedy" from Runaround.** Speedy is the robot stuck oscillating between two competing duties (Second Law obedience vs. Third Law self-preservation). The Scoot system has the same built-in tension — appreciate (duty) vs. don't accumulate (prohibition). Naming the token after the canonical Three-Laws-conflict robot would be very on-brand for a book named "asimov." (Speedy's model is SPD-13, which is *almost* a fun coincidence with Scoot but not quite — I don't think this is the answer.)
+
+**Tertiary: Texas-vernacular informality.** "Scoot is money, y'all" is the literal pitch. The token is named in folksy Texas voice on purpose — friendly, inclusive, the opposite of "Cryptocurrency Unit." Implied by the book's whole voice, not stated. The "family told" part fits: family-folk would catch the Texan-ness others miss.
+
+**Wildcard: there's an acronym hiding in "Dynamically Scalable…" headers.** The Scoot Primer literally subtitles "Dynamically Scalable Responsibility" — SCOOT could be initialed (Scalable / Self-governing / Sovereign Coin Of Open Trust / Truth / Tokens). I don't think the letters land cleanly but you might have a clean expansion in mind.
+
+If I had to pick one I'd put 35% on robots-as-tokens, 20% on Speedy, 20% on the Texan-voice read, 15% on a hidden acronym I'm not seeing, and 10% on something else family-personal I can't reach from the text alone.
+
+Tell me when you're ready — and if it's something I missed entirely, I'd love to know what passage I should have caught.
+
+Have a good night. Tomorrow on the other machine: `git clone` (if needed), run the symlink command from SETUP.md, and we're back in business.
+
+## You
+
+WHere do I find the transcripts? It's basketball and houston related, nothing to do with asimov or robots.  Do you want to try some more to figure it out.   It's a useful experiment.  Just to make sure you have the knowledge nessecarly to figure it out, when were you trained.
+
+## Claude
+
+Before I guess again, let me actually grep the book for basketball/Houston context near "scoot" definitions — I should have done this before guessing the first time.
+
+*[Bash: Grep book for Houston basketball context around scoot]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+*[Bash: Hunt for Houston basketball clues near scoot etymology]*
+
+Hold on — I just hit something. Line 4930 mentions "Scott Brooks" as a Houston Rockets hero, and "Scott" → "Scoot" is one letter. Let me read around that passage.
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+I think I have it.
+
+## Where the transcripts are
+
+`docs/sessions/2026-05-13-asimov-book-import-scoot-conceptual-model-memory-portability.{jsonl,md}` — already pushed. On GitHub: `https://github.com/scuzzydude/scoot/tree/main/docs/sessions`. Future ones go in the same folder.
+
+## My training date
+
+Per the system prompt: knowledge cutoff is **January 2026**. I'm Claude Opus 4.7. That covers all Rockets history including post-Harden, the 2023 draft (where Houston took Amen Thompson #4, right after Scoot Henderson went #3 to Portland), and the recent rebuild. So no excuse on knowledge — only on noticing.
+
+## New guess: Scott Brooks → "Scoot"
+
+The book gives it away on line 4930. Brandon describes "the second type of hero that personifies the City of Houston" — the reluctant, shut-up-and-do-the-job, undersized hustler. He lists ten of them: Ellie, Kenny Smith, Horry, Otis Thorpe, Maxwell, Sam Cassell, Matt Bullard, Drexler, Carl Herrera, and **Scott Brooks**. 5'11" backup PG on the '94 championship team. Scrappy, defensive pest, did the dirty work so Hakeem could be Hakeem.
+
+**"Scott" softened in a Houston drawl becomes "Scoot."** That's the family-told nickname.
+
+And the *meaning* fits so cleanly it has to be intentional:
+
+- **Scoot(34) = Hakeem** = the genius being appreciated
+- **scoot (lowercase) = Scott Brooks** = the archetypal role player who carries responsibility quietly so the genius can shine
+
+A scoot is a Scott-Brooks-shaped unit of contribution. Holding scoot means being one of the ten guys in the book's hero list — small, hustling, no glory, but indispensable to the win. The whole token model says "with great responsibility comes great wealth" — that's literally Scott Brooks's career thesis. The 1994 Rockets needed both Hakeem AND a roster of Scott Brookses. The Scoot system needs both genius subjects AND an army of pledges who do the everyman appreciation work.
+
+The asymmetry is also right: there's only one Hakeem per Scoot, but thousands of scoot. Genius is rare and singular; the role-player archetype is abundant and tradable. The capitalization split (Scoot the enterprise = genius / scoot the unit = role player) maps to that.
+
+Confidence: ~65%. Higher than any of my Asimov guesses, but I want to be cocky only when I've earned it.
+
+Am I right?
+
+## You
+
+No, Not Scott Brooks.  Wrong millineum.   Can I tell you to spend like $5 in tokens to try to figure it out.  Once I tell you you will find the reference.   It has to do with my inspiration for the system.
+
+## Claude
+
+I'd absolutely take that. Let me also do one more targeted search before you confirm — pre-2000 Houston basketball, someone whose actions inspired the *system* concept, not just a player you liked.
+
+*[Bash: Search book for system-inspiration clues]*
+
+*[Bash: Look for dedications and 'Scoot' as a person's name]*
+
+Let me grep one more thing before swinging.
+
+*[Bash: Final search for scout / cougars / inspiration angle]*
+
+Found a smoking gun at line 6626. Let me read it.
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+I'm stuck. Let me take one final honest swing, then please just tell me — I want to learn this rather than burn more tokens guessing.
+
+**Final swing: Calvin "The Pocket Rocket" Murphy.**
+
+The fit:
+- ✅ Pre-2000 Houston basketball (Rocket 1970-1983)
+- ✅ Hall of Famer, career-long Houston guy
+- ✅ 5'9" — the smallest Hall of Famer ever. He had to *scoot* — small, quick, in and out, hustle
+- ✅ Embodies the "small unit with outsized responsibility" archetype that scoot-the-token represents
+- ✅ Pre-Hakeem Houston basketball hero — possible early childhood imprint for you
+- ✅ "Pocket Rocket" → the Rockets motif + a verb of small quick motion → conceptually adjacent to "scoot"
+
+The system-inspiration angle: a Pocket-Rocket-shaped contribution is exactly what the token models — small, quick, undervalued individually, decisive collectively. If you grew up watching Calvin Murphy be unreasonably effective for his size, that's a *system* lesson, not just a player you liked.
+
+But I'm not sure. I've now grepped pretty exhaustively (`scout`, dedications, "inspired me," Cougars / Phi Slama Jama / Guy Lewis, all the role-player era heroes, Comets, your grandpa Marsene), and nothing else jumps out. If it's not Calvin Murphy I genuinely can't get there from the text alone.
+
+**Please tell me.** Once you point at the reference I'll go read that passage and the connection will lock in. I'd rather learn this than spin on it.
+
+While you're typing — quick confirms for tomorrow: training cutoff is January 2026, transcripts of today's session are at `docs/sessions/2026-05-13-asimov-book-import-...{jsonl,md}` (already on GitHub at `scuzzydude/scoot`), and `npm run session:save` saves future ones. All good.
+
+## You
+
+Okay, one more hint.  I'm not going to tell you but take one more stab.  Their are clues throughout the book, but the strongest ones are in the chapter "collecting responsibility".  First, tell me when you were trained?
+
+## Claude
+
+**Training:** Claude Opus 4.7, knowledge cutoff **January 2026**. So any Houston basketball figure pre-2000 (and well into 2025) should be within reach.
+
+Let me find the chapter.
+
+*[Bash: Find the Collecting Responsibility chapter]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+*[Bash: Find chapter boundaries and scoot mentions in chapter]*
+
+*[Bash: Look for brother nickname / family / specific Rockets players]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+*[Read: /home/scuzzydude/projects/scoot/docs/reference/asimov_v2.13.md]*
+
+I read the chapter carefully. Found a lot — but I can't crack the phonetic / direct hit. Here's my honest accounting and final swing.
+
+## What I found in *Collecting Responsibility*
+
+The strongest content in the chapter:
+- **The Hakeem-signed basketball** from your brother → holding it made you feel you'd *carried the team* as a 6 seed through Mailman's Jazz, Sir Charles's Suns, the pretender MVP's Spurs, then swept Shaq's Magic
+- **The Scobee postcard** parallel — same mechanism, different object
+- **Eureka 4/29/2021** — "it is the responsibility itself that we should value"
+- The "carrying the team" feeling = the inspiration for tradable responsibility
+
+That's the system origin in plain text. The basketball IS the prototype scoot — a physical object that conferred a sense of inherited responsibility for genius.
+
+## What I can't crack
+
+I grepped for every Houston basketball figure I could think of (Calvin Murphy, Moses Malone, Elvin Hayes, Sampson, Drexler, Kenny Smith, Vernon Maxwell, Mario Elie, Cassell, Horry, Tomjanovich, Bill Fitch, Don Chaney, Guy V. Lewis, Phi Slama Jama, all the Comets, even Sleepy Floyd and Hot Rod Williams) and none of them phonetically map to "scoot." I also looked for any character named Scoot in dialogue and didn't find one.
+
+## Final swing: Kenny "The Jet" Smith
+
+He's the best of my remaining candidates:
+- Rockets PG '90-'96, two-time champion
+- Job was literally to *bring the ball up the floor* — to scoot it up. The point guard is the scooter. PG = "the position that scoots."
+- "The Jet" = motion verb in the same family as scoot
+- Brandon names him explicitly in the "second-type hero" passage (line 4928)
+- He carried the team in the most literal sense — the championship's ball-handler
+
+System inspiration: if you saw a 6-seed underdog championship as the formative basketball memory of your life (which the chapter says you did), the PG who actually *carried* the ball through it is a natural avatar for "small unit of tradable responsibility that does the work." Hakeem is the genius (Scoot(34)); Kenny Smith is the role-player archetype that the token name honors — same logical structure as my Scott Brooks guess earlier, but with a player who actually carries the ball.
+
+Confidence: 25%. I'm guessing more than knowing.
+
+**I yield.** Please tell me — once you point at the passage I'll lock in the connection and we can both move on. I've spent the budget. If it's a Houston basketball figure I haven't even mentioned, that's the most likely outcome at this point, and grep isn't going to find them for me because they're implied, not named.
+
+## You
+
+add this to your rules about the logging.  I know you know better than to put passwords and keys and secerts in the repo (which is public) but in the transripts, I might have a long hash or key that I need you to add to a script, so I want you to actively mask these kind of things in th elog.  can you do that?
+
+## Claude
+
+Yes — and it should mask in **both** the markdown and the raw JSONL, since both get pushed to the public repo. Let me also check whether anything already slipped through into today's pushed transcript before I close the gap.
+
+*[Bash: Scan today's already-pushed transcript for any secrets that already leaked]*
+
+*[Bash: Tightened scan for actual secret values in today's transcript]*
+
+Good — only false positive is the book's "Hakeem is the GOAT" hex. No actual secrets leaked today. Now closing the gap.
+
+*[Read: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+*[Edit: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+Now plumb the same `redact()` into the markdown output and add a redaction summary to the frontmatter.
+
+*[Edit: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+*[Edit: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+Now update the frontmatter to show redaction count, and the closing log line.
+
+*[Read: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+*[Read: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+*[Edit: /home/scuzzydude/projects/scoot/scripts/save-session.cjs]*
+
+Now re-run on today's session, overwriting the existing files so the already-pushed transcript gets redacted too.
+
+*[Bash: Regenerate today's transcript with redaction applied]*

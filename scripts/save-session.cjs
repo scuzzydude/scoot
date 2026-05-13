@@ -71,7 +71,60 @@ const outJsonl = path.join(OUT_DIR, `${baseName}.jsonl`);
 const outMd = path.join(OUT_DIR, `${baseName}.md`);
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
-fs.copyFileSync(jsonlPath, outJsonl);
+
+// --- Secret redaction --------------------------------------------------------
+// The scoot repo is public and copyleft. Transcripts may contain hashes, keys,
+// or tokens the user pasted into the conversation. Redact known formats from
+// BOTH the markdown and the raw JSONL before writing to docs/sessions/.
+//
+// Replacements are chosen to preserve JSON syntactic validity (no quotes,
+// backslashes, or newlines in the replacement string) so the JSONL stays
+// parseable after substitution.
+
+const REDACTION_PATTERNS = [
+  { name: 'anthropic-key', re: /sk-ant-[A-Za-z0-9_\-]{20,}/g },
+  { name: 'openai-key',    re: /\bsk-(?!ant-)[A-Za-z0-9]{30,}\b/g },
+  { name: 'github-token',  re: /\bgh[pousro]_[A-Za-z0-9]{30,}\b/g },
+  { name: 'aws-access',    re: /\bAKIA[0-9A-Z]{16}\b/g },
+  { name: 'jwt',           re: /\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}/g },
+  { name: 'hex',           re: /\b[0-9a-fA-F]{32,}\b/g },
+];
+
+const DB_URL_RE = /(postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/([^:@\s"'<>]+):([^@\s"'<>]+)@/gi;
+const SENSITIVE_ENV_RE = /\b((?:API|ACCESS|SECRET|PRIVATE|AUTH|BEARER|REFRESH|SESSION|CSRF)_(?:KEY|TOKEN|SECRET|PASSWORD|PASSWD))\s*[:=]\s*["']?([^\s"'\n,;]{8,})/gi;
+
+let redactionCount = 0;
+
+function redact(text) {
+  if (typeof text !== 'string' || text.length === 0) return text;
+  let out = text;
+  // DB connection strings: keep scheme + host shape, mask user+pass.
+  out = out.replace(DB_URL_RE, (_m, scheme) => {
+    redactionCount++;
+    return `${scheme}://[REDACTED]:[REDACTED]@`;
+  });
+  // Sensitive env-style assignments: keep the key name, mask the value.
+  out = out.replace(SENSITIVE_ENV_RE, (_m, key) => {
+    redactionCount++;
+    return `${key}=[REDACTED:env]`;
+  });
+  // Vendor key formats and bare hex hashes.
+  for (const { name, re } of REDACTION_PATTERNS) {
+    out = out.replace(re, () => {
+      redactionCount++;
+      return `[REDACTED:${name}]`;
+    });
+  }
+  return out;
+}
+
+// Redact the raw JSONL line-by-line and write the cleaned copy.
+const redactedJsonl = fs.readFileSync(jsonlPath, 'utf8')
+  .split('\n')
+  .map(redact)
+  .join('\n');
+fs.writeFileSync(outJsonl, redactedJsonl);
+// -----------------------------------------------------------------------------
 
 // Build clean markdown transcript.
 // Strip:
@@ -83,13 +136,13 @@ fs.copyFileSync(jsonlPath, outJsonl);
 
 function stripSystemReminders(text) {
   if (typeof text !== 'string') return text;
-  return text
+  return redact(text
     .replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, '')
     .replace(/<command-name>[\s\S]*?<\/command-name>/g, '')
     .replace(/<command-message>[\s\S]*?<\/command-message>/g, '')
     .replace(/<command-args>[\s\S]*?<\/command-args>/g, '')
     .replace(/<local-command-stdout>[\s\S]*?<\/local-command-stdout>/g, '')
-    .trim();
+    .trim());
 }
 
 function summarizeToolUse(b) {
@@ -101,7 +154,7 @@ function summarizeToolUse(b) {
   else if (name === 'Edit' || name === 'Write') detail = input.file_path || '';
   else if (name === 'Agent') detail = input.description || '';
   else detail = Object.keys(input).slice(0, 3).join(',');
-  return `*[${name}${detail ? ': ' + detail : ''}]*`;
+  return `*[${name}${detail ? ': ' + redact(detail) : ''}]*`;
 }
 
 const lines = [];
@@ -158,9 +211,16 @@ for (const e of entries) {
   }
 }
 
+// Insert a redaction note into the frontmatter so readers know masking was applied.
+const noteIdx = lines.findIndex(l => l === '---');
+if (noteIdx > 0) {
+  lines.splice(noteIdx, 0, `> Redactions: ${redactionCount} pattern hit${redactionCount === 1 ? '' : 's'} masked (api keys, long hex, db credentials).`, '');
+}
+
 fs.writeFileSync(outMd, lines.join('\n'));
 
 const stat = fs.statSync(outMd);
 console.error(`saved session ${sessionId}`);
 console.error(`  raw : ${outJsonl} (${fs.statSync(outJsonl).size} bytes)`);
 console.error(`  md  : ${outMd} (${stat.size} bytes)`);
+console.error(`  redacted: ${redactionCount} suspected secret${redactionCount === 1 ? '' : 's'}`);

@@ -21,6 +21,8 @@ Read `SPEC.md` for full detail on architecture, endpoints, folder structure, and
 
 Worth-keeping conversations can be saved to the repo via `npm run session:save` (wraps `scripts/save-session.cjs`). With no args, it grabs the latest session. Pass `--title="..."` to override the slug. Output goes to `docs/sessions/YYYY-MM-DD-<slug>.{jsonl,md}` — raw JSONL for fidelity, a stripped markdown transcript for human reading. The repo is public/copyleft (per Brandon) so transcripts are share-friendly.
 
+**Secret redaction (mandatory):** the repo is public. `scripts/save-session.cjs` runs a `redact()` pass over BOTH the JSONL and the MD before writing, masking known formats: Anthropic / OpenAI / GitHub / AWS keys, JWTs, hex strings ≥32 chars, DB connection-string credentials, and `(API|ACCESS|SECRET|PRIVATE|AUTH|BEARER|REFRESH|SESSION|CSRF)_(KEY|TOKEN|SECRET|PASSWORD|PASSWD)=value` patterns. The frontmatter records the count. If you spot a new secret format leaking through, extend `REDACTION_PATTERNS` in the script — never disable masking for convenience. If a real secret ever slips into a committed transcript, treat the credential as compromised and rotate; redacting in a follow-up commit does not erase git history.
+
 ---
 
 ## Reference Material — Read This Before Designing Scoot Features

@@ -1,5 +1,6 @@
 # Memory Index
 
+- [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
 - [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat polish first; staking ritual is core identity primitive; token after; scootchain last
 - [Staking ritual — QR + code + selfie pledge](social_graph_staking.md) — In-person ceremony A→B: QR scan, one-time code, second scan, selfie saved as pledge proof. Chains form trust graph
