@@ -79,6 +79,18 @@ docker compose up -d
 
 No rebuild needed unless `package.json` or `Dockerfile.dev` changed. If you're unsure, add `--build`.
 
+## Claude Code memory — one-time symlink per machine
+
+Claude Code's project memory lives in this repo at `.claude/memory/` so it syncs across all dev machines via git. The Claude harness expects to find it at `~/.claude/projects/-home-scuzzydude-projects-scoot/memory/`, so each new machine needs a one-time symlink:
+
+```bash
+# Run this once on each new machine after cloning
+mkdir -p ~/.claude/projects/-home-scuzzydude-projects-scoot
+ln -sfn "$PWD/.claude/memory" ~/.claude/projects/-home-scuzzydude-projects-scoot/memory
+```
+
+After the symlink is in place, `git pull` automatically picks up any new memories Claude has written on another machine. If the repo lives somewhere other than `/home/scuzzydude/projects/scoot`, the path in the symlink target must match the actual repo location AND the directory name under `~/.claude/projects/` must match the slugified repo path Claude Code uses (replace `/` with `-`).
+
 ## Troubleshooting
 
 **Port already in use (5432, 3000, or 5173)**
