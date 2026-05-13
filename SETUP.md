@@ -79,6 +79,18 @@ docker compose up -d
 
 No rebuild needed unless `package.json` or `Dockerfile.dev` changed. If you're unsure, add `--build`.
 
+## Seeding fake users for chat testing
+
+While the staking ritual isn't built yet, populate the `users` table with a handful of fake humans so you can test chat end-to-end (rooms, mentions, multi-user WebSocket behavior):
+
+```bash
+docker compose exec app npm run seed:fakes
+```
+
+Creates 8 fake users (`alice`, `bob`, `carol`, `dave`, `eve`, `frank`, `grace`, `henry`) with `is_bot=false`, a shared password `test1234`, and emails `<name>@fakes.scoot.local`. Idempotent — re-runs skip anyone already present. Override the shared password with `-- --password=<pw>`. Refuses to run with `NODE_ENV=production`.
+
+Log in as any of them in a second browser/incognito to exercise multi-user chat.
+
 ## Claude Code memory — one-time symlink per machine
 
 Claude Code's project memory lives in this repo at `.claude/memory/` so it syncs across all dev machines via git. The Claude harness expects to find it at `~/.claude/projects/<repo-slug>/memory/`, so each new machine needs a one-time symlink. Run:
