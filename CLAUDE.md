@@ -4,6 +4,22 @@ This file tells Claude Code how to work on this project. Read it fully before ma
 
 ---
 
+## Persistent Memory — Check First on Every Fresh Machine
+
+Claude's persistent memory for this project lives in the repo at **`.claude/memory/`** (index at `.claude/memory/MEMORY.md`, full entries in sibling files). It is symlinked into `~/.claude/projects/<repo-slug>/memory/` so the harness picks it up automatically.
+
+**If you don't already see MEMORY.md loaded at session start**, the symlink isn't set up on this machine yet. Fix before doing anything else:
+
+```bash
+npm run setup:memory
+```
+
+Then read `.claude/memory/MEMORY.md` directly to pick up project context. Without the symlink, any new memories you write will land in `~/.claude/...` outside the repo and won't sync to other machines via git — which silently breaks the cross-machine workflow Brandon depends on.
+
+If you're unsure whether the symlink exists, run `npm run setup:memory` — it's idempotent and will report "already linked" if it's already wired up.
+
+---
+
 ## What This Project Is
 
 Scoot is a social platform with three features:

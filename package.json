@@ -13,6 +13,7 @@
     "bot:edit": "tsx server/scripts/bot-edit.ts",
     "bot:invite": "tsx server/scripts/bot-invite.ts",
     "session:save": "node scripts/save-session.cjs",
+    "setup:memory": "bash scripts/setup-claude-memory.sh",
     "test": "node --import tsx --test 'server/**/*.test.ts'"
   },
   "dependencies": {
