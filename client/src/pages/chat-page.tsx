@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { chatApi, type Room, type Message } from "../api/chat.js";
+import { chatApi, roomTitle, type Room, type Message, type Peer } from "../api/chat.js";
 import { createRoomSchema, sendMessageSchema, type CreateRoomInput, type SendMessageInput } from "@shared/schema.js";
 import { useChatWebSocket, upsertMessage, patchRoomLastMessage, type TypingUser } from "../hooks/use-websocket.js";
 import { useAuth } from "../hooks/use-auth.js";
@@ -10,7 +10,7 @@ import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
 import { Avatar, AvatarFallback } from "../components/ui/avatar.js";
-import { Bot, ChevronLeft, Plus, Send } from "lucide-react";
+import { Bot, ChevronLeft, Plus, Send, X } from "lucide-react";
 
 function renderContent(content: string) {
   const parts: (string | { mention: string })[] = [];
@@ -204,6 +204,8 @@ function RoomRow({
   active: boolean;
   onClick: () => void;
 }) {
+  const title = roomTitle(room);
+  const prefix = room.isDm ? "" : "# ";
   return (
     <button
       onClick={onClick}
@@ -211,7 +213,7 @@ function RoomRow({
         active ? "bg-zinc-900" : ""
       }`}
     >
-      <span className="text-sm font-medium text-white"># {room.name}</span>
+      <span className="text-sm font-medium text-white">{prefix}{title}</span>
       {room.lastMessage ? (
         <span className="text-xs text-white/40 truncate">{room.lastMessage.content}</span>
       ) : (
@@ -221,8 +223,78 @@ function RoomRow({
   );
 }
 
+function DmPicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (peer: Peer) => void;
+  onClose: () => void;
+}) {
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ["chat", "users"],
+    queryFn: chatApi.getUsers,
+  });
+
+  return (
+    <div className="border-t border-border bg-zinc-950">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/40">
+          Start a DM
+        </span>
+        <button onClick={onClose} className="text-white/40 hover:text-white" aria-label="Close">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <ScrollArea className="max-h-56">
+        {isLoading && (
+          <p className="text-xs text-white/30 px-3 py-3">Loading…</p>
+        )}
+        {!isLoading && users.length === 0 && (
+          <p className="text-xs text-white/30 px-3 py-3">No other users yet.</p>
+        )}
+        {users.map((u) => {
+          const name = u.displayName ?? u.username;
+          return (
+            <button
+              key={u.id}
+              onClick={() => onPick(u)}
+              className="w-full text-left px-3 py-2 flex items-center gap-2 hover:bg-zinc-900 transition-colors"
+            >
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarFallback className="text-[10px]">
+                  {name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm text-white">{name}</span>
+              {u.displayName && (
+                <span className="text-xs text-white/40">@{u.username}</span>
+              )}
+            </button>
+          );
+        })}
+      </ScrollArea>
+    </div>
+  );
+}
+
+function SectionHeader({
+  label,
+  action,
+}: {
+  label: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 border-b border-border/40">
+      <p className="text-[11px] font-semibold text-white/40 uppercase tracking-widest">{label}</p>
+      {action}
+    </div>
+  );
+}
+
 export default function ChatPage() {
   const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data: rooms = [] } = useQuery({
@@ -230,24 +302,73 @@ export default function ChatPage() {
     queryFn: chatApi.getRooms,
   });
 
+  const dms = rooms.filter((r) => r.isDm);
+  const named = rooms.filter((r) => !r.isDm);
   const activeRoom = rooms.find((r) => r.id === activeRoomId);
+
+  const dmMutation = useMutation({
+    mutationFn: (peerId: number) => chatApi.getOrCreateDm(peerId),
+    onSuccess: (room) => {
+      qc.setQueryData<Room[]>(["chat", "rooms"], (prev) => {
+        if (!prev) return [room];
+        if (prev.some((r) => r.id === room.id)) return prev;
+        return [room, ...prev];
+      });
+      setPickerOpen(false);
+      setActiveRoomId(room.id);
+    },
+  });
+
+  const headerTitle = activeRoom
+    ? activeRoom.isDm
+      ? roomTitle(activeRoom)
+      : `# ${roomTitle(activeRoom)}`
+    : "";
 
   return (
     <div className={`flex ${FULL_H} overflow-hidden`}>
-      {/* Sidebar / Room list */}
+      {/* Sidebar */}
       <aside
         className={`${
           activeRoomId !== null ? "hidden md:flex" : "flex"
         } w-full md:w-72 md:shrink-0 flex-col border-r border-border bg-black`}
       >
-        <div className="px-4 py-3 border-b border-border">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-widest">Rooms</p>
-        </div>
         <ScrollArea className="flex-1">
-          {rooms.length === 0 && (
-            <p className="text-sm text-white/30 text-center py-8">No rooms yet</p>
+          <SectionHeader
+            label="Direct messages"
+            action={
+              <button
+                onClick={() => setPickerOpen((v) => !v)}
+                className="text-white/50 hover:text-white transition-colors"
+                aria-label="New DM"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            }
+          />
+          {pickerOpen && (
+            <DmPicker
+              onPick={(peer) => dmMutation.mutate(peer.id)}
+              onClose={() => setPickerOpen(false)}
+            />
           )}
-          {rooms.map((room) => (
+          {dms.length === 0 && !pickerOpen && (
+            <p className="text-xs text-white/25 italic px-4 py-3">No DMs yet</p>
+          )}
+          {dms.map((room) => (
+            <RoomRow
+              key={room.id}
+              room={room}
+              active={room.id === activeRoomId}
+              onClick={() => setActiveRoomId(room.id)}
+            />
+          ))}
+
+          <SectionHeader label="Rooms" />
+          {named.length === 0 && (
+            <p className="text-xs text-white/25 italic px-4 py-3">No rooms yet</p>
+          )}
+          {named.map((room) => (
             <RoomRow
               key={room.id}
               room={room}
@@ -274,7 +395,6 @@ export default function ChatPage() {
       >
         {activeRoom ? (
           <>
-            {/* Room header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <button
                 onClick={() => setActiveRoomId(null)}
@@ -283,14 +403,14 @@ export default function ChatPage() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <p className="font-semibold text-sm"># {activeRoom.name}</p>
+              <p className="font-semibold text-sm">{headerTitle}</p>
             </div>
             <MessageList roomId={activeRoom.id} />
             <MessageInput roomId={activeRoom.id} />
           </>
         ) : (
           <div className="flex flex-1 items-center justify-center text-white/25 text-sm">
-            Select a room
+            Select a conversation
           </div>
         )}
       </div>

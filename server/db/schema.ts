@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, primaryKey } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -20,10 +20,23 @@ export const bots = pgTable("bots", {
 
 export const chatRooms = pgTable("chat_rooms", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
+  name: text("name"),
+  isDm: boolean("is_dm").notNull().default(false),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const dmPairs = pgTable(
+  "dm_pairs",
+  {
+    userLo: integer("user_lo").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    userHi: integer("user_hi").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    roomId: integer("room_id").references(() => chatRooms.id, { onDelete: "cascade" }).notNull().unique(),
+  },
+  (t) => ({
+    pairPk: primaryKey({ columns: [t.userLo, t.userHi] }),
+  })
+);
 
 export const roomMembers = pgTable("room_members", {
   roomId: integer("room_id").references(() => chatRooms.id).notNull(),

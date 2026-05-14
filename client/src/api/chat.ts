@@ -1,11 +1,26 @@
 import type { CreateRoomInput, SendMessageInput } from "@shared/schema.js";
 
+export interface Peer {
+  id: number;
+  username: string;
+  displayName: string | null;
+}
+
 export interface Room {
   id: number;
-  name: string;
+  name: string | null;
+  isDm: boolean;
   createdBy: number;
   createdAt: string;
   lastMessage: { content: string; createdAt: string } | null;
+  peer: Peer | null;
+}
+
+export function roomTitle(room: Room): string {
+  if (room.isDm && room.peer) {
+    return room.peer.displayName ?? room.peer.username;
+  }
+  return room.name ?? "(untitled)";
 }
 
 export interface Message {
@@ -41,4 +56,9 @@ export const chatApi = {
 
   sendMessage: (roomId: number, data: SendMessageInput) =>
     apiFetch<Message>(`/chat/rooms/${roomId}/messages`, { method: "POST", body: JSON.stringify(data) }),
+
+  getUsers: () => apiFetch<Peer[]>("/chat/users"),
+
+  getOrCreateDm: (userId: number) =>
+    apiFetch<Room>(`/chat/dms/${userId}`, { method: "POST" }),
 };
