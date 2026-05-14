@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { chatApi, type Room, type Message } from "../api/chat.js";
 import { createRoomSchema, sendMessageSchema, type CreateRoomInput, type SendMessageInput } from "@shared/schema.js";
-import { useChatWebSocket, type TypingUser } from "../hooks/use-websocket.js";
+import { useChatWebSocket, upsertMessage, patchRoomLastMessage, type TypingUser } from "../hooks/use-websocket.js";
 import { useAuth } from "../hooks/use-auth.js";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
@@ -138,7 +138,10 @@ function MessageInput({ roomId }: { roomId: number }) {
     mutationFn: (data: SendMessageInput) => chatApi.sendMessage(roomId, data),
     onSuccess: (msg) => {
       qc.setQueryData<Message[]>(["chat", "messages", roomId], (prev) =>
-        prev ? [...prev, msg] : [msg]
+        upsertMessage(prev, msg)
+      );
+      qc.setQueryData<Room[]>(["chat", "rooms"], (prev) =>
+        patchRoomLastMessage(prev, roomId, { content: msg.content, createdAt: msg.createdAt })
       );
       reset();
     },

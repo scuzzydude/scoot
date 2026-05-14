@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Room } from "../api/chat.js";
 
 interface ChatWsMessagePayload {
   id: number;
@@ -11,6 +12,20 @@ interface ChatWsMessagePayload {
   content: string;
   mediaUrl: string | null;
   createdAt: string;
+}
+
+export function upsertMessage<T extends { id: number }>(prev: T[] | undefined, msg: T): T[] {
+  if (!prev) return [msg];
+  return prev.some((m) => m.id === msg.id) ? prev : [...prev, msg];
+}
+
+export function patchRoomLastMessage(
+  prev: Room[] | undefined,
+  roomId: number,
+  last: { content: string; createdAt: string }
+): Room[] | undefined {
+  if (!prev) return prev;
+  return prev.map((r) => (r.id === roomId ? { ...r, lastMessage: last } : r));
 }
 
 interface WsMessageEnvelope {
@@ -74,20 +89,41 @@ export function useChatWebSocket(roomId: number | null) {
     [removeTyping]
   );
 
+  const detach = (sock: WebSocket | null) => {
+    if (!sock) return;
+    sock.onmessage = null;
+    sock.onclose = null;
+    sock.onerror = null;
+  };
+
   const connect = useCallback(() => {
     if (!roomId) return;
+
+    detach(ws.current);
+    if (ws.current && ws.current.readyState !== WebSocket.CLOSED) {
+      ws.current.close();
+    }
+
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const url = `${proto}://${window.location.host}/ws/chat/${roomId}`;
-    ws.current = new WebSocket(url);
+    const sock = new WebSocket(url);
+    ws.current = sock;
 
-    ws.current.onmessage = (event) => {
+    sock.onmessage = (event) => {
       const envelope = JSON.parse(event.data) as WsEnvelope;
       if (envelope.roomId !== roomId) return;
 
       if (envelope.type === "message") {
         removeTyping(envelope.message.userId);
-        qc.setQueryData<ChatWsMessagePayload[]>(["chat", "messages", roomId], (prev) =>
-          prev ? [...prev, envelope.message] : [envelope.message]
+        qc.setQueryData<ChatWsMessagePayload[]>(
+          ["chat", "messages", roomId],
+          (prev) => upsertMessage(prev, envelope.message)
+        );
+        qc.setQueryData<Room[]>(["chat", "rooms"], (prev) =>
+          patchRoomLastMessage(prev, roomId, {
+            content: envelope.message.content,
+            createdAt: envelope.message.createdAt,
+          })
         );
       } else if (envelope.type === "typing") {
         addTyping({
@@ -100,23 +136,29 @@ export function useChatWebSocket(roomId: number | null) {
       }
     };
 
-    ws.current.onclose = () => {
+    sock.onclose = () => {
+      if (ws.current !== sock) return;
       reconnectTimer.current = setTimeout(connect, 2000);
     };
 
-    ws.current.onerror = () => {
-      ws.current?.close();
+    sock.onerror = () => {
+      sock.close();
     };
   }, [roomId, qc, addTyping, removeTyping]);
 
   useEffect(() => {
     connect();
     return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (reconnectTimer.current) {
+        clearTimeout(reconnectTimer.current);
+        reconnectTimer.current = null;
+      }
       for (const t of typingTimers.current.values()) clearTimeout(t);
       typingTimers.current.clear();
       setTypingUsers([]);
+      detach(ws.current);
       ws.current?.close();
+      ws.current = null;
     };
   }, [connect]);
 
