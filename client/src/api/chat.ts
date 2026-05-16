@@ -45,6 +45,14 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
+export interface Member {
+  id: number;
+  username: string;
+  displayName: string | null;
+  isBot: boolean;
+  joinedAt?: string;
+}
+
 export const chatApi = {
   getRooms: () => apiFetch<Room[]>("/chat/rooms"),
 
@@ -61,4 +69,12 @@ export const chatApi = {
 
   getOrCreateDm: (userId: number) =>
     apiFetch<Room>(`/chat/dms/${userId}`, { method: "POST" }),
+
+  getMembers: (roomId: number) => apiFetch<Member[]>(`/chat/rooms/${roomId}/members`),
+
+  addMember: (roomId: number, userId: number) =>
+    apiFetch<Member>(`/chat/rooms/${roomId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId }),
+    }),
 };

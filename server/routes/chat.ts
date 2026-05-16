@@ -285,4 +285,97 @@ router.post("/rooms/:id/messages", async (req, res) => {
   }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "handleMentions threw"));
 });
 
+async function requireRoomMember(
+  roomId: number,
+  userId: number
+): Promise<
+  | { ok: true; room: { id: number; isDm: boolean } }
+  | { status: number; error: string }
+> {
+  const room = await db.query.chatRooms.findFirst({ where: eq(chatRooms.id, roomId) });
+  if (!room) return { status: 404, error: "Room not found" };
+  const membership = await db.query.roomMembers.findFirst({
+    where: and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)),
+  });
+  if (!membership) return { status: 403, error: "Not a member of this room" };
+  return { ok: true, room: { id: room.id, isDm: room.isDm } };
+}
+
+router.get("/rooms/:id/members", async (req, res) => {
+  const me = req.user as { id: number };
+  const roomId = parseInt(req.params.id);
+  if (isNaN(roomId)) {
+    res.status(400).json({ ok: false, error: "Invalid room id" });
+    return;
+  }
+  const check = await requireRoomMember(roomId, me.id);
+  if (!("ok" in check)) {
+    res.status(check.status).json({ ok: false, error: check.error });
+    return;
+  }
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      isBot: users.isBot,
+      joinedAt: roomMembers.joinedAt,
+    })
+    .from(roomMembers)
+    .innerJoin(users, eq(users.id, roomMembers.userId))
+    .where(eq(roomMembers.roomId, roomId))
+    .orderBy(asc(roomMembers.joinedAt));
+  res.json({ ok: true, data: rows });
+});
+
+router.post("/rooms/:id/members", async (req, res) => {
+  const me = req.user as { id: number };
+  const roomId = parseInt(req.params.id);
+  const targetId = Number((req.body as { userId?: unknown })?.userId);
+  if (isNaN(roomId) || !Number.isInteger(targetId) || targetId <= 0) {
+    res.status(400).json({ ok: false, error: "Invalid room or user id" });
+    return;
+  }
+
+  const check = await requireRoomMember(roomId, me.id);
+  if (!("ok" in check)) {
+    res.status(check.status).json({ ok: false, error: check.error });
+    return;
+  }
+  if (check.room.isDm) {
+    res.status(400).json({ ok: false, error: "Cannot add members to a DM" });
+    return;
+  }
+
+  const target = await db.query.users.findFirst({ where: eq(users.id, targetId) });
+  if (!target) {
+    res.status(404).json({ ok: false, error: "User not found" });
+    return;
+  }
+  if (target.isBot) {
+    res.status(400).json({
+      ok: false,
+      error: "Bots are added via the bot:invite CLI, not the chat UI",
+    });
+    return;
+  }
+
+  const existing = await db.query.roomMembers.findFirst({
+    where: and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, targetId)),
+  });
+  if (!existing) {
+    await db.insert(roomMembers).values({ roomId, userId: targetId });
+  }
+
+  res.json({
+    ok: true,
+    data: {
+      id: target.id,
+      username: target.username,
+      displayName: target.displayName,
+      isBot: target.isBot,
+    },
+  });
+});
+
 export default router;

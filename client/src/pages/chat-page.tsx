@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { chatApi, roomTitle, type Room, type Message, type Peer } from "../api/chat.js";
+import { chatApi, roomTitle, type Room, type Message, type Peer, type Member } from "../api/chat.js";
 import { createRoomSchema, sendMessageSchema, type CreateRoomInput, type SendMessageInput } from "@shared/schema.js";
 import { useChatWebSocket, upsertMessage, patchRoomLastMessage, type TypingUser } from "../hooks/use-websocket.js";
 import { useAuth } from "../hooks/use-auth.js";
@@ -10,7 +10,7 @@ import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
 import { Avatar, AvatarFallback } from "../components/ui/avatar.js";
-import { Bot, ChevronLeft, Plus, Send, X } from "lucide-react";
+import { Bot, ChevronLeft, Plus, Send, Users, X } from "lucide-react";
 
 function renderContent(content: string) {
   const parts: (string | { mention: string })[] = [];
@@ -277,6 +277,112 @@ function DmPicker({
   );
 }
 
+function MembersPanel({
+  roomId,
+  onClose,
+}: {
+  roomId: number;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const { data: members = [], isLoading: membersLoading } = useQuery({
+    queryKey: ["chat", "members", roomId],
+    queryFn: () => chatApi.getMembers(roomId),
+  });
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ["chat", "users"],
+    queryFn: chatApi.getUsers,
+  });
+
+  const memberIds = new Set(members.map((m) => m.id));
+  const addable = users.filter((u) => !memberIds.has(u.id));
+
+  const addMutation = useMutation({
+    mutationFn: (userId: number) => chatApi.addMember(roomId, userId),
+    onSuccess: (newMember) => {
+      qc.setQueryData<Member[]>(["chat", "members", roomId], (prev) => {
+        if (!prev) return [newMember];
+        if (prev.some((m) => m.id === newMember.id)) return prev;
+        return [...prev, newMember];
+      });
+    },
+  });
+
+  return (
+    <div className="border-b border-border bg-zinc-950">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border/40">
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-white/40">
+          Members ({members.length})
+        </span>
+        <button onClick={onClose} className="text-white/40 hover:text-white" aria-label="Close">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="max-h-72 overflow-auto">
+        {membersLoading && <p className="text-xs text-white/30 px-4 py-3">Loading…</p>}
+        {members.map((m) => {
+          const name = m.displayName ?? m.username;
+          return (
+            <div
+              key={m.id}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-white"
+            >
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarFallback className={`text-[10px] ${m.isBot ? "bg-sky-900 text-sky-200" : ""}`}>
+                  {m.isBot ? <Bot className="h-3 w-3" /> : name.slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span>{name}</span>
+              {m.isBot && (
+                <span className="text-[9px] uppercase tracking-wider text-sky-400/80 bg-sky-950/60 px-1 rounded">
+                  bot
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {!membersLoading && addable.length > 0 && (
+          <div className="border-t border-border/40 mt-1 pt-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 px-4 py-2">
+              Add member
+            </p>
+            {usersLoading && <p className="text-xs text-white/30 px-4 py-2">Loading…</p>}
+            {addable.map((u) => {
+              const name = u.displayName ?? u.username;
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => addMutation.mutate(u.id)}
+                  disabled={addMutation.isPending}
+                  className="w-full text-left px-4 py-2 flex items-center gap-2 hover:bg-zinc-900 transition-colors disabled:opacity-50"
+                >
+                  <Avatar className="h-6 w-6 shrink-0">
+                    <AvatarFallback className="text-[10px]">
+                      {name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-white">{name}</span>
+                  <Plus className="h-3 w-3 text-white/40 ml-auto" />
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {!membersLoading && !usersLoading && addable.length === 0 && (
+          <p className="text-xs text-white/30 italic px-4 py-3">
+            All users are in this room.
+          </p>
+        )}
+        {addMutation.isError && (
+          <p className="text-xs text-red-400 px-4 py-2">
+            {(addMutation.error as Error)?.message ?? "Failed to add member"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SectionHeader({
   label,
   action,
@@ -295,6 +401,7 @@ function SectionHeader({
 export default function ChatPage() {
   const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [membersOpen, setMembersOpen] = useState(false);
   const qc = useQueryClient();
 
   const { data: rooms = [] } = useQuery({
@@ -397,14 +504,34 @@ export default function ChatPage() {
           <>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
               <button
-                onClick={() => setActiveRoomId(null)}
+                onClick={() => {
+                  setActiveRoomId(null);
+                  setMembersOpen(false);
+                }}
                 className="md:hidden text-white/60 hover:text-white transition-colors"
                 aria-label="Back"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <p className="font-semibold text-sm">{headerTitle}</p>
+              <p className="font-semibold text-sm flex-1">{headerTitle}</p>
+              {!activeRoom.isDm && (
+                <button
+                  onClick={() => setMembersOpen((v) => !v)}
+                  className={`text-white/50 hover:text-white transition-colors ${
+                    membersOpen ? "text-white" : ""
+                  }`}
+                  aria-label="Members"
+                >
+                  <Users className="h-4 w-4" />
+                </button>
+              )}
             </div>
+            {membersOpen && !activeRoom.isDm && (
+              <MembersPanel
+                roomId={activeRoom.id}
+                onClose={() => setMembersOpen(false)}
+              />
+            )}
             <MessageList roomId={activeRoom.id} />
             <MessageInput roomId={activeRoom.id} />
           </>
