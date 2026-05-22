@@ -29,6 +29,42 @@ export const botMessageSchema = z.object({
   content: z.string().min(1).max(8000),
 });
 
+export const navItemSchema = z.object({
+  label: z.string(),
+  href: z.string(),
+  external: z.boolean().optional(),
+});
+
+export const blockMarkdownSchema = z.object({
+  blockType: z.literal("markdown"),
+  content: z.object({ text: z.string() }),
+});
+
+export const blockImageSchema = z.object({
+  blockType: z.literal("image"),
+  content: z.object({ url: z.string(), alt: z.string(), caption: z.string().optional() }),
+});
+
+export const blockLinkListSchema = z.object({
+  blockType: z.literal("link_list"),
+  content: z.object({ links: z.array(z.object({ label: z.string(), href: z.string(), external: z.boolean().optional() })) }),
+});
+
+export const blockComponentSchema = z.object({
+  blockType: z.literal("component"),
+  content: z.object({ component: z.string(), props: z.record(z.unknown()).optional() }),
+});
+
+export const pageBlockSchema = z.discriminatedUnion("blockType", [
+  blockMarkdownSchema,
+  blockImageSchema,
+  blockLinkListSchema,
+  blockComponentSchema,
+]);
+
+export type NavItem = z.infer<typeof navItemSchema>;
+export type PageBlock = z.infer<typeof pageBlockSchema>;
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;

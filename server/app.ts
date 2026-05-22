@@ -13,6 +13,7 @@ import type { User } from "./db/schema.js";
 import authRouter from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
 import scootRouter from "./routes/scoot.js";
+import scootsRouter from "./routes/scoots.js";
 import botRouter from "./routes/bot.js";
 import mediaRouter from "./routes/media.js";
 
@@ -58,6 +59,7 @@ passport.deserializeUser(async (id: number, done) => {
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/scoot", scootRouter);
+app.use("/api/v1/scoots", scootsRouter);
 app.use("/api/v1/bot", botRouter);
 app.use("/api/v1/media", mediaRouter);
 

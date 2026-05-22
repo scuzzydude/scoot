@@ -1,0 +1,96 @@
+import { Router } from "express";
+import { db } from "../db/index.js";
+import { scoots, scootMembers, scootPages, scootPageBlocks } from "../db/schema.js";
+import { eq, and, asc } from "drizzle-orm";
+import { requireAuth } from "../middleware/auth.js";
+
+const router = Router();
+router.use(requireAuth);
+
+router.get("/", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const rows = await db
+    .select({
+      id: scoots.id,
+      slug: scoots.slug,
+      name: scoots.name,
+      description: scoots.description,
+      logoUrl: scoots.logoUrl,
+      labelMap: scoots.labelMap,
+      featureFlags: scoots.featureFlags,
+      navItems: scoots.navItems,
+      role: scootMembers.role,
+    })
+    .from(scootMembers)
+    .innerJoin(scoots, eq(scootMembers.scootId, scoots.id))
+    .where(eq(scootMembers.userId, userId))
+    .orderBy(asc(scoots.name));
+  res.json({ ok: true, data: rows });
+});
+
+router.get("/:id", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const scoot = await db.query.scoots.findFirst({ where: eq(scoots.id, scootId) });
+  if (!scoot) return res.status(404).json({ ok: false, error: "not found" });
+
+  res.json({ ok: true, data: { ...scoot, role: member.role } });
+});
+
+router.get("/:id/pages", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const pages = await db
+    .select({
+      id: scootPages.id,
+      slug: scootPages.slug,
+      title: scootPages.title,
+      navLabel: scootPages.navLabel,
+      navOrder: scootPages.navOrder,
+    })
+    .from(scootPages)
+    .where(and(eq(scootPages.scootId, scootId), eq(scootPages.published, true)))
+    .orderBy(asc(scootPages.navOrder), asc(scootPages.title));
+
+  res.json({ ok: true, data: pages });
+});
+
+router.get("/:id/pages/:slug", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const page = await db.query.scootPages.findFirst({
+    where: and(eq(scootPages.scootId, scootId), eq(scootPages.slug, req.params.slug), eq(scootPages.published, true)),
+  });
+  if (!page) return res.status(404).json({ ok: false, error: "page not found" });
+
+  const blocks = await db
+    .select()
+    .from(scootPageBlocks)
+    .where(eq(scootPageBlocks.pageId, page.id))
+    .orderBy(asc(scootPageBlocks.blockOrder));
+
+  res.json({ ok: true, data: { ...page, blocks } });
+});
+
+export default router;

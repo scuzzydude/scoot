@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Wallet, Bot } from "lucide-react";
+import { MessageSquare, Wallet, Bot, FileText } from "lucide-react";
+import { useScoot } from "../../hooks/use-scoot.js";
 
-const navItems = [
+const FIXED_NAV = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/bot", label: "Bot", icon: Bot },
@@ -9,10 +10,17 @@ const navItems = [
 
 export function BottomNav() {
   const [location] = useLocation();
+  const { activeScoot } = useScoot();
+
+  const dynamicItems = (activeScoot?.navItems ?? [])
+    .filter((item) => !item.external)
+    .map((item) => ({ href: item.href, label: item.label, icon: FileText }));
+
+  const allItems = [...FIXED_NAV, ...dynamicItems];
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 h-16 w-full max-w-[640px] bg-black border-t border-border flex">
-      {navItems.map(({ href, label, icon: Icon }) => {
+      {allItems.map(({ href, label, icon: Icon }) => {
         const active = location.startsWith(href);
         return (
           <Link
