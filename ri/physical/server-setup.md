@@ -133,3 +133,48 @@ Set endpoint URL for non-AWS providers (R2, B2, Wasabi, MinIO).
 
 When using S3, `$DATA_DIR/media` is unused for RC uploads — only needed for
 scootchain media and any Scoot-native file serving.
+
+---
+
+## WSL2 Dev Machine — Remote Access Setup
+
+Makes Scoot reachable from any machine on your subnet, and allows SSH into WSL.
+Works on Windows 11 + WSL 2.0+ with mirrored networking mode.
+
+### One-time setup (3 steps)
+
+**Step 1 — Install SSH server in WSL** (run in WSL terminal):
+```bash
+sudo apt-get install -y openssh-server
+sudo bash ~/wsl-ssh-setup.sh
+```
+
+**Step 2 — Run the Windows firewall script** (run as Administrator on Windows):
+The script `wsl-network-setup.ps1` is in `ri/physical/` and on your OneDrive Desktop.
+Right-click it → "Run with PowerShell" (or open elevated PowerShell and run it).
+
+Opens inbound rules for: SSH (2222), Scoot API (3000), RC (3100), Vite (5173), Postgres (5432).
+
+**Step 3 — Restart WSL** (in Windows PowerShell/cmd — NOT in WSL):
+```powershell
+wsl --shutdown
+```
+Then reopen your WSL terminal. Docker containers auto-restart (`restart: unless-stopped`).
+
+### After restart — your services
+
+Machine IP: **192.168.1.118** (Wi-Fi — may change if DHCP reassigns; check with `ip addr`)
+
+| Service | URL |
+|---|---|
+| Scoot app | http://192.168.1.118:5173 |
+| Rocket.Chat | http://192.168.1.118:3100 |
+| Scoot API | http://192.168.1.118:3000 |
+| SSH into WSL | `ssh scuzzydude@192.168.1.118 -p 2222` |
+
+### Persistence
+
+- SSH service is enabled via systemd — survives WSL restarts automatically
+- Docker containers have `restart: unless-stopped` — recover after WSL restart
+- `.wslconfig` is permanent — mirrored mode persists across reboots
+- If your IP changes (DHCP), check it with `ip addr show eth0 | grep "inet "`
