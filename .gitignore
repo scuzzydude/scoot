@@ -2,6 +2,9 @@
 node_modules/
 .npm/
 
+# Local data volumes (dev)
+ri/physical/.data/
+
 # Build output
 dist/
 build/
