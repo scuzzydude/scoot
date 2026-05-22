@@ -291,13 +291,27 @@ Dev server runs on `http://localhost:3000`. Vite proxies `/api` and `/ws` to Exp
 
 ## Build Phases — Current Status
 
-Work through phases in order. Do not start Phase 2 until Phase 1 is complete and tested.
+Work through phases in order. Do not start the next phase until the current one is complete and tested.
 
-- **Phase 1** — Web foundation (scaffold, auth, chat, stub endpoints) ← START HERE
-- **Phase 2** — C core integration (scootd daemon, C bridge, wallet)
-- **Phase 3** — Blockchain (block structure, CPU threads, CUDA)
-- **Phase 4** — Bot + protected video
-- **Phase 5** — Mobile (React Native / Expo)
+- **Phase 1** ✅ — Web foundation (auth, Scoot pages, stub endpoints)
+- **Phase 2** ← CURRENT — Rocket.Chat integration
+  - RC + MongoDB running in Docker
+  - BigMo webhook endpoint (`/api/v1/rc/webhook`) — @BigMo in RC → Claude reply
+  - Chat page embeds RC iframe (interim; SSO + custom UI in Phase 2b)
+  - Outgoing webhook configured in RC Admin → Integrations
+- **Phase 3** — SMS bridge via Twilio
+  - Twilio number purchased, connected to RC
+  - Brothers can text in and participate without installing anything
+- **Phase 4** — C core + wallet
+  - scootd daemon, C bridge, Scoot currency send/receive
+  - Blockchain: block structure, CPU threads, CUDA/HIP
+- **Phase 5** — Staking ritual
+  - QR + one-time code + selfie pledge ceremony
+  - Trust graph, scootage membership derived from pledge graph
+- **Phase 6** — Native mobile (React Native / Expo)
+  - Scoot app on iOS + Android
+  - Chat via RC Realtime API (replaces iframe)
+  - Push notifications via RC
 
 ---
 

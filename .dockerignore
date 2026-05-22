@@ -2,6 +2,7 @@ node_modules
 dist
 build
 ri/src/client/dist
+ri/physical/.data
 .env
 .env.local
 *.log

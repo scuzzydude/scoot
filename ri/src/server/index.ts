@@ -1,7 +1,6 @@
 import "dotenv/config";
 import http from "http";
-import { app, sessionMiddleware } from "./app.js";
-import { setupChatWS } from "./ws/chat-ws.js";
+import { app } from "./app.js";
 import { initProvider } from "./llm/provider.js";
 import { seedDefaultUser } from "./db/seed-default-user.js";
 import { seedBots } from "./db/seed-bots.js";
@@ -9,7 +8,6 @@ import { seedBots } from "./db/seed-bots.js";
 const PORT = parseInt(process.env.PORT ?? "3000");
 
 const server = http.createServer(app);
-setupChatWS(server, sessionMiddleware);
 
 try {
   await seedDefaultUser();

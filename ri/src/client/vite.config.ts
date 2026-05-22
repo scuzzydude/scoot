@@ -40,4 +40,8 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "../../dist/public"),
     emptyOutDir: true,
   },
+  define: {
+    // Expose VITE_RC_URL from .env to the client bundle
+    "import.meta.env.VITE_RC_URL": JSON.stringify(process.env.VITE_RC_URL ?? "http://localhost:3100"),
+  },
 });
