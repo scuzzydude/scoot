@@ -5,7 +5,7 @@ node_modules/
 # Build output
 dist/
 build/
-client/dist/
+ri/src/client/dist/
 
 # Environment
 .env
@@ -13,10 +13,10 @@ client/dist/
 .env.production
 
 # C build artifacts
-core/bin/
-core/obj/
-core/*.o
-core/scootd
+ri/src/core/bin/
+ri/src/core/obj/
+ri/src/core/*.o
+ri/src/core/scootd
 
 # Logs
 *.log

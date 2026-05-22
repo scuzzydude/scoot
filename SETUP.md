@@ -77,7 +77,7 @@ git pull
 docker compose up -d
 ```
 
-No rebuild needed unless `package.json` or `Dockerfile.dev` changed. If you're unsure, add `--build`.
+No rebuild needed unless `package.json` or `ri/physical/Dockerfile.dev` changed. If you're unsure, add `--build`.
 
 ## Seeding fake users for chat testing
 

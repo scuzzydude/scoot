@@ -29,7 +29,7 @@ Scoot is a social platform with three features:
 
 Architecture: thin web client (React), Node/Express API layer, C core daemon (`scootd`) that owns the blockchain and database. The client does nothing but render and call the API.
 
-Read `SPEC.md` for full detail on architecture, endpoints, folder structure, and build phases.
+Read `arch/spec.md` for full detail on architecture, endpoints, folder structure, and build phases.
 
 ---
 
@@ -43,7 +43,7 @@ Worth-keeping conversations can be saved to the repo via `npm run session:save` 
 
 ## Reference Material — Read This Before Designing Scoot Features
 
-`docs/reference/asimov_v2.13.{pdf,md}` — Brandon's book defining the Scoot / Foundation / asimov system. The MD is grep-friendly text extraction (335 pages → ~12k lines). Read it when working on identity, governance, wallet, social-graph, or any feature involving Scoot semantics. Key spots:
+`ip/inventions/asimov_v2.13.{pdf,md}` — Brandon's book defining the Scoot / Foundation / asimov system. The MD is grep-friendly text extraction (335 pages → ~12k lines). Read it when working on identity, governance, wallet, social-graph, or any feature involving Scoot semantics. Key spots:
 
 - **Scoot Primer** (~MD line 737) — conceptual overview and vocabulary (pledge, scootage, trustee, scoot, asimov)
 - **Appendix D — System Technical Description** (~MD line 8571) — domains, scootchain, responsibility/value, conformance rules
@@ -132,12 +132,12 @@ Do not add color, gradients (except `from-primary to-primary/50` on auth split s
 - Use TanStack Query (`useQuery`, `useMutation`) for all server state
 - Use `wouter` for routing — not React Router
 - Form handling: `react-hook-form` + `zod` validation
-- API calls go in `/client/src/api/` — not inline in components
+- API calls go in `/ri/src/client/src/api/` — not inline in components
 - Keep components thin — logic in hooks or api layer
 
 ### Node / Express
 - TypeScript throughout
-- Routes in `/server/routes/` — one file per feature area
+- Routes in `/ri/src/server/routes/` — one file per feature area
 - All routes return JSON: `{ ok: true, data: ... }` or `{ ok: false, error: "..." }`
 - Auth middleware applied at router level, not per-endpoint
 - All Scoot/blockchain operations go through the C bridge — never implement blockchain logic in Node
@@ -161,7 +161,7 @@ Do not add color, gradients (except `from-primary to-primary/50` on auth split s
 
 ## LLM Provider Abstraction
 
-The bot feature must use a provider abstraction layer at `/server/llm/provider.ts` so the backend can be swapped by config without code changes.
+The bot feature must use a provider abstraction layer at `/ri/src/server/llm/provider.ts` so the backend can be swapped by config without code changes.
 
 **Interface:**
 ```typescript
@@ -176,7 +176,7 @@ interface LLMProvider {
 
 Active provider selected by `LLM_PROVIDER` env var (`anthropic` | `openai_compat`).
 
-The bot route `/server/routes/bot.ts` imports only the interface — never a specific provider directly.
+The bot route `/ri/src/server/routes/bot.ts` imports only the interface — never a specific provider directly.
 
 ---
 
@@ -201,7 +201,7 @@ Messages are newline-delimited JSON. Every request includes a `req_id` for corre
 {"req_id": "uuid-here", "ok": false, "error": "user not found"}
 ```
 
-The bridge file is `/server/bridge/scootd.ts`. It handles:
+The bridge file is `/ri/src/server/bridge/scootd.ts`. It handles:
 - Socket connection and reconnection
 - Sending requests with generated `req_id`
 - Correlating async responses back to callers (promise map by req_id)
@@ -213,8 +213,8 @@ The bridge file is `/server/bridge/scootd.ts`. It handles:
 
 PostgreSQL. Schema lives in two places:
 
-- `/server/db/schema.ts` — Drizzle schema for Node-managed tables (users, sessions, chat, media metadata)
-- `/core/src/db.c` — direct libpq DDL for blockchain tables (blocks, transactions, addresses)
+- `/ri/src/server/db/schema.ts` — Drizzle schema for Node-managed tables (users, sessions, chat, media metadata)
+- `/ri/src/core/src/db.c` — direct libpq DDL for blockchain tables (blocks, transactions, addresses)
 
 Run migrations: `npm run db:push` (Drizzle, Node tables only)
 C tables: created by `scootd --init-db` on first run
@@ -223,7 +223,7 @@ C tables: created by `scootd --init-db` on first run
 
 ## Video Player — Share Protection Requirements
 
-The video player (`/client/src/components/chat/VideoPlayer.tsx`) must:
+The video player (`/ri/src/client/src/components/chat/VideoPlayer.tsx`) must:
 - Use HLS.js for streaming — no direct MP4 src
 - Disable right-click context menu on the video element
 - Use custom controls only — no native browser controls (`controls` attribute removed)
@@ -239,8 +239,8 @@ Never use `<video controls src="...">` directly.
 
 Live chat uses WebSocket at `ws://host/ws/chat/:roomId`.
 
-- Server: `/server/ws/chat-ws.ts` — manages room subscriptions, broadcasts
-- Client: `/client/src/hooks/use-websocket.ts` — connects, auto-reconnects, feeds TanStack Query cache
+- Server: `/ri/src/server/ws/chat-ws.ts` — manages room subscriptions, broadcasts
+- Client: `/ri/src/client/src/hooks/use-websocket.ts` — connects, auto-reconnects, feeds TanStack Query cache
 
 Message format:
 ```json
@@ -276,10 +276,10 @@ docker compose up -d postgres
 npm run db:push
 
 # Build C core
-cd core && make && cd ..
+cd ri/src/core && make && cd ../../..
 
 # Start C daemon
-./core/bin/scootd --socket /tmp/scootd.sock &
+./ri/src/core/bin/scootd --socket /tmp/scootd.sock &
 
 # Start dev server (API + client via Vite proxy)
 npm run dev
@@ -304,9 +304,9 @@ Work through phases in order. Do not start Phase 2 until Phase 1 is complete and
 ## Things Claude Code Should Never Do
 
 - Do not copy any code from scoot0430 — style inspiration only, clean codebase
-- Do not call LLM providers directly from routes — always go through `/server/llm/provider.ts`
+- Do not call LLM providers directly from routes — always go through `/ri/src/server/llm/provider.ts`
 - Do not use React Router — use wouter
-- Do not use `fetch` directly in components — use the `/client/src/api/` wrappers
+- Do not use `fetch` directly in components — use the `/ri/src/client/src/api/` wrappers
 - Do not add new UI component libraries — use shadcn/ui only
 - Do not change the dark/black color scheme
 - Do not add `console.log` in production code paths
@@ -319,23 +319,30 @@ Work through phases in order. Do not start Phase 2 until Phase 1 is complete and
 
 ## File Locations Quick Reference
 
+**RI structure:** source lives in `ri/src/`, behavioral model in `ri/model/`, tests in `ri/src/server/services/`, IP in `ip/inventions/`, spec in `arch/`.
+
 | What | Where |
 |---|---|
-| React pages | `client/src/pages/` |
-| React components | `client/src/components/` |
-| API call wrappers | `client/src/api/` |
-| Custom hooks | `client/src/hooks/` |
-| Tailwind config | `client/tailwind.config.ts` |
-| LLM provider abstraction | `server/llm/provider.ts` |
-| Anthropic provider impl | `server/llm/anthropic.ts` |
-| OpenAI-compat provider impl | `server/llm/openai-compat.ts` |
-| Express routes | `server/routes/` |
-| C bridge | `server/bridge/scootd.ts` |
-| Drizzle schema | `server/db/schema.ts` |
-| WebSocket server | `server/ws/chat-ws.ts` |
-| C source | `core/src/` |
-| C headers | `core/include/` |
-| CUDA kernels | `core/cuda/` |
-| Logo assets | `client/public/assets/` |
+| React pages | `ri/src/client/src/pages/` |
+| React components | `ri/src/client/src/components/` |
+| API call wrappers | `ri/src/client/src/api/` |
+| Custom hooks | `ri/src/client/src/hooks/` |
+| Tailwind config | `ri/src/client/tailwind.config.ts` |
+| LLM provider abstraction | `ri/src/server/llm/provider.ts` |
+| Anthropic provider impl | `ri/src/server/llm/anthropic.ts` |
+| OpenAI-compat provider impl | `ri/src/server/llm/openai-compat.ts` |
+| Express routes | `ri/src/server/routes/` |
+| C bridge | `ri/src/server/bridge/scootd.ts` |
+| Drizzle schema | `ri/src/server/db/schema.ts` |
+| WebSocket server | `ri/src/server/ws/chat-ws.ts` |
+| C source | `ri/src/core/src/` |
+| C headers | `ri/src/core/include/` |
+| CUDA kernels | `ri/src/core/cuda/` |
+| Logo assets | `ri/src/client/public/assets/` |
 | Env template | `.env.example` |
-| Full spec | `SPEC.md` |
+| Architecture spec | `arch/spec.md` |
+| Behavioral model (Pass 1) | `ri/model/pass1_behavioral_model.md` |
+| IP / design claims | `ip/inventions/scoot_design_claims.md` |
+| Asimov reference book | `ip/inventions/asimov_v2.13.md` |
+| Deployment config | `ri/physical/` |
+| Handback to Steve | `HANDBACK_STEVE.md` |

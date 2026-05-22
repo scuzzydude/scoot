@@ -8,10 +8,11 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "paths": {
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./ri/src/shared/*"]
     }
   },
-  "include": ["server/**/*", "shared/**/*"],
+  "include": ["ri/src/server/**/*", "ri/src/shared/**/*"],
   "exclude": ["node_modules", "client", "dist"]
 }
