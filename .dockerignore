@@ -1,11 +1,11 @@
 node_modules
 dist
 build
-client/dist
+ri/src/client/dist
 .env
 .env.local
 *.log
-core/bin
-core/obj
-core/*.o
+ri/src/core/bin
+ri/src/core/obj
+ri/src/core/*.o
 .git

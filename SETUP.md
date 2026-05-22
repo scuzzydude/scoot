@@ -38,10 +38,10 @@ The `DEFAULT_*` vars exist because public registration is disabled. On first sta
 
 ```bash
 # 3. Build and start the containers
-docker compose up --build -d
+npm run docker:up:build
 
 # 4. Push the database schema (first run only)
-docker compose exec app npm run db:push
+npm run docker:exec -- npm run db:push
 ```
 
 ## Done
@@ -56,16 +56,16 @@ Open http://localhost:5173 in your browser and log in with the `DEFAULT_USERNAME
 
 ```bash
 # Start everything
-docker compose up -d
+npm run docker:up
 
 # Stop everything
-docker compose down
+npm run docker:down
 
 # View logs
-docker compose logs -f
+npm run docker:logs
 
-# Pull latest code and restart
-git pull && docker compose up -d --build
+# Pull latest code and restart (rebuilds if Dockerfile changed)
+git pull && npm run docker:up:build
 ```
 
 ## Switching machines mid-session
@@ -84,7 +84,7 @@ No rebuild needed unless `package.json` or `ri/physical/Dockerfile.dev` changed.
 While the staking ritual isn't built yet, populate the `users` table with a handful of fake humans so you can test chat end-to-end (rooms, mentions, multi-user WebSocket behavior):
 
 ```bash
-docker compose exec app npm run seed:fakes
+npm run docker:exec -- npm run seed:fakes
 ```
 
 Creates 8 fake users (`alice`, `bob`, `carol`, `dave`, `eve`, `frank`, `grace`, `henry`) with `is_bot=false`, a shared password `test1234`, and emails `<name>@fakes.scoot.local`. Idempotent — re-runs skip anyone already present. Override the shared password with `-- --password=<pw>`. Refuses to run with `NODE_ENV=production`.
