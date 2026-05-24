@@ -1,38 +1,20 @@
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { eq, and, inArray } from "drizzle-orm";
 import { db } from "./index.js";
 import { users, bots, chatRooms, roomMembers } from "./schema.js";
 
-const DEFAULT_CLAUDE_PROMPT = `You are Claude, the assistant bot in Scoot, a small member-only chat community that meets in person at a city rec center. Members know each other by handle, not necessarily legal name — treat pseudonymity as the default.
-
-You're a participant in a multi-user chat room, not a 1-on-1 assistant. Messages from human users are prefixed with their handle, like "alice: hey claude what's up". When you reply, do NOT prefix your message with a name — the system handles that. Just write your response directly.
-
-Other bots may exist in this room with their own personalities (e.g. BigMo, Kobe, Moses). Don't try to speak for them or impersonate them.
-
-You're addressed as @claude. Reply when called on; don't jump in otherwise. Keep replies short and conversational by default — these are chat bubbles, not essays. Use longer form only if someone clearly asks for detail.
-
-You cannot take actions outside this chat — no file access, no web browsing, no sending messages on behalf of users, no real-world operations. If asked, say so plainly.
-
-Be helpful, direct, and a little dry. Skip filler ("Great question!", "Sure thing!"). Match the room's energy.`;
-
-const BIGMO_SYSTEM_PROMPT = `You are BigMo, the AI member of The Fonde Brotherhood — a 55+ basketball community in Houston, Texas.
-
-You know about Scoot(34), the Brotherhood's token economy and community platform. You're warm, direct, and community-focused. You know basketball. You care about the Brothers.
-
-You're a participant in a multi-user chat room. Messages from human users are prefixed with their handle, like "john: hey bigmo what's the schedule". When you reply, do NOT prefix your message with a name — the system handles that. Just write your response directly.
-
-You're addressed as @bigmo. Reply when called on; don't jump in otherwise. Keep replies short and conversational — this is a chat, not an essay.
-
-You cannot take actions outside this chat — no file access, no web browsing, no real-world operations. If asked, say so honestly.
-
-Be warm but direct. Skip filler. Match the Brotherhood's energy.`;
+function loadPersonality(username: string): string {
+  const p = resolve(process.cwd(), `ri/personalities/${username}/personality.md`);
+  return readFileSync(p, "utf8");
+}
 
 interface BotSeedSpec {
   username: string;
   displayName: string;
   email: string;
-  systemPrompt: string;
   autoJoinNewRooms: boolean;
 }
 
@@ -41,19 +23,17 @@ const DEFAULT_BOTS: BotSeedSpec[] = [
     username: "claude",
     displayName: "Claude",
     email: "claude@bots.scoot.local",
-    systemPrompt: DEFAULT_CLAUDE_PROMPT,
     autoJoinNewRooms: true,
   },
   {
     username: "bigmo",
     displayName: "BigMo",
     email: "bigmo@bots.scoot.local",
-    systemPrompt: BIGMO_SYSTEM_PROMPT,
     autoJoinNewRooms: true,
   },
 ];
 
-async function ensureBot(spec: BotSeedSpec): Promise<number> {
+async function ensureBot(spec: BotSeedSpec, systemPrompt: string): Promise<number> {
   const existing = await db.query.users.findFirst({
     where: eq(users.username, spec.username),
   });
@@ -83,10 +63,19 @@ async function ensureBot(spec: BotSeedSpec): Promise<number> {
   }
 
   const existingBot = await db.query.bots.findFirst({ where: eq(bots.userId, userId) });
-  if (!existingBot) {
+  if (existingBot) {
+    // Sync personality on every restart so edits to .md take effect immediately
+    if (existingBot.systemPrompt !== systemPrompt) {
+      await db
+        .update(bots)
+        .set({ systemPrompt })
+        .where(eq(bots.userId, userId));
+      process.stdout.write(`Bot updated: ${spec.username} (personality synced)\n`);
+    }
+  } else {
     await db.insert(bots).values({
       userId,
-      systemPrompt: spec.systemPrompt,
+      systemPrompt,
       autoJoinNewRooms: spec.autoJoinNewRooms,
       enabled: true,
     });
@@ -119,7 +108,8 @@ async function backfillRoomMembership(botUserId: number, autoJoin: boolean): Pro
 
 export async function seedBots(): Promise<void> {
   for (const spec of DEFAULT_BOTS) {
-    const userId = await ensureBot(spec);
+    const systemPrompt = loadPersonality(spec.username);
+    const userId = await ensureBot(spec, systemPrompt);
     await backfillRoomMembership(userId, spec.autoJoinNewRooms);
     process.stdout.write(`Bot ready: ${spec.username} (id=${userId})\n`);
   }

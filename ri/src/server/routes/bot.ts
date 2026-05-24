@@ -1,10 +1,17 @@
 import { Router } from "express";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { requireAuth } from "../middleware/auth.js";
 import { getProvider } from "../llm/provider.js";
 import { botMessageSchema } from "../../shared/schema.js";
 
 const router = Router();
 router.use(requireAuth);
+
+const BIGMO_SYSTEM = readFileSync(
+  resolve(process.cwd(), "ri/personalities/bigmo/personality.md"),
+  "utf8"
+);
 
 // In-memory history per session — Phase 4 will persist this
 const sessionHistory = new Map<string, { role: string; content: string }[]>();
@@ -22,9 +29,7 @@ router.post("/message", async (req, res) => {
 
   try {
     const provider = getProvider();
-    const reply = await provider.chat(history, {
-      system: `You are BigMo, the AI member of The Fonde Brotherhood — a 55+ basketball community in Houston, Texas. You know about Scoot(34), the Brotherhood's token economy and community platform. You're warm, direct, and community-focused. You know basketball. You care about the Brothers. Keep replies short and conversational. Be helpful but skip filler.`,
-    });
+    const reply = await provider.chat(history, { system: BIGMO_SYSTEM });
     history.push({ role: "assistant", content: reply });
     sessionHistory.set(sessionId, history);
     res.json({ ok: true, data: { reply } });
