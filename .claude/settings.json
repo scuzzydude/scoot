@@ -6,5 +6,21 @@
       "Bash(docker compose logs *)",
       "Bash(docker compose ps)"
     ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git push*)",
+            "command": "pkill -f '[s]coot/node_modules/.bin/concurrently' 2>/dev/null; pkill -f '[s]coot/node_modules/.bin/vite' 2>/dev/null; pkill -f '[s]coot/node_modules/.bin/tsx' 2>/dev/null; sleep 2; cd /home/scuzzydude/projects/scoot && nohup npm run dev >> /tmp/scoot-dev.log 2>&1 &",
+            "statusMessage": "Restarting dev server…",
+            "async": true
+          }
+        ]
+      }
+    ]
   }
 }
