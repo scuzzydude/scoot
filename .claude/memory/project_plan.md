@@ -9,11 +9,12 @@ Scootchain (the C blockchain daemon) is the long-term goal but is NOT a prerequi
 ## Priority order
 
 1. **Chat foundation** — rooms, messages, live WebSocket delivery (DONE — works end to end).
-2. **Chat polish** — read receipts + unread counts, DMs, image attachments. These do not require staking and can ship first.
-3. **Staking ritual (pledges)** — the in-person QR + code + selfie ceremony. See `social_graph_staking.md` for the full flow. This unlocks identity-aware features and is a prerequisite for stake-gated chat/wallet behavior.
-4. **Scoot token** — balances, send/receive, transaction history, Postgres via Drizzle (no C daemon, no bridge yet). Likely tied to staking (Scoot as stake collateral, slashing on revocation).
-5. **Room privacy / staking-gated chat** — visibility and DM rules expressed as graph predicates against the staking graph. Comes after both staking and token exist.
-6. **Scootchain integration** — future phase; existing DB transactions and pledges get committed to the chain when ready.
+2. **Native chat UI** ← NEXT — Replace RC iframe in `chat-page.tsx` with a real Scoot chat UI (room list left, message thread right, WebSocket live). Backend routes and WS are fully built in `chat.ts`. RC iframe decision: RC was dropped as a UI layer — it had a separate user system with no SSO, iframe broke on LAN access. RC containers may stay for BigMo webhook only.
+3. **Chat polish** — read receipts + unread counts, image attachments, after native UI is in place.
+4. **Staking ritual (pledges)** — the in-person QR + code + selfie ceremony. See `social_graph_staking.md` for the full flow. This unlocks identity-aware features and is a prerequisite for stake-gated chat/wallet behavior.
+5. **Scoot token** — balances, send/receive, transaction history, Postgres via Drizzle (no C daemon, no bridge yet). Likely tied to staking (Scoot as stake collateral, slashing on revocation).
+6. **Room privacy / staking-gated chat** — visibility and DM rules expressed as graph predicates against the staking graph. Comes after both staking and token exist.
+7. **Scootchain integration** — future phase; existing DB transactions and pledges get committed to the chain when ready.
 
 ## Why this order
 
