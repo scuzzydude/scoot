@@ -42,6 +42,7 @@ export const roomMembers = pgTable("room_members", {
   roomId: integer("room_id").references(() => chatRooms.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastReadAt: timestamp("last_read_at"),
 });
 
 export const messages = pgTable("messages", {

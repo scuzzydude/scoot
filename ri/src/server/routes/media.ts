@@ -14,7 +14,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     return;
   }
   const userId = (req.user as { id: number }).id;
-  const baseUrl = process.env.MEDIA_BASE_URL ?? "http://localhost:3000/media";
+  const filename = path.basename(req.file.path);
 
   const [record] = await db.insert(media).values({
     filename: req.file.originalname,
@@ -24,12 +24,7 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     uploadedBy: userId,
   }).returning();
 
-  const url = `${baseUrl}/${record.id}/${path.basename(req.file.path)}`;
-  res.status(201).json({ ok: true, data: { id: record.id, url } });
-});
-
-router.get("/:id", (_req, res) => {
-  res.status(501).json({ ok: false, error: "Signed URL generation — Phase 4" });
+  res.status(201).json({ ok: true, data: { id: record.id, url: `/media/${filename}` } });
 });
 
 export default router;

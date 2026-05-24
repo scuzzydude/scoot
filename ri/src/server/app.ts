@@ -11,9 +11,11 @@ import { eq } from "drizzle-orm";
 import type { User } from "./db/schema.js";
 
 import authRouter from "./routes/auth.js";
+import chatRouter from "./routes/chat.js";
 import scootRouter from "./routes/scoot.js";
 import scootsRouter from "./routes/scoots.js";
 import botRouter from "./routes/bot.js";
+import mediaRouter from "./routes/media.js";
 import rcWebhookRouter from "./routes/rc-webhook.js";
 
 const PgSession = connectPgSimple(session);
@@ -55,10 +57,15 @@ passport.deserializeUser(async (id: number, done) => {
   done(null, user ?? false);
 });
 
+const MEDIA_DIR = process.env.MEDIA_DIR ?? "/tmp/scoot-media";
+app.use("/media", express.static(MEDIA_DIR));
+
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/chat", chatRouter);
 app.use("/api/v1/scoot", scootRouter);
 app.use("/api/v1/scoots", scootsRouter);
 app.use("/api/v1/bot", botRouter);
+app.use("/api/v1/media", mediaRouter);
 app.use("/api/v1/rc", rcWebhookRouter);
 
 export { app };

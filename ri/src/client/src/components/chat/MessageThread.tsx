@@ -1,16 +1,18 @@
 import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatApi, roomTitle, type Room } from "../../api/chat.js";
-import { useChatWebSocket } from "../../hooks/use-websocket.js";
-import { ChevronLeft, Bot } from "lucide-react";
+import { ChevronLeft, Bot, ImageIcon } from "lucide-react";
 import { Button } from "../ui/button.js";
+import type { TypingUser } from "../../hooks/use-websocket.js";
 
 interface Props {
   room: Room;
+  typingUsers: TypingUser[];
   onBack: () => void;
 }
 
-export function MessageThread({ room, onBack }: Props) {
+export function MessageThread({ room, typingUsers, onBack }: Props) {
+  const qc = useQueryClient();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [] } = useQuery({
@@ -18,7 +20,14 @@ export function MessageThread({ room, onBack }: Props) {
     queryFn: () => chatApi.getMessages(room.id),
   });
 
-  const { typingUsers } = useChatWebSocket(room.id);
+  // Mark room as read when opened
+  useEffect(() => {
+    chatApi.markRead(room.id).then(() => {
+      qc.setQueryData<Room[]>(["chat", "rooms"], (prev) =>
+        prev?.map((r) => (r.id === room.id ? { ...r, unreadCount: 0 } : r))
+      );
+    }).catch(() => {});
+  }, [room.id, qc]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -75,9 +84,28 @@ export function MessageThread({ room, onBack }: Props) {
               )}
               <span className="text-xs text-white/25">{formatTime(msg.createdAt)}</span>
             </div>
-            <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">
-              {msg.content}
-            </p>
+            {msg.mediaUrl ? (
+              <div className="pl-0 mt-1">
+                <img
+                  src={msg.mediaUrl}
+                  alt="attachment"
+                  className="max-w-xs max-h-64 rounded-lg object-cover border border-white/10 cursor-pointer"
+                  onClick={() => window.open(msg.mediaUrl!, "_blank")}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                {msg.content && (
+                  <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words mt-1">
+                    {msg.content}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-white/90 leading-relaxed whitespace-pre-wrap break-words">
+                {msg.content}
+              </p>
+            )}
           </div>
         ))}
 

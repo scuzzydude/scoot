@@ -24,6 +24,7 @@ router.get("/rooms", async (req, res) => {
     peer_id: number | null;
     peer_username: string | null;
     peer_display_name: string | null;
+    unread_count: number;
   }>(
     `
     SELECT
@@ -32,7 +33,13 @@ router.get("/rooms", async (req, res) => {
       lm.created_at AS last_at,
       peer.id AS peer_id,
       peer.username AS peer_username,
-      peer.display_name AS peer_display_name
+      peer.display_name AS peer_display_name,
+      (
+        SELECT COUNT(*)::int
+        FROM messages
+        WHERE room_id = r.id
+          AND (rm_self.last_read_at IS NULL OR created_at > rm_self.last_read_at)
+      ) AS unread_count
     FROM chat_rooms r
     INNER JOIN room_members rm_self
       ON rm_self.room_id = r.id AND rm_self.user_id = $1
@@ -70,9 +77,24 @@ router.get("/rooms", async (req, res) => {
       r.is_dm && r.peer_id !== null
         ? { id: r.peer_id, username: r.peer_username!, displayName: r.peer_display_name }
         : null,
+    unreadCount: r.unread_count,
   }));
 
   res.json({ ok: true, data: rooms });
+});
+
+router.post("/rooms/:id/read", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const roomId = parseInt(req.params.id);
+  if (isNaN(roomId)) {
+    res.status(400).json({ ok: false, error: "Invalid room id" });
+    return;
+  }
+  await db
+    .update(roomMembers)
+    .set({ lastReadAt: new Date() })
+    .where(and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, userId)));
+  res.json({ ok: true, data: null });
 });
 
 router.get("/users", async (req, res) => {

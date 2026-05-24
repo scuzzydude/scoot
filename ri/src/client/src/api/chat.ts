@@ -14,6 +14,7 @@ export interface Room {
   createdAt: string;
   lastMessage: { content: string; createdAt: string } | null;
   peer: Peer | null;
+  unreadCount: number;
 }
 
 export function roomTitle(room: Room): string {
@@ -77,4 +78,16 @@ export const chatApi = {
       method: "POST",
       body: JSON.stringify({ userId }),
     }),
+
+  markRead: (roomId: number) =>
+    apiFetch<null>(`/chat/rooms/${roomId}/read`, { method: "POST" }),
+
+  uploadMedia: async (file: File): Promise<string> => {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/v1/media/upload", { method: "POST", body: form });
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error ?? "Upload failed");
+    return (json.data as { url: string }).url;
+  },
 };

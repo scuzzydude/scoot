@@ -45,6 +45,15 @@ export function RoomList({ selectedRoomId, onSelectRoom }: Props) {
     if (name) createRoom.mutate(name);
   }
 
+  function handleSelect(room: Room) {
+    // Optimistically clear unread badge
+    qc.setQueryData<Room[]>(["chat", "rooms"], (prev) =>
+      prev?.map((r) => (r.id === room.id ? { ...r, unreadCount: 0 } : r))
+    );
+    chatApi.markRead(room.id).catch(() => {});
+    onSelectRoom(room);
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
@@ -94,13 +103,14 @@ export function RoomList({ selectedRoomId, onSelectRoom }: Props) {
 
         {rooms.map((room) => {
           const active = selectedRoomId === room.id;
+          const hasUnread = room.unreadCount > 0;
           return (
             <button
               key={room.id}
               className={`w-full text-left px-4 py-3 border-b border-white/5 transition-colors ${
                 active ? "bg-white/10" : "hover:bg-white/5"
               }`}
-              onClick={() => onSelectRoom(room)}
+              onClick={() => handleSelect(room)}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -109,18 +119,25 @@ export function RoomList({ selectedRoomId, onSelectRoom }: Props) {
                   ) : (
                     <MessageSquare className="h-3.5 w-3.5 text-white/30 shrink-0" />
                   )}
-                  <span className="text-sm font-medium text-white truncate">
+                  <span className={`text-sm truncate ${hasUnread && !active ? "font-semibold text-white" : "font-medium text-white"}`}>
                     {roomTitle(room)}
                   </span>
                 </div>
-                {room.lastMessage && (
-                  <span className="text-xs text-white/30 shrink-0">
-                    {formatTime(room.lastMessage.createdAt)}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {hasUnread && !active && (
+                    <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-white text-black text-[10px] font-bold flex items-center justify-center">
+                      {room.unreadCount > 99 ? "99+" : room.unreadCount}
+                    </span>
+                  )}
+                  {room.lastMessage && (
+                    <span className="text-xs text-white/30">
+                      {formatTime(room.lastMessage.createdAt)}
+                    </span>
+                  )}
+                </div>
               </div>
               {room.lastMessage && (
-                <p className="text-xs text-white/40 mt-0.5 pl-[22px] truncate">
+                <p className={`text-xs mt-0.5 pl-[22px] truncate ${hasUnread && !active ? "text-white/70" : "text-white/40"}`}>
                   {room.lastMessage.content}
                 </p>
               )}
