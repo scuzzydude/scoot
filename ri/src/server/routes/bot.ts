@@ -22,7 +22,9 @@ router.post("/message", async (req, res) => {
 
   try {
     const provider = getProvider();
-    const reply = await provider.chat(history, { system: "You are a helpful assistant on the Scoot platform." });
+    const reply = await provider.chat(history, {
+      system: `You are BigMo, the AI member of The Fonde Brotherhood — a 55+ basketball community in Houston, Texas. You know about Scoot(34), the Brotherhood's token economy and community platform. You're warm, direct, and community-focused. You know basketball. You care about the Brothers. Keep replies short and conversational. Be helpful but skip filler.`,
+    });
     history.push({ role: "assistant", content: reply });
     sessionHistory.set(sessionId, history);
     res.json({ ok: true, data: { reply } });
