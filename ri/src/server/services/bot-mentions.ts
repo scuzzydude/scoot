@@ -190,8 +190,10 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
       await postBotMessage(ctx.roomId, bot, "(no response)");
     }
   } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const errStack = err instanceof Error ? err.stack : "";
     log.error(
-      { roomId: ctx.roomId, botUserId: bot.userId, ms: Date.now() - startedAt, err },
+      { roomId: ctx.roomId, botUserId: bot.userId, ms: Date.now() - startedAt, errMsg, errStack },
       "bot dispatch failed"
     );
     try {
@@ -201,7 +203,9 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
         "I'm having trouble responding right now. Try again in a moment."
       );
     } catch (postErr) {
-      log.error({ err: postErr }, "failed to post bot error message");
+      const postErrMsg = postErr instanceof Error ? postErr.message : String(postErr);
+      const postErrStack = postErr instanceof Error ? postErr.stack : "";
+      log.error({ errMsg: postErrMsg, errStack: postErrStack }, "failed to post bot error message");
     }
   } finally {
     inFlight.delete(key);
