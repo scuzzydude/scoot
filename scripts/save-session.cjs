@@ -92,6 +92,10 @@ const REDACTION_PATTERNS = [
   { name: 'tavily-key',     re: /tvly-[A-Za-z0-9_\-]{20,}/g },
   { name: 'google-api-key', re: /AIza[A-Za-z0-9_\-]{30,}/g },
   { name: 'hex',            re: /\b[0-9a-fA-F]{32,}\b/g },
+  // NANP phone numbers (US/Canada). Area code and exchange must start with 2-9
+  // per the numbering plan, and digit-boundary lookarounds prevent matching
+  // inside longer digit runs (timestamps, IDs).
+  { name: 'us-phone',       re: /(?<!\d)(?:\+?1[\s.\-]?)?\(?[2-9]\d{2}\)?[\s.\-]?[2-9]\d{2}[\s.\-]?\d{4}(?!\d)/g },
 ];
 
 const DB_URL_RE = /(postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/([^:@\s"'<>]+):([^@\s"'<>]+)@/gi;
