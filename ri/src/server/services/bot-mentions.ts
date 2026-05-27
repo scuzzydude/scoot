@@ -2,7 +2,6 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { bots, messages, roomMembers, users } from "../db/schema.js";
 import { getProvider } from "../llm/provider.js";
-import { searchWeb } from "./search.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { log } from "../log.js";
 
@@ -178,18 +177,10 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
     const providerMessages = buildProviderMessages(history, bot.userId);
     const provider = getProvider();
 
-    let system = bot.systemPrompt;
-    if (bot.searchEnabled) {
-      const searchResult = await searchWeb(ctx.content);
-      if (searchResult) {
-        log.debug({ roomId: ctx.roomId, botUserId: bot.userId }, "injecting search results into system prompt");
-        system = `${system}\n\n--- Current information from web search ---\n${searchResult}\n--- End search results ---\nUse the above if relevant to the question. Stay in character.`;
-      }
-    }
-
     const reply = await provider.chat(providerMessages, {
-      system,
+      system: bot.systemPrompt,
       maxTokens: MAX_REPLY_TOKENS,
+      searchEnabled: bot.searchEnabled,
     });
     const trimmed = (reply ?? "").trim();
     log.info(

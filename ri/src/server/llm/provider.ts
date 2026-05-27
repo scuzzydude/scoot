@@ -1,6 +1,7 @@
 export interface ChatOptions {
   system?: string;
   maxTokens?: number;
+  searchEnabled?: boolean;  // let the provider use web search tools if supported
 }
 
 export interface LLMProvider {
