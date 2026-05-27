@@ -100,6 +100,8 @@ Admin                          (parent, access_mask=0b0001 — Brandon only)
   └── System                   (child)
 ```
 
+Each room — parent or child — defines its own `access_mask` and `post_mask` independently. A parent category can be visible to everyone (`access_mask=0`) while a specific child room under it is restricted, or vice versa. No inheritance. The UI uses the parent to group rooms visually; the permission check always uses the individual room's own masks.
+
 Creating a new room under "BrotherWhoNeedsHelp" is just an INSERT with `parent_id` pointing to that category row. No schema change needed.
 
 ---
