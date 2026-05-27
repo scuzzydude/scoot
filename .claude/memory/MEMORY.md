@@ -8,4 +8,6 @@
 - [Keep SETUP.md current with install procedure](feedback_setup_procedure.md) — update SETUP.md in the same commit whenever env vars or first-run steps change
 - [WSL2 remote access — mirrored networking + SSH](infra_wsl_network.md) — LAN IP 192.168.1.118; SSH :22 passwordless from work laptop; Vite :5173, RC :3100 reachable on LAN
 - [Prod server — steve (Azure VM)](infra_prod_server.md) — 13.64.77.78, hosts fairchildlabs.org + thedreamlaboratory.org; Scoot stack on Docker, API :3000, Vite :5174, DATA_DIR=/var/lib/scoot
+- [Claude Code runs ON prod steve, not WSL](infra_claude_runs_on_steve.md) — when in /home/brandon/scoot, the host IS prod; no SSH-to-deploy; edits go straight to prod
+- [Twilio US SMS needs A2P 10DLC registration](twilio_a2p_10dlc_registration.md) — Fonde Brotherhood account, +13614232253 long-code; undelivered + errorCode 30034 means reg gap, not a code bug
 - [Git remote: use SSH not HTTPS](infra_git_remote_ssh.md) — `git@github.com:scuzzydude/scoot.git`; SSH keys uploaded on all 3 machines; switch remote without asking if it's HTTPS
