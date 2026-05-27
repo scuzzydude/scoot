@@ -22,7 +22,8 @@ for (const a of args) {
   else if (!a.startsWith('--')) sessionId = a;
 }
 
-const PROJECT_SLUG = '-home-scuzzydude-projects-scoot';
+// Derive slug from actual cwd so it works on any machine
+const PROJECT_SLUG = '-' + process.cwd().replace(/\//g, '-').replace(/^-+/, '');
 const STATE_DIR = path.join(os.homedir(), '.claude', 'projects', PROJECT_SLUG);
 const OUT_DIR = path.join(__dirname, '..', 'docs', 'sessions');
 
@@ -82,12 +83,15 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
 // parseable after substitution.
 
 const REDACTION_PATTERNS = [
-  { name: 'anthropic-key', re: /sk-ant-[A-Za-z0-9_\-]{20,}/g },
-  { name: 'openai-key',    re: /\bsk-(?!ant-)[A-Za-z0-9]{30,}\b/g },
-  { name: 'github-token',  re: /\bgh[pousro]_[A-Za-z0-9]{30,}\b/g },
-  { name: 'aws-access',    re: /\bAKIA[0-9A-Z]{16}\b/g },
-  { name: 'jwt',           re: /\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}/g },
-  { name: 'hex',           re: /\b[0-9a-fA-F]{32,}\b/g },
+  { name: 'anthropic-key',  re: /sk-ant-[A-Za-z0-9_\-]{20,}/g },
+  { name: 'openai-key',     re: /\bsk-(?!ant-)[A-Za-z0-9]{30,}\b/g },
+  { name: 'github-token',   re: /\bgh[pousro]_[A-Za-z0-9]{30,}\b/g },
+  { name: 'aws-access',     re: /\bAKIA[0-9A-Z]{16}\b/g },
+  { name: 'jwt',            re: /\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}/g },
+  { name: 'perplexity-key', re: /pplx-[A-Za-z0-9_\-]{20,}/g },
+  { name: 'tavily-key',     re: /tvly-[A-Za-z0-9_\-]{20,}/g },
+  { name: 'google-api-key', re: /AIza[A-Za-z0-9_\-]{30,}/g },
+  { name: 'hex',            re: /\b[0-9a-fA-F]{32,}\b/g },
 ];
 
 const DB_URL_RE = /(postgres(?:ql)?|mysql|mongodb(?:\+srv)?):\/\/([^:@\s"'<>]+):([^@\s"'<>]+)@/gi;
