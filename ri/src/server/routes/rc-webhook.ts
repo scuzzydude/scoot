@@ -65,7 +65,7 @@ router.post("/webhook", async (req, res) => {
 
     if (user) {
       const membership = await db
-        .select({ scootName: scoots.name, role: scootMembers.role })
+        .select({ scootName: scoots.name, userFlags: scootMembers.userFlags })
         .from(scootMembers)
         .innerJoin(scoots, eq(scoots.id, scootMembers.scootId))
         .where(eq(scootMembers.userId, user.id));

@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
       labelMap: scoots.labelMap,
       featureFlags: scoots.featureFlags,
       navItems: scoots.navItems,
-      role: scootMembers.role,
+      userFlags: scootMembers.userFlags,
     })
     .from(scootMembers)
     .innerJoin(scoots, eq(scootMembers.scootId, scoots.id))
