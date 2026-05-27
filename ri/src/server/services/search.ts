@@ -3,17 +3,17 @@ import { log } from "../log.js";
 const PERPLEXITY_API_URL = "https://api.perplexity.ai/chat/completions";
 const PERPLEXITY_MODEL = "sonar";
 
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const TAVILY_API_URL = "https://api.tavily.com/search";
 
-// Tries Perplexity first, falls back to Gemini with Google Search grounding, returns null if neither key is set.
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+// Priority: Perplexity → Tavily → Gemini → null
 export async function searchWeb(query: string): Promise<string | null> {
-  if (process.env.PERPLEXITY_API_KEY) {
-    return searchWithPerplexity(query);
-  }
-  if (process.env.GEMINI_API_KEY) {
-    return searchWithGemini(query);
-  }
-  log.warn("No search API key set (PERPLEXITY_API_KEY or GEMINI_API_KEY), skipping search");
+  if (process.env.PERPLEXITY_API_KEY) return searchWithPerplexity(query);
+  if (process.env.TAVILY_API_KEY)     return searchWithTavily(query);
+  if (process.env.GEMINI_API_KEY)     return searchWithGemini(query);
+  log.warn("no search API key set (PERPLEXITY_API_KEY, TAVILY_API_KEY, or GEMINI_API_KEY)");
   return null;
 }
 
@@ -22,7 +22,7 @@ async function searchWithPerplexity(query: string): Promise<string | null> {
     const res = await fetch(PERPLEXITY_API_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -31,10 +31,7 @@ async function searchWithPerplexity(query: string): Promise<string | null> {
         max_tokens: 300,
       }),
     });
-    if (!res.ok) {
-      log.error({ status: res.status, query }, "Perplexity search failed");
-      return null;
-    }
+    if (!res.ok) { log.error({ status: res.status, query }, "Perplexity search failed"); return null; }
     const data = await res.json() as { choices?: { message?: { content?: string } }[] };
     return data.choices?.[0]?.message?.content ?? null;
   } catch (err) {
@@ -43,24 +40,45 @@ async function searchWithPerplexity(query: string): Promise<string | null> {
   }
 }
 
+async function searchWithTavily(query: string): Promise<string | null> {
+  try {
+    const res = await fetch(TAVILY_API_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.TAVILY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        search_depth: "basic",
+        max_results: 3,
+        include_answer: true,
+      }),
+    });
+    if (!res.ok) { log.error({ status: res.status, query }, "Tavily search failed"); return null; }
+    const data = await res.json() as { answer?: string; results?: { content: string }[] };
+    // Prefer the synthesized answer; fall back to concatenating top results
+    if (data.answer) return data.answer;
+    return data.results?.map((r) => r.content).join("\n\n") ?? null;
+  } catch (err) {
+    log.error({ err, query }, "Tavily search threw");
+    return null;
+  }
+}
+
 async function searchWithGemini(query: string): Promise<string | null> {
   try {
-    const url = `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`;
+    const url = `${GEMINI_API_BASE}/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: query }], role: "user" }],
-        tools: [{ google_search: {} }],
+        tools: [{ googleSearch: {} }],
       }),
     });
-    if (!res.ok) {
-      log.error({ status: res.status, query }, "Gemini search failed");
-      return null;
-    }
-    const data = await res.json() as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
+    if (!res.ok) { log.error({ status: res.status, query }, "Gemini search failed"); return null; }
+    const data = await res.json() as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     return data.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
   } catch (err) {
     log.error({ err, query }, "Gemini search threw");
