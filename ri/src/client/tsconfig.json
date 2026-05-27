@@ -14,7 +14,9 @@
     "strict": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "scoot-chat": ["../../../../scoot-chat/src/index.ts"],
+      "scoot-chat/*": ["../../../../scoot-chat/src/*"]
     }
   },
   "include": ["src/**/*", "../shared/**/*"],
