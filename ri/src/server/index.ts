@@ -3,6 +3,7 @@ import http from "http";
 import { app, sessionMiddleware } from "./app.js";
 import { setupChatWS } from "./ws/chat-ws.js";
 import { initProvider } from "./llm/provider.js";
+import { initProvider as initSmsProvider } from "./sms/provider.js";
 import { seedDefaultUser } from "./db/seed-default-user.js";
 import { seedBots } from "./db/seed-bots.js";
 
@@ -27,6 +28,12 @@ try {
   await seedBots();
 } catch (err) {
   process.stderr.write(`Bot seed failed: ${err}\n`);
+}
+
+try {
+  await initSmsProvider();
+} catch (err) {
+  process.stderr.write(`SMS provider init failed (set TWILIO_* env vars to enable): ${err}\n`);
 }
 
 server.listen(PORT, () => {
