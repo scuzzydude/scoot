@@ -21,7 +21,10 @@ export const bots = pgTable("bots", {
 export const chatRooms = pgTable("chat_rooms", {
   id: serial("id").primaryKey(),
   name: text("name"),
+  parentId: integer("parent_id"),  // NULL = top-level category; set = child room under a category
   isDm: boolean("is_dm").notNull().default(false),
+  accessMask: text("access_mask").notNull().default("0"),  // bigint as text — JS can't hold 64-bit int safely
+  postMask: text("post_mask").notNull().default("0"),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -81,7 +84,7 @@ export const scootMembers = pgTable(
   {
     scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    role: text("role").notNull().default("member"),
+    userFlags: text("user_flags").notNull().default("0"),  // 64-bit permission bitmask as text
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (t) => ({
