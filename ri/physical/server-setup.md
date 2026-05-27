@@ -1,8 +1,8 @@
 # Server Setup — Data Volume and Docker
 
-How to stand up Scoot (and Rocket.Chat) on any Linux host with persistent data on a
-non-boot volume. Works on Hetzner, DigitalOcean, AWS, Azure, GCP, Vultr, bare metal —
-anywhere you can attach a block volume.
+How to stand up Scoot on any Linux host with persistent data on a non-boot volume.
+Works on Hetzner, DigitalOcean, AWS, Azure, GCP, Vultr, bare metal — anywhere you
+can attach a block volume.
 
 ## Why this matters
 
@@ -47,8 +47,6 @@ blkid /dev/sdb
 mkdir -p /mnt/data/scoot/postgres
 mkdir -p /mnt/data/scoot/media
 mkdir -p /mnt/data/scoot/scootchain   # future: scootd blockchain data
-mkdir -p /mnt/data/rocketchat/mongo   # future: Rocket.Chat MongoDB
-mkdir -p /mnt/data/rocketchat/uploads # future: Rocket.Chat file uploads
 ```
 
 ---
@@ -120,19 +118,16 @@ npm run docker:up
 
 ## S3 media storage (recommended for production)
 
-Instead of local filesystem for media, configure Rocket.Chat to use S3-compatible
-storage (Cloudflare R2, Backblaze B2, AWS S3, etc.).
+Instead of local filesystem for chat media, point Scoot at S3-compatible storage
+(Cloudflare R2, Backblaze B2, AWS S3, MinIO, etc.) via the media env vars.
 
 Benefits:
 - Media survives server migration with zero rsync
 - Works on any provider
 - One config change to switch providers
 
-Configure in Rocket.Chat Admin → File Upload → Storage Type → AmazonS3.
-Set endpoint URL for non-AWS providers (R2, B2, Wasabi, MinIO).
-
-When using S3, `$DATA_DIR/media` is unused for RC uploads — only needed for
-scootchain media and any Scoot-native file serving.
+When using S3, `$DATA_DIR/media` is unused — only needed for scootchain media and
+any Scoot-native file serving.
 
 ---
 
@@ -153,7 +148,7 @@ sudo bash ~/wsl-ssh-setup.sh
 The script `wsl-network-setup.ps1` is in `ri/physical/` and on your OneDrive Desktop.
 Right-click it → "Run with PowerShell" (or open elevated PowerShell and run it).
 
-Opens inbound rules for: SSH (2222), Scoot API (3000), RC (3100), Vite (5173), Postgres (5432).
+Opens inbound rules for: SSH (2222), Scoot API (3000), Vite (5173), Postgres (5432).
 
 **Step 3 — Restart WSL** (in Windows PowerShell/cmd — NOT in WSL):
 ```powershell
@@ -168,7 +163,6 @@ Machine IP: **192.168.1.118** (Wi-Fi — may change if DHCP reassigns; check wit
 | Service | URL |
 |---|---|
 | Scoot app | http://192.168.1.118:5173 |
-| Rocket.Chat | http://192.168.1.118:3100 |
 | Scoot API | http://192.168.1.118:3000 |
 | SSH into WSL | `ssh scuzzydude@192.168.1.118 -p 2222` |
 

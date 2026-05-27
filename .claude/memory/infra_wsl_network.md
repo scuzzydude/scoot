@@ -10,11 +10,11 @@ WSL2 is configured with mirrored networking (`~/.wslconfig` on Windows). WSL IP 
 
 **Windows Firewall rules added (PowerShell as Admin):**
 - Port 22 (SSH) — added manually after reboot
-- Ports 2222, 3000, 3100, 5173, 5432 — added by `ri/physical/wsl-network-setup.ps1`
+- Ports 2222, 3000, 5173, 5432 — added by `ri/physical/wsl-network-setup.ps1`
 
 **Services reachable from LAN:**
 - Frontend (Vite): `http://192.168.1.118:5173`
-- Rocket.Chat: `http://192.168.1.118:3100`
+- Scoot API: `http://192.168.1.118:3000`
 - SSH: `ssh scuzzydude@192.168.1.118`
 
 **Why:** Brandon works across 3 machines; WSL needs to be reachable from other machines on the home LAN without a VPN.

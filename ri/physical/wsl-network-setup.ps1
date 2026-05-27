@@ -7,7 +7,6 @@
 $ports = @(
     @{ Port = 2222;  Name = "WSL SSH";              Protocol = "TCP" },
     @{ Port = 3000;  Name = "Scoot API";             Protocol = "TCP" },
-    @{ Port = 3100;  Name = "Rocket.Chat";           Protocol = "TCP" },
     @{ Port = 5173;  Name = "Scoot Frontend (Vite)"; Protocol = "TCP" },
     @{ Port = 5432;  Name = "Postgres";              Protocol = "TCP" }
 )
@@ -39,4 +38,3 @@ $ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
 } | Select-Object -First 1).IPAddress
 Write-Host "  SSH:     ssh scuzzydude@$ip -p 2222"
 Write-Host "  Scoot:   http://$($ip):5173"
-Write-Host "  RC:      http://$($ip):3100"

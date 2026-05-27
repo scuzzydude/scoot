@@ -294,24 +294,20 @@ Dev server runs on `http://localhost:3000`. Vite proxies `/api` and `/ws` to Exp
 Work through phases in order. Do not start the next phase until the current one is complete and tested.
 
 - **Phase 1** ✅ — Web foundation (auth, Scoot pages, stub endpoints)
-- **Phase 2** ← CURRENT — Rocket.Chat integration
-  - RC + MongoDB running in Docker
-  - BigMo webhook endpoint (`/api/v1/rc/webhook`) — @BigMo in RC → Claude reply
-  - Chat page embeds RC iframe (interim; SSO + custom UI in Phase 2b)
-  - Outgoing webhook configured in RC Admin → Integrations
-- **Phase 3** — SMS bridge via Twilio
-  - Twilio number purchased, connected to RC
-  - Brothers can text in and participate without installing anything
-- **Phase 4** — C core + wallet
-  - scootd daemon, C bridge, Scoot currency send/receive
-  - Blockchain: block structure, CPU threads, CUDA/HIP
-- **Phase 5** — Staking ritual
+- **Phase 2** ✅ — Native chat (rooms, messages, WebSocket, media, @bot mentions)
+  - Built on Postgres directly — no Rocket.Chat, no Mongo
+  - Shared `scoot-chat` package (consumed by Scoot and Steve projects)
+  - BigMo bot with provider abstraction + web search (Perplexity → Tavily → Gemini)
+- **Phase 3** ← CURRENT — Bot token usage tracking + remote server bringup
+- **Phase 4** — Staking ritual
   - QR + one-time code + selfie pledge ceremony
   - Trust graph, scootage membership derived from pledge graph
+- **Phase 5** — C core + wallet
+  - scootd daemon, C bridge, Scoot currency send/receive
+  - Blockchain: block structure, CPU threads, CUDA/HIP
 - **Phase 6** — Native mobile (React Native / Expo)
-  - Scoot app on iOS + Android
-  - Chat via RC Realtime API (replaces iframe)
-  - Push notifications via RC
+  - Scoot app on iOS + Android (reuses `scoot-chat` via .native.tsx variants)
+  - Push notifications
 
 ---
 
