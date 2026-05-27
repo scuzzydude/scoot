@@ -15,6 +15,7 @@ export const bots = pgTable("bots", {
   systemPrompt: text("system_prompt").notNull(),
   autoJoinNewRooms: boolean("auto_join_new_rooms").notNull().default(false),
   enabled: boolean("enabled").notNull().default(true),
+  searchEnabled: boolean("search_enabled").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
