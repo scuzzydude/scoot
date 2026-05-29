@@ -19,12 +19,9 @@ interface BotSeedSpec {
 }
 
 const DEFAULT_BOTS: BotSeedSpec[] = [
-  {
-    username: "claude",
-    displayName: "Claude",
-    email: "claude@bots.scoot.local",
-    autoJoinNewRooms: true,
-  },
+  // claude retired in favor of bigmo — left out of the seed so it isn't
+  // recreated/re-added to rooms on restart. Its personality.md is kept for
+  // reference. (The existing disabled claude row, if any, is left untouched.)
   {
     username: "bigmo",
     displayName: "BigMo",
