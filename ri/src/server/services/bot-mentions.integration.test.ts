@@ -23,13 +23,21 @@ interface TestContext {
   roomId: number;
   humanUserId: number;
   botUserId: number;
+  botUsername: string;
   cleanup: () => Promise<void>;
 }
 
 async function setupRoom(): Promise<TestContext> {
-  const claude = await db.query.users.findFirst({ where: eq(users.username, "claude") });
-  if (!claude || !claude.isBot) {
-    throw new Error("claude bot not seeded — run server once to seed");
+  // Use whichever bot is currently enabled (claude was retired; bigmo is the
+  // active bot). findMentionedBot only matches enabled bots.
+  const [bot] = await db
+    .select({ id: users.id, isBot: users.isBot, username: users.username })
+    .from(users)
+    .innerJoin(bots, eq(bots.userId, users.id))
+    .where(and(eq(users.isBot, true), eq(bots.enabled, true)))
+    .limit(1);
+  if (!bot) {
+    throw new Error("no enabled bot seeded — run server once to seed bigmo");
   }
 
   const human = await db.query.users.findFirst({ where: eq(users.isBot, false) });
@@ -41,13 +49,14 @@ async function setupRoom(): Promise<TestContext> {
     .returning();
   await db.insert(roomMembers).values([
     { roomId: room.id, userId: human.id },
-    { roomId: room.id, userId: claude.id },
+    { roomId: room.id, userId: bot.id },
   ]);
 
   return {
     roomId: room.id,
     humanUserId: human.id,
-    botUserId: claude.id,
+    botUserId: bot.id,
+    botUsername: bot.username,
     cleanup: async () => {
       await db.delete(messages).where(eq(messages.roomId, room.id));
       await db.delete(roomMembers).where(eq(roomMembers.roomId, room.id));
@@ -106,27 +115,27 @@ describe("handleMentions integration", () => {
     assert.equal(provider.calls.length, callsBefore);
   });
 
-  it("dispatches reply when @claude is mentioned, inserts bot message", async () => {
+  it("dispatches reply when the bot is mentioned, inserts bot message", async () => {
     provider.nextReply = "Hello! How can I help?";
 
     // Seed an existing message so we have a history row to format
     await db.insert(messages).values({
       roomId: ctx.roomId,
       userId: ctx.humanUserId,
-      content: "@claude what's up",
+      content: `@${ctx.botUsername} what's up`,
     });
 
     await handleMentions({
       roomId: ctx.roomId,
       authorId: ctx.humanUserId,
       authorIsBot: false,
-      content: "@claude what's up",
+      content: `@${ctx.botUsername} what's up`,
     });
 
     assert.equal(provider.calls.length >= 1, true, "provider should have been called");
     const lastCall = provider.calls[provider.calls.length - 1];
     assert.equal(lastCall.options.maxTokens, 500);
-    assert.match(lastCall.options.system ?? "", /Claude/i, "system prompt should be the claude prompt");
+    assert.equal((lastCall.options.system ?? "").length > 0, true, "system prompt should be the bot's prompt");
     assert.equal(lastCall.messages.length > 0, true);
 
     const lastMessages = await db
@@ -145,14 +154,14 @@ describe("handleMentions integration", () => {
     await db.insert(messages).values({
       roomId: ctx.roomId,
       userId: ctx.humanUserId,
-      content: "@claude please fail",
+      content: `@${ctx.botUsername} please fail`,
     });
 
     await handleMentions({
       roomId: ctx.roomId,
       authorId: ctx.humanUserId,
       authorIsBot: false,
-      content: "@claude please fail",
+      content: `@${ctx.botUsername} please fail`,
     });
 
     const lastMessages = await db
@@ -172,16 +181,16 @@ describe("handleMentions integration", () => {
     provider.calls = [];
 
     await db.insert(messages).values([
-      { roomId: ctx.roomId, userId: ctx.humanUserId, content: "@claude pretend I asked something" },
+      { roomId: ctx.roomId, userId: ctx.humanUserId, content: `@${ctx.botUsername} pretend I asked something` },
       { roomId: ctx.roomId, userId: ctx.botUserId, content: "I'm a previous bot turn." },
-      { roomId: ctx.roomId, userId: ctx.humanUserId, content: "@claude follow up" },
+      { roomId: ctx.roomId, userId: ctx.humanUserId, content: `@${ctx.botUsername} follow up` },
     ]);
 
     await handleMentions({
       roomId: ctx.roomId,
       authorId: ctx.humanUserId,
       authorIsBot: false,
-      content: "@claude follow up",
+      content: `@${ctx.botUsername} follow up`,
     });
 
     assert.equal(provider.calls.length, 1);

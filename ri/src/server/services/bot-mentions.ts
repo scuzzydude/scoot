@@ -35,8 +35,10 @@ interface BotMember {
   searchEnabled: boolean;
 }
 
+// Match a mentioned, enabled bot by username — independent of room membership.
+// Mentioning an enabled bot in a room it isn't in pulls it in (see
+// ensureBotMembership in handleMentions); a disabled bot never matches.
 export async function findMentionedBot(
-  roomId: number,
   mentionLower: string[]
 ): Promise<BotMember | null> {
   if (mentionLower.length === 0) return null;
@@ -52,18 +54,26 @@ export async function findMentionedBot(
     })
     .from(users)
     .innerJoin(bots, eq(bots.userId, users.id))
-    .innerJoin(roomMembers, eq(roomMembers.userId, users.id))
-    .where(
-      and(eq(roomMembers.roomId, roomId), eq(users.isBot, true), inArray(users.username, mentionLower))
-    );
+    .where(and(eq(users.isBot, true), eq(bots.enabled, true), inArray(users.username, mentionLower)));
 
   if (rows.length === 0) return null;
 
   for (const name of mentionLower) {
     const found = rows.find((r) => r.username.toLowerCase() === name);
-    if (found && found.enabled) return found;
+    if (found) return found;
   }
   return null;
+}
+
+// Pull a mentioned bot into the room if it isn't already a member.
+async function ensureBotMembership(roomId: number, botUserId: number): Promise<void> {
+  const existing = await db.query.roomMembers.findFirst({
+    where: and(eq(roomMembers.roomId, roomId), eq(roomMembers.userId, botUserId)),
+  });
+  if (!existing) {
+    await db.insert(roomMembers).values({ roomId, userId: botUserId });
+    log.info({ roomId, botUserId }, "auto-joined mentioned bot to room");
+  }
 }
 
 interface HistoryRow {
@@ -145,11 +155,14 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
   const mentions = extractMentions(ctx.content);
   if (mentions.length === 0) return;
 
-  const bot = await findMentionedBot(ctx.roomId, mentions);
+  const bot = await findMentionedBot(mentions);
   if (!bot) {
-    log.debug({ roomId: ctx.roomId, mentions }, "mention found no matching bot in room");
+    log.debug({ roomId: ctx.roomId, mentions }, "mention found no matching enabled bot");
     return;
   }
+
+  // @mentioning an enabled bot adds it to the room if it wasn't already there.
+  await ensureBotMembership(ctx.roomId, bot.userId);
 
   const key = flightKey(ctx.roomId, ctx.authorId);
   if (inFlight.has(key)) {
