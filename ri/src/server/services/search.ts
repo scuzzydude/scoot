@@ -6,7 +6,9 @@ const PERPLEXITY_MODEL = "sonar";
 const TAVILY_API_URL = "https://api.tavily.com/search";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-const GEMINI_MODEL = "gemini-2.0-flash";
+// gemini-2.0-flash has a free-tier quota of 0 on some keys; 2.5-flash works on
+// the free tier. Override with GEMINI_MODEL if needed.
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
 
 // Priority: Perplexity → Tavily → Gemini → null
 export async function searchWeb(query: string): Promise<string | null> {
