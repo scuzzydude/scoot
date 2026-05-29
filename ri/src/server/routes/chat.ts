@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, pool } from "../db/index.js";
 import { chatRooms, messages, roomMembers, users, bots, dmPairs } from "../db/schema.js";
-import { eq, lt, desc, and, ne, asc } from "drizzle-orm";
+import { eq, lt, desc, and, ne, asc, or } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { createRoomSchema, moveRoomSchema, sendMessageSchema } from "../../shared/schema.js";
 import { broadcast } from "../ws/chat-ws.js";
@@ -150,7 +150,8 @@ router.get("/users", async (req, res) => {
   res.json({ ok: true, data: rows });
 });
 
-// Everyone the viewer can start a conversation with — humans and bots alike.
+// Everyone the viewer can start a conversation with — all humans, plus only
+// ENABLED bots (a disabled bot shouldn't be offered as a participant).
 router.get("/participants", async (req, res) => {
   const meId = (req.user as { id: number }).id;
   const rows = await db
@@ -161,7 +162,8 @@ router.get("/participants", async (req, res) => {
       isBot: users.isBot,
     })
     .from(users)
-    .where(ne(users.id, meId))
+    .leftJoin(bots, eq(bots.userId, users.id))
+    .where(and(ne(users.id, meId), or(eq(users.isBot, false), eq(bots.enabled, true))))
     .orderBy(asc(users.isBot), asc(users.username));
   res.json({ ok: true, data: rows });
 });
