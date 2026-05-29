@@ -1,6 +1,6 @@
 ---
 name: prod-server-steve-azure-vm-fairchildlabs-org-thedreamlaboratory-org
-description: "Production Azure VM hosting Scoot. Hostname steve, public IP 13.64.77.78. Apache fronts existing fairchildlabs.org. Scoot stack runs in Docker on :3000 (API) and :5174 (Vite). DATA_DIR=/var/lib/scoot, postgres on :5433."
+description: "Production Azure VM hosting Scoot. Hostname steve, public IP 13.64.77.78. Apache fronts existing fairchildlabs.org. Scoot stack runs in Docker on :3000 (API) and :5175 (Vite). DATA_DIR=/var/lib/scoot, postgres on :5433."
 metadata: 
   node_type: memory
   type: project
@@ -20,9 +20,9 @@ Production Scoot host. Distinct from WSL dev box (`steve` server vs WSL2 at 192.
 - Docker + Compose v2 installed via official apt repo. `brandon` is in `docker` group but new shell sessions need fresh login to use docker without sudo.
 - Stack started with `sudo docker compose -f ri/physical/docker-compose.yml up -d --build`
 - **DATA_DIR=/var/lib/scoot** (owned by `brandon`); subdirs `postgres/` and `media/`
-- Ports exposed to host: API 3000, Vite 5174 (mapped to container 5173), Postgres 5433 (mapped to container 5432)
+- Ports exposed to host: API 3000, Vite 5175 (mapped to container 5173), Postgres 5433 (mapped to container 5432). **Note:** Vite host port was 5174 until 2026-05-29, remapped to 5175 because the Steve tracker now occupies 5174 on the host (commit 0097c6e).
 - `.env` has DEFAULT_USERNAME=scuzzydude seeded on first boot; bots `claude` and `bigmo` seed automatically
-- **Apache IS reverse-proxying thedreamlaboratory.org to Scoot** (as of 2026-05-27). Vhost forwards `/api` and `/media` → Express :3000, `/ws` → Express :3000 WebSocket, everything else → Vite :5174. HTTP redirects to HTTPS. Vhost files mirrored in repo at `ri/physical/apache/`.
+- **Apache IS reverse-proxying thedreamlaboratory.org to Scoot** (as of 2026-05-27). Vhost forwards `/api` and `/media` → Express :3000, `/ws` → Express :3000 WebSocket, everything else → Vite :5175. HTTP redirects to HTTPS. Vhost files mirrored in repo at `ri/physical/apache/`.
 - **HTTPS is live** for both `thedreamlaboratory.org` and `www.thedreamlaboratory.org` (Let's Encrypt, expires 2026-08-25, certbot auto-renew configured). Cert lives at `/etc/letsencrypt/live/thedreamlaboratory.org/`.
 - **Static legal pages** served via Apache `Alias` outside the proxy: `/privacy` and `/terms` resolve to `/var/www/thedreamlaboratory.org/html/{privacy,terms}.html`. Source-of-truth copies committed at `ri/physical/legal/`.
 
