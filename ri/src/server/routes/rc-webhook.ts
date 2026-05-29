@@ -75,7 +75,9 @@ router.post("/webhook", async (req, res) => {
 
       if (membership.length > 0) {
         const m = membership[0];
-        systemParts.push(`They are a ${m.role} of ${m.scootName}.`);
+        // userFlags is a 64-bit permission bitmask (text). Bits 1|2 = engineer roles.
+        const roleName = (BigInt(m.userFlags) & 3n) !== 0n ? "an engineer" : "a member";
+        systemParts.push(`They are ${roleName} of ${m.scootName}.`);
       }
     } else {
       systemParts.push(`\nYou are speaking with ${rcUsername}. They don't have a Scoot account yet.`);

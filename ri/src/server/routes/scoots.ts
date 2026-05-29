@@ -41,7 +41,7 @@ router.get("/:id", async (req, res) => {
   const scoot = await db.query.scoots.findFirst({ where: eq(scoots.id, scootId) });
   if (!scoot) return res.status(404).json({ ok: false, error: "not found" });
 
-  res.json({ ok: true, data: { ...scoot, role: member.role } });
+  res.json({ ok: true, data: { ...scoot, userFlags: member.userFlags } });
 });
 
 router.get("/:id/pages", async (req, res) => {

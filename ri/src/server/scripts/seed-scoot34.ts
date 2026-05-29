@@ -101,7 +101,7 @@ for (const u of allUsers) {
     .from(scootMembers)
     .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, u.id)));
   if (existing) { skipped++; continue; }
-  await db.insert(scootMembers).values({ scootId, userId: u.id, role: "member" });
+  await db.insert(scootMembers).values({ scootId, userId: u.id });
   added++;
 }
 process.stdout.write(`Members: ${added} added, ${skipped} already present\n`);

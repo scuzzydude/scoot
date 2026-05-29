@@ -18,6 +18,14 @@ export const sendMessageSchema = z.object({
 
 export const createRoomSchema = z.object({
   name: z.string().min(1).max(64),
+  inviteIds: z.array(z.number().int().positive()).optional(),  // human members to add at creation
+  skipBots: z.boolean().optional(),  // when true, do not auto-join bots
+});
+
+export const moveRoomSchema = z.object({
+  name: z.string().min(1).max(64).optional(),
+  parentId: z.number().int().positive().nullable().optional(),  // null = move to top level
+  pinnedModel: z.string().max(128).nullable().optional(),       // null = clear pinned model
 });
 
 export const sendScootSchema = z.object({

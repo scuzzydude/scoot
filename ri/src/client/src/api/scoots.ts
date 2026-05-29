@@ -9,7 +9,7 @@ export interface ScootConfig {
   labelMap: Record<string, string>;
   featureFlags: Record<string, boolean>;
   navItems: NavItem[];
-  role: string;
+  userFlags: string;  // 64-bit per-scoot permission bitmask as text
 }
 
 export interface ScootPageSummary {

@@ -23,6 +23,11 @@ export const chatRooms = pgTable("chat_rooms", {
   id: serial("id").primaryKey(),
   name: text("name"),
   parentId: integer("parent_id"),  // NULL = top-level category; set = child room under a category
+  // "folder" | "conversation" | "dm" — drives the scoot-chat sidebar tree.
+  // isDm is kept as the internal source of truth for DM logic; roomType is the
+  // client-facing classification (dm rooms get roomType='dm', folders 'folder').
+  roomType: text("room_type").notNull().default("conversation"),
+  pinnedModel: text("pinned_model"),  // LLM model pinned to this room (NULL = use default)
   isDm: boolean("is_dm").notNull().default(false),
   accessMask: text("access_mask").notNull().default("0"),  // bigint as text — JS can't hold 64-bit int safely
   postMask: text("post_mask").notNull().default("0"),

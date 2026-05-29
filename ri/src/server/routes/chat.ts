@@ -3,7 +3,7 @@ import { db, pool } from "../db/index.js";
 import { chatRooms, messages, roomMembers, users, bots, dmPairs } from "../db/schema.js";
 import { eq, lt, desc, and, ne, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
-import { createRoomSchema, sendMessageSchema } from "../../shared/schema.js";
+import { createRoomSchema, moveRoomSchema, sendMessageSchema } from "../../shared/schema.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { handleMentions } from "../services/bot-mentions.js";
 import { log } from "../log.js";
@@ -11,29 +11,45 @@ import { log } from "../log.js";
 const router = Router();
 router.use(requireAuth);
 
-router.get("/rooms", async (req, res) => {
-  const userId = (req.user as { id: number }).id;
-  const { rows } = await pool.query<{
-    id: number;
-    name: string | null;
-    is_dm: boolean;
-    created_by: number;
-    created_at: Date;
-    last_content: string | null;
-    last_at: Date | null;
-    peer_id: number | null;
-    peer_username: string | null;
-    peer_display_name: string | null;
-    unread_count: number;
-  }>(
-    `
+// ── Room serialization ──────────────────────────────────────────────────────
+// One SQL shape, used both for the full list and for single-room responses, so
+// the client-facing Room contract (roomType / parentId / peerLabel / pinnedModel
+// / peer / unreadCount) is computed identically everywhere.
+
+interface RoomRow {
+  id: number;
+  name: string | null;
+  room_type: string;
+  parent_id: number | null;
+  pinned_model: string | null;
+  is_dm: boolean;
+  created_by: number;
+  created_at: Date;
+  last_content: string | null;
+  last_at: Date | null;
+  peer_id: number | null;
+  peer_username: string | null;
+  peer_display_name: string | null;
+  other_human_count: number;
+  unread_count: number;
+}
+
+function roomQuery(filterClause: string): string {
+  // $1 = viewer id. filterClause may reference $2.
+  return `
     SELECT
-      r.id, r.name, r.is_dm, r.created_by, r.created_at,
+      r.id, r.name, r.room_type, r.parent_id, r.pinned_model, r.is_dm, r.created_by, r.created_at,
       lm.content AS last_content,
       lm.created_at AS last_at,
-      peer.id AS peer_id,
-      peer.username AS peer_username,
-      peer.display_name AS peer_display_name,
+      oh.id AS peer_id,
+      oh.username AS peer_username,
+      oh.display_name AS peer_display_name,
+      (
+        SELECT COUNT(*)::int
+        FROM room_members rmh
+        INNER JOIN users uu ON uu.id = rmh.user_id
+        WHERE rmh.room_id = r.id AND rmh.user_id <> $1 AND uu.is_bot = false
+      ) AS other_human_count,
       (
         SELECT COUNT(*)::int
         FROM messages
@@ -54,33 +70,56 @@ router.get("/rooms", async (req, res) => {
       SELECT u.id, u.username, u.display_name
       FROM room_members rm_other
       INNER JOIN users u ON u.id = rm_other.user_id
-      WHERE r.is_dm = true
-        AND rm_other.room_id = r.id
+      WHERE rm_other.room_id = r.id
         AND rm_other.user_id <> $1
+        AND u.is_bot = false
+      ORDER BY u.id
       LIMIT 1
-    ) peer ON true
-    ORDER BY COALESCE(lm.created_at, r.created_at) DESC
-    `,
-    [userId]
-  );
+    ) oh ON true
+    ${filterClause}
+  `;
+}
 
-  const rooms = rows.map((r) => ({
+function serializeRoom(r: RoomRow) {
+  // peerLabel groups the inbox: a 1:1 (human peer) groups under that person;
+  // group/solo rooms group under a fixed "Group"; folders have no label.
+  const peerLabel =
+    r.room_type === "folder"
+      ? null
+      : r.other_human_count === 1
+        ? r.peer_display_name ?? r.peer_username
+        : "Group";
+  return {
     id: r.id,
     name: r.name,
-    isDm: r.is_dm,
+    parentId: r.parent_id,
+    roomType: r.room_type,
+    pinnedModel: r.pinned_model,
+    peerLabel,
     createdBy: r.created_by,
     createdAt: r.created_at,
-    lastMessage: r.last_content
-      ? { content: r.last_content, createdAt: r.last_at }
-      : null,
+    lastMessage: r.last_content ? { content: r.last_content, createdAt: r.last_at } : null,
     peer:
       r.is_dm && r.peer_id !== null
         ? { id: r.peer_id, username: r.peer_username!, displayName: r.peer_display_name }
         : null,
     unreadCount: r.unread_count,
-  }));
+  };
+}
 
-  res.json({ ok: true, data: rooms });
+// Reload a single room in the canonical client shape for the given viewer.
+async function loadRoomForViewer(roomId: number, viewerId: number) {
+  const { rows } = await pool.query<RoomRow>(roomQuery("WHERE r.id = $2"), [viewerId, roomId]);
+  return rows.length ? serializeRoom(rows[0]) : null;
+}
+
+router.get("/rooms", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const { rows } = await pool.query<RoomRow>(
+    roomQuery("ORDER BY COALESCE(lm.created_at, r.created_at) DESC"),
+    [userId]
+  );
+  res.json({ ok: true, data: rows.map(serializeRoom) });
 });
 
 router.post("/rooms/:id/read", async (req, res) => {
@@ -111,6 +150,22 @@ router.get("/users", async (req, res) => {
   res.json({ ok: true, data: rows });
 });
 
+// Everyone the viewer can start a conversation with — humans and bots alike.
+router.get("/participants", async (req, res) => {
+  const meId = (req.user as { id: number }).id;
+  const rows = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      isBot: users.isBot,
+    })
+    .from(users)
+    .where(ne(users.id, meId))
+    .orderBy(asc(users.isBot), asc(users.username));
+  res.json({ ok: true, data: rows });
+});
+
 router.post("/dms/:userId", async (req, res) => {
   const me = req.user as { id: number };
   const peerId = parseInt(req.params.userId);
@@ -122,6 +177,10 @@ router.post("/dms/:userId", async (req, res) => {
     res.status(400).json({ ok: false, error: "Cannot DM yourself" });
     return;
   }
+
+  const title = typeof (req.body as { title?: unknown })?.title === "string"
+    ? ((req.body as { title: string }).title.trim() || null)
+    : null;
 
   const peer = await db.query.users.findFirst({ where: eq(users.id, peerId) });
   if (!peer) {
@@ -146,7 +205,7 @@ router.post("/dms/:userId", async (req, res) => {
   } else {
     const [room] = await db
       .insert(chatRooms)
-      .values({ name: null, isDm: true, createdBy: me.id })
+      .values({ name: title, isDm: true, roomType: "dm", createdBy: me.id })
       .returning();
     roomId = room.id;
 
@@ -176,19 +235,8 @@ router.post("/dms/:userId", async (req, res) => {
     }
   }
 
-  const room = await db.query.chatRooms.findFirst({ where: eq(chatRooms.id, roomId) });
-  res.json({
-    ok: true,
-    data: {
-      id: roomId,
-      name: room?.name ?? null,
-      isDm: true,
-      createdBy: room?.createdBy ?? me.id,
-      createdAt: room?.createdAt ?? new Date(),
-      lastMessage: null,
-      peer: { id: peer.id, username: peer.username, displayName: peer.displayName },
-    },
-  });
+  const data = await loadRoomForViewer(roomId, me.id);
+  res.json({ ok: true, data });
 });
 
 router.post("/rooms", async (req, res) => {
@@ -198,36 +246,74 @@ router.post("/rooms", async (req, res) => {
     return;
   }
   const userId = (req.user as { id: number }).id;
+  const { name, inviteIds, skipBots } = parsed.data;
+
   const [room] = await db
     .insert(chatRooms)
-    .values({ name: parsed.data.name, isDm: false, createdBy: userId })
+    .values({ name, isDm: false, roomType: "conversation", createdBy: userId })
     .returning();
-  await db.insert(roomMembers).values({ roomId: room.id, userId });
 
-  const autoJoinBots = await db
-    .select({ userId: bots.userId })
-    .from(bots)
-    .innerJoin(users, eq(users.id, bots.userId))
-    .where(and(eq(bots.autoJoinNewRooms, true), eq(bots.enabled, true), eq(users.isBot, true)));
+  // Members: creator + any invited humans (deduped, excluding the creator). Bots
+  // can't be invited as humans here — they join via the auto-join path below.
+  const memberIds = new Set<number>([userId]);
+  if (inviteIds?.length) {
+    const validHumans = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(ne(users.id, userId), eq(users.isBot, false)));
+    const allowed = new Set(validHumans.map((u) => u.id));
+    for (const id of inviteIds) if (allowed.has(id)) memberIds.add(id);
+  }
+  await db.insert(roomMembers).values([...memberIds].map((id) => ({ roomId: room.id, userId: id })));
 
-  if (autoJoinBots.length > 0) {
-    await db
-      .insert(roomMembers)
-      .values(autoJoinBots.map((b) => ({ roomId: room.id, userId: b.userId })));
+  if (!skipBots) {
+    const autoJoinBots = await db
+      .select({ userId: bots.userId })
+      .from(bots)
+      .innerJoin(users, eq(users.id, bots.userId))
+      .where(and(eq(bots.autoJoinNewRooms, true), eq(bots.enabled, true), eq(users.isBot, true)));
+
+    const botRows = autoJoinBots
+      .filter((b) => !memberIds.has(b.userId))
+      .map((b) => ({ roomId: room.id, userId: b.userId }));
+    if (botRows.length > 0) await db.insert(roomMembers).values(botRows);
   }
 
-  res.status(201).json({
-    ok: true,
-    data: {
-      id: room.id,
-      name: room.name,
-      isDm: room.isDm,
-      createdBy: room.createdBy,
-      createdAt: room.createdAt,
-      lastMessage: null,
-      peer: null,
-    },
-  });
+  const data = await loadRoomForViewer(room.id, userId);
+  res.status(201).json({ ok: true, data });
+});
+
+// Move / rename / pin-model — used by the sidebar's drag-to-folder and model picker.
+router.patch("/rooms/:id", async (req, res) => {
+  const me = req.user as { id: number };
+  const roomId = parseInt(req.params.id);
+  if (isNaN(roomId)) {
+    res.status(400).json({ ok: false, error: "Invalid room id" });
+    return;
+  }
+  const parsed = moveRoomSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
+    return;
+  }
+  const check = await requireRoomMember(roomId, me.id);
+  if (!("ok" in check)) {
+    res.status(check.status).json({ ok: false, error: check.error });
+    return;
+  }
+
+  const { name, parentId, pinnedModel } = parsed.data;
+  const update: Partial<{ name: string; parentId: number | null; pinnedModel: string | null }> = {};
+  if (name !== undefined) update.name = name;
+  if (parentId !== undefined) update.parentId = parentId;
+  if (pinnedModel !== undefined) update.pinnedModel = pinnedModel;
+
+  if (Object.keys(update).length > 0) {
+    await db.update(chatRooms).set(update).where(eq(chatRooms.id, roomId));
+  }
+
+  const data = await loadRoomForViewer(roomId, me.id);
+  res.json({ ok: true, data });
 });
 
 router.get("/rooms/:id", async (req, res) => {
