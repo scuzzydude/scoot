@@ -22,7 +22,7 @@ sudo docker compose -f ri/physical/docker-compose.yml exec -T postgres \
 **DB connection topology:**
 - Prod Postgres (container `scoot-postgres-1`) is reachable **from the host at `localhost:5433`** (compose maps `5433:5432`).
 - The **container** connects via `postgres:5432` (docker network) — compose sets `DATABASE_URL=postgresql://scoot:password@postgres:5432/scoot` for the app service.
-- The host `.env` has `DATABASE_URL=...@localhost:5432` which does NOT reach the dockerized prod DB. So run DB tooling **inside the container** (`docker compose exec`), not from the host.
+- The host `.env` `DATABASE_URL` points at `localhost:5433` (fixed 2026-05-29; was `:5432` which reached nothing). So host-side tooling — `npm test`, drizzle, one-off scripts — now talks to the dockerized prod DB directly. `npm test` passes 25/25 from the host. NOTE: this means host scripts hit **prod** data; be deliberate.
 
 **Code is live without rebuild.** The `app` service (`Dockerfile.dev`) bind-mounts the whole repo (`../..:/app`) and runs `npm run dev` (tsx watch + Vite). Editing files on the host = editing `/app` in the container; tsx watch restarts the server automatically (visible in `docker logs scoot-app-1`). `scoot-chat` is mounted at `/scoot-chat`. So a normal "deploy" of code changes needs no `docker compose build` — only schema changes (manual ALTER) and dependency changes (rebuild for the `node_modules` named volume) need extra steps.
 
