@@ -18,6 +18,12 @@ export default defineConfig({
     },
   },
   resolve: {
+    // scoot-chat is consumed from a sibling dir with no node_modules of its own.
+    // dedupe forces these shared singletons to resolve from this project's root
+    // node_modules — both so the bare imports resolve at all, and so scoot-chat
+    // shares ONE react + react-query instance with the host (the chat hook feeds
+    // the host's TanStack Query cache, which requires a single QueryClient context).
+    dedupe: ["react", "react-dom", "@tanstack/react-query", "lucide-react"],
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "../shared"),
