@@ -13,8 +13,7 @@ const storage = multer.diskStorage({
 export const upload = multer({
   storage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm"];
-    cb(null, allowed.includes(file.mimetype));
-  },
+  // All file types accepted (general file transfer). Non-image types are served
+  // with Content-Disposition: attachment + nosniff (see /media in app.ts), so an
+  // uploaded HTML/SVG can't execute inline in the app origin.
 });

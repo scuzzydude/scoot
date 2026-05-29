@@ -343,6 +343,8 @@ router.get("/rooms/:id/messages", async (req, res) => {
       isBot: users.isBot,
       content: messages.content,
       mediaUrl: messages.mediaUrl,
+      mediaName: messages.mediaName,
+      mediaType: messages.mediaType,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -369,7 +371,14 @@ router.post("/rooms/:id/messages", async (req, res) => {
 
   const [msg] = await db
     .insert(messages)
-    .values({ roomId, userId: user.id, content: parsed.data.content, mediaUrl: parsed.data.mediaUrl ?? null })
+    .values({
+      roomId,
+      userId: user.id,
+      content: parsed.data.content,
+      mediaUrl: parsed.data.mediaUrl ?? null,
+      mediaName: parsed.data.mediaName ?? null,
+      mediaType: parsed.data.mediaType ?? null,
+    })
     .returning();
 
   const msgPayload = {
@@ -381,6 +390,8 @@ router.post("/rooms/:id/messages", async (req, res) => {
     isBot: user.isBot,
     content: msg.content,
     mediaUrl: msg.mediaUrl,
+    mediaName: msg.mediaName,
+    mediaType: msg.mediaType,
     createdAt: msg.createdAt.toISOString(),
   };
 

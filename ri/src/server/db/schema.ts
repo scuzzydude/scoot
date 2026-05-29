@@ -60,6 +60,8 @@ export const messages = pgTable("messages", {
   userId: integer("user_id").references(() => users.id).notNull(),
   content: text("content").notNull(),
   mediaUrl: text("media_url"),
+  mediaName: text("media_name"),  // original filename of the attachment, for display/download
+  mediaType: text("media_type"),  // MIME type, so the client knows to render inline vs as a download
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

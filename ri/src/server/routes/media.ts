@@ -24,7 +24,16 @@ router.post("/upload", upload.single("file"), async (req, res) => {
     uploadedBy: userId,
   }).returning();
 
-  res.status(201).json({ ok: true, data: { id: record.id, url: `/media/${filename}` } });
+  res.status(201).json({
+    ok: true,
+    data: {
+      id: record.id,
+      url: `/media/${filename}`,
+      name: req.file.originalname,
+      type: req.file.mimetype,
+      size: req.file.size,
+    },
+  });
 });
 
 export default router;

@@ -12,8 +12,13 @@ export const loginSchema = z.object({
 });
 
 export const sendMessageSchema = z.object({
-  content: z.string().min(1).max(4000),
-  mediaUrl: z.string().url().optional(),
+  content: z.string().max(4000).default(""),
+  // Server-generated, relative path like "/media/<uuid>.ext" (or an absolute URL).
+  mediaUrl: z.string().max(1024).regex(/^(\/media\/|https?:\/\/)/, "invalid media url").optional(),
+  mediaName: z.string().max(255).optional(),
+  mediaType: z.string().max(128).optional(),
+}).refine((d) => d.content.trim().length > 0 || !!d.mediaUrl, {
+  message: "message must have text or an attachment",
 });
 
 export const createRoomSchema = z.object({

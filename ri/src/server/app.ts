@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import session from "express-session";
 import type { RequestHandler } from "express";
 import passport from "passport";
@@ -59,7 +60,22 @@ passport.deserializeUser(async (id: number, done) => {
 });
 
 const MEDIA_DIR = process.env.MEDIA_DIR ?? "/tmp/scoot-media";
-app.use("/media", express.static(MEDIA_DIR));
+const INLINE_MEDIA_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm"]);
+app.use(
+  "/media",
+  express.static(MEDIA_DIR, {
+    setHeaders: (res, filePath) => {
+      // Never let the browser MIME-sniff uploaded content.
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      // Images/video render inline; everything else downloads (so an uploaded
+      // HTML/SVG can't execute in the app origin).
+      const ext = path.extname(filePath).toLowerCase();
+      if (!INLINE_MEDIA_EXT.has(ext)) {
+        res.setHeader("Content-Disposition", "attachment");
+      }
+    },
+  })
+);
 
 app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/chat", chatRouter);

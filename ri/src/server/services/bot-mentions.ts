@@ -136,6 +136,8 @@ async function postBotMessage(
       isBot: true,
       content: msg.content,
       mediaUrl: msg.mediaUrl,
+      mediaName: msg.mediaName,
+      mediaType: msg.mediaType,
       createdAt: msg.createdAt.toISOString(),
     },
   });
