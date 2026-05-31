@@ -8,6 +8,10 @@ import { Input } from "../components/ui/input.js";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card.js";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form.js";
 
+// Public landing copy — only logged-out visitors reach this page.
+// Update WEEKLY_STATUS each week (e.g. "No play Tuesday — court closed for the holiday").
+const WEEKLY_STATUS = "Normal play / hours this week.";
+
 export default function AuthPage() {
   const { user, login, loginError } = useAuth();
   const form = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
@@ -15,15 +19,26 @@ export default function AuthPage() {
   if (user) return <Redirect to="/chat" />;
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">
+    <div className="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center gap-8 p-6">
+      <header className="flex flex-col items-center text-center max-w-md">
+        <img
+          src="/assets/white_on_transparent_scoot.png"
+          alt="Scoot"
+          className="h-14 w-auto mb-4"
+        />
+        <h1 className="text-3xl font-bold tracking-tight text-white">The Dream Laboratory</h1>
+        <p className="mt-1 text-lg text-white/80">Home of the Fonde Brotherhood</p>
+        <p className="mt-3 text-sm font-medium text-white/70">Men's Senior Basketball · 55+</p>
+        <p className="mt-2 text-sm text-white/70">
+          We play 4-on-4 pickup at Fonde Rec Center on Tuesdays at 4pm and Saturdays at 10am.
+        </p>
+        <p className="mt-4 text-sm text-white/70">
+          <span className="text-white/50">Status:</span> {WEEKLY_STATUS}
+        </p>
+      </header>
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center pb-4">
-          <img
-            src="/assets/white_on_transparent_scoot.png"
-            alt="Scoot"
-            className="h-16 w-auto mb-2"
-          />
-          <CardTitle className="text-xl">Sign in to Scoot</CardTitle>
+          <CardTitle className="text-xl">Sign in</CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
