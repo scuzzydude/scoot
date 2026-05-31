@@ -84,6 +84,9 @@ export default function AuthPage() {
           </Form>
         </CardContent>
       </Card>
+      <p className="text-sm text-white/70">
+        Text <a href="sms:+13614232253" className="text-white underline underline-offset-2">361-423-2253</a> for latest updates
+      </p>
     </div>
   );
 }
