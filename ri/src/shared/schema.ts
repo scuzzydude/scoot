@@ -40,6 +40,7 @@ export const sendScootSchema = z.object({
 
 export const botMessageSchema = z.object({
   content: z.string().min(1).max(8000),
+  mode: z.enum(["full", "cotb"]).optional().default("full"),
 });
 
 export const navItemSchema = z.object({

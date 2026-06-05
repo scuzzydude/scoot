@@ -8,16 +8,22 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
+export type BotMode = "full" | "cotb";
+
 export interface BotHistoryEntry {
   role: string;
   content: string;
 }
 
 export const botApi = {
-  sendMessage: (content: string) =>
-    apiFetch<{ reply: string }>("/bot/message", { method: "POST", body: JSON.stringify({ content }) }),
+  sendMessage: (content: string, mode: BotMode = "full") =>
+    apiFetch<{ reply: string; mode: BotMode }>("/bot/message", {
+      method: "POST",
+      body: JSON.stringify({ content, mode }),
+    }),
 
-  getHistory: () => apiFetch<BotHistoryEntry[]>("/bot/history"),
+  getHistory: (mode: BotMode = "full") =>
+    apiFetch<BotHistoryEntry[]>(`/bot/history?mode=${mode}`),
 
   reset: () => apiFetch<null>("/bot/reset", { method: "POST" }),
 };

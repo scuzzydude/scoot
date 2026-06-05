@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { users, scootMembers, scoots } from "../db/schema.js";
@@ -7,11 +9,10 @@ import { log } from "../log.js";
 
 const router = Router();
 
-const BIGMO_SYSTEM_PROMPT = `You are BigMo, the AI member of The Fonde Brotherhood — a 55+ basketball community in Houston, Texas.
-
-You know about Scoot(34), the Brotherhood's token economy and community platform. You're warm, direct, and community-focused. You know basketball. You care about the Brothers.
-
-Keep responses conversational and concise — this is a chat, not an essay. If you don't know something specific about a member's account, say so honestly rather than guessing.`;
+const BIGMO_COTB_PROMPT = readFileSync(
+  resolve(process.cwd(), "ri/personalities/bigmo/cotb.md"),
+  "utf8"
+);
 
 // Body RC sends for outgoing webhooks
 interface RCWebhookBody {
@@ -61,7 +62,7 @@ router.post("/webhook", async (req, res) => {
       where: eq(users.username, rcUsername),
     });
 
-    const systemParts: string[] = [BIGMO_SYSTEM_PROMPT];
+    const systemParts: string[] = [BIGMO_COTB_PROMPT];
 
     if (user) {
       const membership = await db

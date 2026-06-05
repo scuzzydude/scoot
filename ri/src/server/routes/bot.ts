@@ -8,12 +8,12 @@ import { botMessageSchema } from "../../shared/schema.js";
 const router = Router();
 router.use(requireAuth);
 
-const BIGMO_SYSTEM = readFileSync(
-  resolve(process.cwd(), "ri/personalities/bigmo/personality.md"),
-  "utf8"
-);
+const SYSTEM_PROMPTS = {
+  full: readFileSync(resolve(process.cwd(), "ri/personalities/bigmo/personality.md"), "utf8"),
+  cotb: readFileSync(resolve(process.cwd(), "ri/personalities/bigmo/cotb.md"), "utf8"),
+};
 
-// In-memory history per session — Phase 4 will persist this
+// History is keyed by sessionId + mode so switching modes starts a fresh context
 const sessionHistory = new Map<string, { role: string; content: string }[]>();
 
 router.post("/message", async (req, res) => {
@@ -23,16 +23,17 @@ router.post("/message", async (req, res) => {
     return;
   }
 
-  const sessionId = req.sessionID;
-  const history = sessionHistory.get(sessionId) ?? [];
-  history.push({ role: "user", content: parsed.data.content });
+  const { content, mode } = parsed.data;
+  const historyKey = `${req.sessionID}:${mode}`;
+  const history = sessionHistory.get(historyKey) ?? [];
+  history.push({ role: "user", content });
 
   try {
     const provider = getProvider();
-    const reply = await provider.chat(history, { system: BIGMO_SYSTEM });
+    const reply = await provider.chat(history, { system: SYSTEM_PROMPTS[mode] });
     history.push({ role: "assistant", content: reply });
-    sessionHistory.set(sessionId, history);
-    res.json({ ok: true, data: { reply } });
+    sessionHistory.set(historyKey, history);
+    res.json({ ok: true, data: { reply, mode } });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "LLM error";
     res.status(503).json({ ok: false, error: msg });
@@ -40,12 +41,14 @@ router.post("/message", async (req, res) => {
 });
 
 router.get("/history", (req, res) => {
-  const history = sessionHistory.get(req.sessionID) ?? [];
+  const mode = (req.query.mode as string) === "cotb" ? "cotb" : "full";
+  const history = sessionHistory.get(`${req.sessionID}:${mode}`) ?? [];
   res.json({ ok: true, data: history });
 });
 
 router.post("/reset", (req, res) => {
-  sessionHistory.delete(req.sessionID);
+  sessionHistory.delete(`${req.sessionID}:full`);
+  sessionHistory.delete(`${req.sessionID}:cotb`);
   res.json({ ok: true, data: null });
 });
 
