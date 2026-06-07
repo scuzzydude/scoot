@@ -87,6 +87,11 @@ export default function AuthPage() {
       <p className="text-sm text-white/70">
         Text <a href="sms:+13614232253" className="text-white underline underline-offset-2">361-423-2253</a> for latest updates
       </p>
+      <p className="text-xs text-white/40 pb-4">
+        <a href="/privacy" className="underline underline-offset-2">Privacy Policy</a>
+        {" · "}
+        <a href="/terms" className="underline underline-offset-2">Terms of Service</a>
+      </p>
     </div>
   );
 }

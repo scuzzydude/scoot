@@ -10,6 +10,8 @@ import ChatPage from "./pages/chat-page.js";
 import WalletPage from "./pages/wallet-page.js";
 import BotPage from "./pages/bot-page.js";
 import ScootPage from "./pages/scoot-page.js";
+import PrivacyPage from "./pages/privacy-page.js";
+import TermsPage from "./pages/terms-page.js";
 import NotFound from "./pages/not-found.js";
 
 export default function App() {
@@ -24,6 +26,8 @@ export default function App() {
             <Switch>
               <Route path="/" component={() => <Redirect to="/chat" />} />
               <Route path="/auth" component={AuthPage} />
+              <Route path="/privacy" component={PrivacyPage} />
+              <Route path="/terms" component={TermsPage} />
               <Route path="/chat">
                 <ProtectedRoute><ChatPage /></ProtectedRoute>
               </Route>
