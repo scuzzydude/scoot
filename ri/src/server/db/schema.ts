@@ -3,12 +3,14 @@ import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, jsonb }
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
   phone: text("phone").unique(),
   passwordHash: text("password_hash"),
   displayName: text("display_name"),
   isBot: boolean("is_bot").notNull().default(false),
   isStaked: boolean("is_staked").notNull().default(false),
+  isGymBoss: boolean("is_gymboss").notNull().default(false),
+  yearOfBirth: integer("year_of_birth"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
