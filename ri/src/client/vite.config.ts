@@ -27,7 +27,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "src"),
       "@shared": path.resolve(__dirname, "../shared"),
-      "scoot-chat": path.resolve(__dirname, "../../../../scoot-chat/src/index.ts"),
+      "scoot-chat": path.resolve(__dirname, "../../../scoot-chat/src/index.ts"),
     },
   },
   server: {

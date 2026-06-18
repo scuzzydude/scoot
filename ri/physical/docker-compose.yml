@@ -37,7 +37,7 @@ services:
       - ../..:/app
       - node_modules:/app/node_modules
       - ${DATA_DIR:-/tmp/scoot-data}/media:/var/scoot/media
-      - ../../../scoot-chat:/scoot-chat
+      - ../../../scoot-chat:/app/scoot-chat
 
 volumes:
   node_modules:
