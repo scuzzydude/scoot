@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { authApi } from "../api/auth.js";
-import type { RegisterInput, LoginInput } from "@shared/schema.js";
+import type { RegisterInput, LoginRequestInput, LoginVerifyInput } from "@shared/schema.js";
 
 export function useAuth() {
   const qc = useQueryClient();
@@ -13,11 +13,14 @@ export function useAuth() {
 
   const registerMutation = useMutation({
     mutationFn: (data: RegisterInput) => authApi.register(data),
-    onSuccess: (u) => qc.setQueryData(["auth", "me"], u),
   });
 
-  const loginMutation = useMutation({
-    mutationFn: (data: LoginInput) => authApi.login(data),
+  const loginRequestMutation = useMutation({
+    mutationFn: (data: LoginRequestInput) => authApi.loginRequest(data),
+  });
+
+  const loginVerifyMutation = useMutation({
+    mutationFn: (data: LoginVerifyInput) => authApi.loginVerify(data),
     onSuccess: (u) => qc.setQueryData(["auth", "me"], u),
   });
 
@@ -33,9 +36,11 @@ export function useAuth() {
     user: user ?? null,
     isLoading,
     register: registerMutation.mutateAsync,
-    login: loginMutation.mutateAsync,
-    logout: logoutMutation.mutate,
     registerError: registerMutation.error,
-    loginError: loginMutation.error,
+    loginRequest: loginRequestMutation.mutateAsync,
+    loginRequestError: loginRequestMutation.error,
+    loginVerify: loginVerifyMutation.mutateAsync,
+    loginVerifyError: loginVerifyMutation.error,
+    logout: logoutMutation.mutate,
   };
 }

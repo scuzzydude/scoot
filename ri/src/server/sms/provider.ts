@@ -16,6 +16,7 @@ export interface InboundMessage {
   fromCountry: string | null;
   numMedia: number;      // 0 = SMS, >0 = MMS with attachments
   numSegments: number;
+  mediaUrls: string[];   // MMS attachment URLs (MediaUrl0, MediaUrl1, ...)
 }
 
 export interface SMSProvider {

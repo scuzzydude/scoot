@@ -2,14 +2,24 @@ import { z } from "zod";
 
 export const registerSchema = z.object({
   username: z.string().min(3).max(32).regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers, underscores only"),
+  displayName: z.string().min(1).max(64),
   email: z.string().email(),
-  password: z.string().min(8),
+  phone: z.string().regex(/^\d{10}$/, "10-digit US number, no spaces or dashes"),
 });
 
-export const loginSchema = z.object({
-  username: z.string().min(1),
-  password: z.string().min(1),
+// Step 1: request OTP — just a phone number
+export const loginRequestSchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "10-digit US number"),
 });
+
+// Step 2: verify OTP — phone + code
+export const loginVerifySchema = z.object({
+  phone: z.string().regex(/^\d{10}$/, "10-digit US number"),
+  code: z.string().length(5),
+});
+
+// Keep loginSchema as an alias for loginRequestSchema (used in auth hook)
+export const loginSchema = loginRequestSchema;
 
 const attachmentSchema = z.object({
   url: z.string().max(1024),
@@ -87,7 +97,9 @@ export type NavItem = z.infer<typeof navItemSchema>;
 export type PageBlock = z.infer<typeof pageBlockSchema>;
 
 export type RegisterInput = z.infer<typeof registerSchema>;
-export type LoginInput = z.infer<typeof loginSchema>;
+export type LoginRequestInput = z.infer<typeof loginRequestSchema>;
+export type LoginVerifyInput = z.infer<typeof loginVerifySchema>;
+export type LoginInput = LoginRequestInput;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 export type SendScootInput = z.infer<typeof sendScootSchema>;

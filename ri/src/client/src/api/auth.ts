@@ -1,4 +1,4 @@
-import type { RegisterInput, LoginInput } from "@shared/schema.js";
+import type { RegisterInput, LoginRequestInput, LoginVerifyInput } from "@shared/schema.js";
 
 interface UserData {
   id: number;
@@ -6,6 +6,7 @@ interface UserData {
   email: string;
   displayName: string | null;
   isBot: boolean;
+  isStaked: boolean;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -22,11 +23,16 @@ export const authApi = {
   me: () => apiFetch<UserData | null>("/auth/me").catch(() => null),
 
   register: (data: RegisterInput) =>
-    apiFetch<UserData>("/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    apiFetch<{ id: number; username: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
-  login: (data: LoginInput) =>
-    apiFetch<UserData>("/auth/login", { method: "POST", body: JSON.stringify(data) }),
+  loginRequest: (data: LoginRequestInput) =>
+    apiFetch<null>("/auth/login/request", { method: "POST", body: JSON.stringify(data) }),
 
-  logout: () =>
-    apiFetch<null>("/auth/logout", { method: "POST" }),
+  loginVerify: (data: LoginVerifyInput) =>
+    apiFetch<UserData>("/auth/login/verify", { method: "POST", body: JSON.stringify(data) }),
+
+  logout: () => apiFetch<null>("/auth/logout", { method: "POST" }),
 };

@@ -4,9 +4,11 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  phone: text("phone").unique(),
+  passwordHash: text("password_hash"),
   displayName: text("display_name"),
   isBot: boolean("is_bot").notNull().default(false),
+  isStaked: boolean("is_staked").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -118,6 +120,33 @@ export const scootPageBlocks = pgTable("scoot_page_blocks", {
   blockType: text("block_type").notNull(),
   blockOrder: integer("block_order").notNull(),
   content: jsonb("content").notNull(),
+});
+
+export const loginOtps = pgTable("login_otps", {
+  id: serial("id").primaryKey(),
+  phone: text("phone").notNull(),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const stakingCodes = pgTable("staking_codes", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const pledges = pgTable("pledges", {
+  id: serial("id").primaryKey(),
+  stakerId: integer("staker_id").notNull().references(() => users.id),
+  stakeeId: integer("stakee_id").notNull().references(() => users.id),
+  selfieUrl: text("selfie_url").notNull(),
+  stakingCode: text("staking_code").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;

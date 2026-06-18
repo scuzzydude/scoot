@@ -30,6 +30,12 @@ export class TwilioProvider implements SMSProvider {
   }
 
   parseInbound(payload: Record<string, string>): InboundMessage {
+    const numMedia = parseInt(payload.NumMedia ?? "0", 10);
+    const mediaUrls: string[] = [];
+    for (let i = 0; i < numMedia; i++) {
+      const url = payload[`MediaUrl${i}`];
+      if (url) mediaUrls.push(url);
+    }
     return {
       from: payload.From ?? "",
       to: payload.To ?? "",
@@ -40,8 +46,9 @@ export class TwilioProvider implements SMSProvider {
       fromState: payload.FromState || null,
       fromZip: payload.FromZip || null,
       fromCountry: payload.FromCountry || null,
-      numMedia: parseInt(payload.NumMedia ?? "0", 10),
+      numMedia,
       numSegments: parseInt(payload.NumSegments ?? "1", 10),
+      mediaUrls,
     };
   }
 }
