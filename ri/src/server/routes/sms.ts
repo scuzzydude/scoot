@@ -37,7 +37,11 @@ router.post("/inbound", (req, res) => {
 
   const msg = provider.parseInbound(params);
   pushInbox(msg);
-  log.info({ from: msg.from, body: msg.body, sid: msg.messageSid }, "sms inbound");
+  log.info({
+    from: msg.from, body: msg.body, sid: msg.messageSid,
+    fromCity: msg.fromCity, fromState: msg.fromState,
+    numMedia: msg.numMedia, numSegments: msg.numSegments,
+  }, "sms inbound");
 
   // Optional echo reply for end-to-end test
   if (process.env.SMS_AUTOREPLY === "true") {

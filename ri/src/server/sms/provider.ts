@@ -9,6 +9,13 @@ export interface InboundMessage {
   body: string;
   messageSid: string;
   receivedAt: string;
+  // Sender location — derived from area code registration, NOT current cell tower
+  fromCity: string | null;
+  fromState: string | null;
+  fromZip: string | null;
+  fromCountry: string | null;
+  numMedia: number;      // 0 = SMS, >0 = MMS with attachments
+  numSegments: number;
 }
 
 export interface SMSProvider {

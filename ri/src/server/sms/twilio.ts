@@ -36,6 +36,12 @@ export class TwilioProvider implements SMSProvider {
       body: payload.Body ?? "",
       messageSid: payload.MessageSid ?? "",
       receivedAt: new Date().toISOString(),
+      fromCity: payload.FromCity || null,
+      fromState: payload.FromState || null,
+      fromZip: payload.FromZip || null,
+      fromCountry: payload.FromCountry || null,
+      numMedia: parseInt(payload.NumMedia ?? "0", 10),
+      numSegments: parseInt(payload.NumSegments ?? "1", 10),
     };
   }
 }
