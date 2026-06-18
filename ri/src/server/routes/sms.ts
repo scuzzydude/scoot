@@ -6,6 +6,7 @@ import type { InboundMessage } from "../sms/provider.js";
 import { db } from "../db/index.js";
 import { users, stakingCodes, pledges } from "../db/schema.js";
 import { eq, and, gt } from "drizzle-orm";
+import { handleSmsMessage } from "../sms/bigmo.js";
 
 const router = Router();
 
@@ -55,11 +56,14 @@ router.post("/inbound", async (req, res) => {
     return;
   }
 
-  // Optional echo reply for end-to-end test
-  if (process.env.SMS_AUTOREPLY === "true") {
-    const safe = msg.body.replace(/[<&>]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c]!));
-    res.type("text/xml").send(`<Response><Message>echo: ${safe}</Message></Response>`);
-    return;
+  // BigMo responds to all plain text messages
+  if (msg.body.trim()) {
+    const reply = await handleSmsMessage(msg.from, msg.body);
+    if (reply) {
+      const safe = reply.replace(/[<&>'"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", "'": "&apos;", '"': "&quot;" }[c]!));
+      res.type("text/xml").send(`<Response><Message>${safe}</Message></Response>`);
+      return;
+    }
   }
 
   res.type("text/xml").send("<Response></Response>");
