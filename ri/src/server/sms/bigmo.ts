@@ -85,7 +85,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   try {
     const reply = await getProvider().chat([...hist], { system: withTimeContext(systemPrompt), maxTokens: 160 });
     pushHistory(histKey, "assistant", reply);
-    log.info({ phone, sender: sender?.username ?? "unknown" }, "bigmo sms reply sent");
+    log.info({ phone, sender: sender?.username ?? "unknown", reply }, "bigmo sms reply sent");
     return reply;
   } catch (err) {
     log.error({ err, phone }, "bigmo sms: LLM error");
