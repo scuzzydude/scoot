@@ -73,7 +73,8 @@ else
 fi
 
 # ── 7. BigMo bot registered ──────────────────────────────────────────────────
-if docker logs scoot-app-1 2>&1 | grep -q "Bot ready: bigmo"; then
+CONTAINER_LOGS=$(docker logs scoot-app-1 2>&1 || true)
+if echo "$CONTAINER_LOGS" | grep -q "Bot ready: bigmo"; then
   ok "BigMo bot registered on startup"
 else
   fail "BigMo bot not found in container logs"
