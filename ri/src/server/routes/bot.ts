@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { requireAuth } from "../middleware/auth.js";
 import { getProvider } from "../llm/provider.js";
+import { withTimeContext } from "../llm/time-context.js";
 import { botMessageSchema } from "../../shared/schema.js";
 
 const router = Router();
@@ -30,7 +31,7 @@ router.post("/message", async (req, res) => {
 
   try {
     const provider = getProvider();
-    const reply = await provider.chat(history, { system: SYSTEM_PROMPTS[mode] });
+    const reply = await provider.chat(history, { system: withTimeContext(SYSTEM_PROMPTS[mode]) });
     history.push({ role: "assistant", content: reply });
     sessionHistory.set(historyKey, history);
     res.json({ ok: true, data: { reply, mode } });
