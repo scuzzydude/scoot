@@ -22,7 +22,10 @@
     "docker:up:build": "docker compose -f ri/physical/docker-compose.yml up -d --build",
     "docker:down": "docker compose -f ri/physical/docker-compose.yml down",
     "docker:logs": "docker compose -f ri/physical/docker-compose.yml logs -f",
-    "docker:exec": "docker compose -f ri/physical/docker-compose.yml exec app"
+    "docker:exec": "docker compose -f ri/physical/docker-compose.yml exec app",
+    "smoke": "bash scripts/smoke-test.sh",
+    "hooks:install": "bash scripts/install-hooks.sh",
+    "prepare": "bash scripts/install-hooks.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
