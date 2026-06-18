@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "../hooks/use-auth.js";
 import {
   loginRequestSchema, loginVerifySchema, registerSchema,
-  type LoginRequestInput, type LoginVerifyInput, type RegisterInput,
+  type LoginRequestInput, type RegisterInput,
 } from "@shared/schema.js";
 import { Button } from "../components/ui/button.js";
 import { Input } from "../components/ui/input.js";
@@ -24,7 +24,9 @@ function SignInForm() {
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const phoneForm = useForm<LoginRequestInput>({ resolver: zodResolver(loginRequestSchema) });
-  const codeForm = useForm<LoginVerifyInput>({ resolver: zodResolver(loginVerifySchema) });
+  const codeForm = useForm<{ code: string }>({
+    resolver: zodResolver(loginVerifySchema.pick({ code: true })),
+  });
 
   async function onPhoneSubmit(data: LoginRequestInput) {
     setRequestError(null);
@@ -37,7 +39,7 @@ function SignInForm() {
     }
   }
 
-  async function onCodeSubmit(data: LoginVerifyInput) {
+  async function onCodeSubmit(data: { code: string }) {
     await loginVerify({ phone, code: data.code });
   }
 
