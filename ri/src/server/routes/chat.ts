@@ -345,6 +345,7 @@ router.get("/rooms/:id/messages", async (req, res) => {
       mediaUrl: messages.mediaUrl,
       mediaName: messages.mediaName,
       mediaType: messages.mediaType,
+      attachments: messages.attachments,
       createdAt: messages.createdAt,
     })
     .from(messages)
@@ -378,6 +379,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
       mediaUrl: parsed.data.mediaUrl ?? null,
       mediaName: parsed.data.mediaName ?? null,
       mediaType: parsed.data.mediaType ?? null,
+      attachments: parsed.data.attachments ?? null,
     })
     .returning();
 
@@ -392,6 +394,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
     mediaUrl: msg.mediaUrl,
     mediaName: msg.mediaName,
     mediaType: msg.mediaType,
+    attachments: msg.attachments ?? null,
     createdAt: msg.createdAt.toISOString(),
   };
 

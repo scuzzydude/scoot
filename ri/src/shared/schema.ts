@@ -11,13 +11,20 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const attachmentSchema = z.object({
+  url: z.string().max(1024),
+  name: z.string().max(255),
+  type: z.string().max(128),
+  size: z.number().optional(),
+});
+
 export const sendMessageSchema = z.object({
   content: z.string().max(4000).default(""),
-  // Server-generated, relative path like "/media/<uuid>.ext" (or an absolute URL).
   mediaUrl: z.string().max(1024).regex(/^(\/media\/|https?:\/\/)/, "invalid media url").optional(),
   mediaName: z.string().max(255).optional(),
   mediaType: z.string().max(128).optional(),
-}).refine((d) => d.content.trim().length > 0 || !!d.mediaUrl, {
+  attachments: z.array(attachmentSchema).max(25).optional(),
+}).refine((d) => d.content.trim().length > 0 || !!d.mediaUrl || (d.attachments?.length ?? 0) > 0, {
   message: "message must have text or an attachment",
 });
 
