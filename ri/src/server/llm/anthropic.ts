@@ -21,7 +21,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor() {
     this.client = new Anthropic({ apiKey: process.env.LLM_API_KEY });
-    this.model = process.env.LLM_MODEL ?? "claude-sonnet-4-20250514";
+    this.model = process.env.LLM_MODEL ?? "claude-sonnet-4-5";
   }
 
   async chat(
