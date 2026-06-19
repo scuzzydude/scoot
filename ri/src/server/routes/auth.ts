@@ -1,7 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "../db/index.js";
-import { users, loginOtps } from "../db/schema.js";
+import { users, loginOtps, UserFlags } from "../db/schema.js";
 import { eq, and, gt } from "drizzle-orm";
 import { getProvider as getSms } from "../sms/provider.js";
 import { registerSchema, loginRequestSchema, loginVerifySchema } from "../../shared/schema.js";
@@ -47,7 +47,6 @@ router.post("/register", async (req, res) => {
     email,
     phone,
     passwordHash: null,
-    isStaked: false,
   }).returning();
 
   log.info({ userId: user.id, username }, "new user registered");
@@ -127,8 +126,8 @@ router.post("/login/verify", async (req, res) => {
       username: user.username,
       email: user.email,
       displayName: user.displayName,
-      isBot: user.isBot,
-      isStaked: user.isStaked,
+      isBot: (user.flags & UserFlags.BOT) !== 0,
+      isStaked: (user.flags & UserFlags.STAKED) !== 0,
     },
   });
 });
@@ -152,8 +151,8 @@ router.get("/me", (req, res) => {
       username: u.username,
       email: u.email,
       displayName: u.displayName,
-      isBot: u.isBot,
-      isStaked: u.isStaked,
+      isBot: (u.flags & UserFlags.BOT) !== 0,
+      isStaked: (u.flags & UserFlags.STAKED) !== 0,
     },
   });
 });

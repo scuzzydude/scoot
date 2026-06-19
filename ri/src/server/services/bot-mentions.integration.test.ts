@@ -1,9 +1,9 @@
 import "dotenv/config";
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
-import { bots, chatRooms, messages, roomMembers, users } from "../db/schema.js";
+import { bots, chatRooms, messages, roomMembers, users, UserFlags } from "../db/schema.js";
 import { setProvider } from "../llm/provider.js";
 import type { LLMProvider, ChatOptions } from "../llm/provider.js";
 import { handleMentions } from "./bot-mentions.js";
@@ -31,16 +31,16 @@ async function setupRoom(): Promise<TestContext> {
   // Use whichever bot is currently enabled (claude was retired; bigmo is the
   // active bot). findMentionedBot only matches enabled bots.
   const [bot] = await db
-    .select({ id: users.id, isBot: users.isBot, username: users.username })
+    .select({ id: users.id, flags: users.flags, username: users.username })
     .from(users)
     .innerJoin(bots, eq(bots.userId, users.id))
-    .where(and(eq(users.isBot, true), eq(bots.enabled, true)))
+    .where(and(sql`(${users.flags} & ${UserFlags.BOT}) != 0`, eq(bots.enabled, true)))
     .limit(1);
   if (!bot) {
     throw new Error("no enabled bot seeded — run server once to seed bigmo");
   }
 
-  const human = await db.query.users.findFirst({ where: eq(users.isBot, false) });
+  const human = await db.query.users.findFirst({ where: sql`(${users.flags} & ${UserFlags.BOT}) = 0` });
   if (!human) throw new Error("no human user in DB — seed default user");
 
   const [room] = await db

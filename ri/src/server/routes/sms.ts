@@ -4,8 +4,8 @@ import { getProvider } from "../sms/provider.js";
 import { log } from "../log.js";
 import type { InboundMessage } from "../sms/provider.js";
 import { db } from "../db/index.js";
-import { users, stakingCodes, pledges } from "../db/schema.js";
-import { eq, and, gt } from "drizzle-orm";
+import { users, stakingCodes, pledges, UserFlags } from "../db/schema.js";
+import { eq, and, gt, sql } from "drizzle-orm";
 import { handleSmsMessage } from "../sms/bigmo.js";
 
 const router = Router();
@@ -78,7 +78,7 @@ async function handleStaking(msg: InboundMessage, code: string): Promise<string>
     log.warn({ from: msg.from }, "staking attempt from unknown phone");
     return "I don&apos;t recognize your number. Are you registered on Scoot?";
   }
-  if (!staker.isStaked) {
+  if ((staker.flags & UserFlags.STAKED) === 0) {
     log.warn({ stakerId: staker.id }, "unstaked user attempted to stake");
     return "You need to be staked yourself before you can stake others.";
   }
@@ -99,14 +99,14 @@ async function handleStaking(msg: InboundMessage, code: string): Promise<string>
   if (!stakee) {
     return "Something went wrong — user not found.";
   }
-  if (stakee.isStaked) {
+  if ((stakee.flags & UserFlags.STAKED) !== 0) {
     return `${stakee.displayName ?? stakee.username} is already staked!`;
   }
 
   const selfieUrl = msg.mediaUrls[0];
 
   await db.update(stakingCodes).set({ used: true }).where(eq(stakingCodes.id, stakingCode.id));
-  await db.update(users).set({ isStaked: true }).where(eq(users.id, stakee.id));
+  await db.update(users).set({ flags: sql`${users.flags} | ${UserFlags.STAKED}` }).where(eq(users.id, stakee.id));
   await db.insert(pledges).values({
     stakerId: staker.id,
     stakeeId: stakee.id,

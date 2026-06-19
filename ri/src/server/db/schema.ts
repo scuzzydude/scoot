@@ -1,5 +1,12 @@
 import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, jsonb } from "drizzle-orm/pg-core";
 
+// Bit positions for users.flags
+export const UserFlags = {
+  BOT:      1 << 0,  // 1
+  STAKED:   1 << 1,  // 2
+  GYMBOSS:  1 << 2,  // 4
+} as const;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
@@ -7,9 +14,7 @@ export const users = pgTable("users", {
   phone: text("phone").unique(),
   passwordHash: text("password_hash"),
   displayName: text("display_name"),
-  isBot: boolean("is_bot").notNull().default(false),
-  isStaked: boolean("is_staked").notNull().default(false),
-  isGymBoss: boolean("is_gymboss").notNull().default(false),
+  flags: integer("flags").notNull().default(0),
   yearOfBirth: integer("year_of_birth"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

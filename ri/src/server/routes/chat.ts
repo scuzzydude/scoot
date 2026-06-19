@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, pool } from "../db/index.js";
-import { chatRooms, messages, roomMembers, users, bots, dmPairs } from "../db/schema.js";
-import { eq, lt, desc, and, ne, asc, or } from "drizzle-orm";
+import { chatRooms, messages, roomMembers, users, bots, dmPairs, UserFlags } from "../db/schema.js";
+import { eq, lt, desc, and, ne, asc, or, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { createRoomSchema, moveRoomSchema, sendMessageSchema } from "../../shared/schema.js";
 import { broadcast } from "../ws/chat-ws.js";
@@ -48,7 +48,7 @@ function roomQuery(filterClause: string): string {
         SELECT COUNT(*)::int
         FROM room_members rmh
         INNER JOIN users uu ON uu.id = rmh.user_id
-        WHERE rmh.room_id = r.id AND rmh.user_id <> $1 AND uu.is_bot = false
+        WHERE rmh.room_id = r.id AND rmh.user_id <> $1 AND (uu.flags & 1) = 0
       ) AS other_human_count,
       (
         SELECT COUNT(*)::int
@@ -72,7 +72,7 @@ function roomQuery(filterClause: string): string {
       INNER JOIN users u ON u.id = rm_other.user_id
       WHERE rm_other.room_id = r.id
         AND rm_other.user_id <> $1
-        AND u.is_bot = false
+        AND (u.flags & 1) = 0
       ORDER BY u.id
       LIMIT 1
     ) oh ON true
@@ -145,7 +145,7 @@ router.get("/users", async (req, res) => {
       displayName: users.displayName,
     })
     .from(users)
-    .where(and(ne(users.id, meId), eq(users.isBot, false)))
+    .where(and(ne(users.id, meId), sql`(${users.flags} & ${UserFlags.BOT}) = 0`))
     .orderBy(asc(users.username));
   res.json({ ok: true, data: rows });
 });
@@ -159,13 +159,14 @@ router.get("/participants", async (req, res) => {
       id: users.id,
       username: users.username,
       displayName: users.displayName,
-      isBot: users.isBot,
+      flags: users.flags,
     })
     .from(users)
     .leftJoin(bots, eq(bots.userId, users.id))
-    .where(and(ne(users.id, meId), or(eq(users.isBot, false), eq(bots.enabled, true))))
-    .orderBy(asc(users.isBot), asc(users.username));
-  res.json({ ok: true, data: rows });
+    .where(and(ne(users.id, meId), or(sql`(${users.flags} & ${UserFlags.BOT}) = 0`, eq(bots.enabled, true))))
+    .orderBy(asc(users.flags), asc(users.username));
+  const participantRows = rows.map((r) => ({ ...r, isBot: (r.flags & UserFlags.BOT) !== 0 }));
+  res.json({ ok: true, data: participantRows });
 });
 
 router.post("/dms/:userId", async (req, res) => {
@@ -189,7 +190,7 @@ router.post("/dms/:userId", async (req, res) => {
     res.status(404).json({ ok: false, error: "User not found" });
     return;
   }
-  if (peer.isBot) {
+  if ((peer.flags & UserFlags.BOT) !== 0) {
     res.status(400).json({ ok: false, error: "Cannot DM a bot" });
     return;
   }
@@ -262,7 +263,7 @@ router.post("/rooms", async (req, res) => {
     const validHumans = await db
       .select({ id: users.id })
       .from(users)
-      .where(and(ne(users.id, userId), eq(users.isBot, false)));
+      .where(and(ne(users.id, userId), sql`(${users.flags} & ${UserFlags.BOT}) = 0`));
     const allowed = new Set(validHumans.map((u) => u.id));
     for (const id of inviteIds) if (allowed.has(id)) memberIds.add(id);
   }
@@ -273,7 +274,7 @@ router.post("/rooms", async (req, res) => {
       .select({ userId: bots.userId })
       .from(bots)
       .innerJoin(users, eq(users.id, bots.userId))
-      .where(and(eq(bots.autoJoinNewRooms, true), eq(bots.enabled, true), eq(users.isBot, true)));
+      .where(and(eq(bots.autoJoinNewRooms, true), eq(bots.enabled, true), sql`(${users.flags} & ${UserFlags.BOT}) != 0`));
 
     const botRows = autoJoinBots
       .filter((b) => !memberIds.has(b.userId))
@@ -340,7 +341,7 @@ router.get("/rooms/:id/messages", async (req, res) => {
       userId: messages.userId,
       username: users.username,
       displayName: users.displayName,
-      isBot: users.isBot,
+      flags: users.flags,
       content: messages.content,
       mediaUrl: messages.mediaUrl,
       mediaName: messages.mediaName,
@@ -358,7 +359,7 @@ router.get("/rooms/:id/messages", async (req, res) => {
     .orderBy(desc(messages.createdAt))
     .limit(50);
 
-  res.json({ ok: true, data: rows.reverse() });
+  res.json({ ok: true, data: rows.reverse().map((r) => ({ ...r, isBot: ((r.flags ?? 0) & UserFlags.BOT) !== 0 })) });
 });
 
 router.post("/rooms/:id/messages", async (req, res) => {
@@ -367,7 +368,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
     res.status(400).json({ ok: false, error: parsed.error.issues[0].message });
     return;
   }
-  const user = req.user as { id: number; username: string; displayName: string | null; isBot: boolean };
+  const user = req.user as { id: number; username: string; displayName: string | null; flags: number };
   const roomId = parseInt(req.params.id);
 
   const [msg] = await db
@@ -389,7 +390,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
     userId: msg.userId,
     username: user.username,
     displayName: user.displayName,
-    isBot: user.isBot,
+    isBot: (user.flags & UserFlags.BOT) !== 0,
     content: msg.content,
     mediaUrl: msg.mediaUrl,
     mediaName: msg.mediaName,
@@ -404,7 +405,7 @@ router.post("/rooms/:id/messages", async (req, res) => {
   void handleMentions({
     roomId,
     authorId: user.id,
-    authorIsBot: user.isBot,
+    authorIsBot: (user.flags & UserFlags.BOT) !== 0,
     content: msg.content,
   }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "handleMentions threw"));
 });
@@ -442,14 +443,14 @@ router.get("/rooms/:id/members", async (req, res) => {
       id: users.id,
       username: users.username,
       displayName: users.displayName,
-      isBot: users.isBot,
+      flags: users.flags,
       joinedAt: roomMembers.joinedAt,
     })
     .from(roomMembers)
     .innerJoin(users, eq(users.id, roomMembers.userId))
     .where(eq(roomMembers.roomId, roomId))
     .orderBy(asc(roomMembers.joinedAt));
-  res.json({ ok: true, data: rows });
+  res.json({ ok: true, data: rows.map((r) => ({ ...r, isBot: (r.flags & UserFlags.BOT) !== 0 })) });
 });
 
 router.post("/rooms/:id/members", async (req, res) => {
@@ -476,7 +477,7 @@ router.post("/rooms/:id/members", async (req, res) => {
     res.status(404).json({ ok: false, error: "User not found" });
     return;
   }
-  if (target.isBot) {
+  if ((target.flags & UserFlags.BOT) !== 0) {
     res.status(400).json({
       ok: false,
       error: "Bots are added via the bot:invite CLI, not the chat UI",
@@ -497,7 +498,7 @@ router.post("/rooms/:id/members", async (req, res) => {
       id: target.id,
       username: target.username,
       displayName: target.displayName,
-      isBot: target.isBot,
+      isBot: (target.flags & UserFlags.BOT) !== 0,
     },
   });
 });

@@ -1,8 +1,8 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { db } from "../db/index.js";
-import { users } from "../db/schema.js";
-import { eq } from "drizzle-orm";
+import { users, UserFlags } from "../db/schema.js";
+import { eq, sql } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
 import { withTimeContext } from "../llm/time-context.js";
 import { log } from "../log.js";
@@ -29,7 +29,7 @@ function pushHistory(phone: string, role: string, content: string) {
 
 async function getMemberRoster(): Promise<string> {
   const members = await db.query.users.findMany({
-    where: eq(users.isStaked, true),
+    where: sql`(${users.flags} & ${UserFlags.STAKED}) != 0`,
     columns: { displayName: true, username: true },
   });
   if (!members.length) return "No staked members yet.";
@@ -67,7 +67,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
 
   if (!sender) {
     contextPrefix = "[Unknown prospect | not registered]";
-  } else if (!sender.isStaked) {
+  } else if ((sender.flags & UserFlags.STAKED) === 0) {
     const name = sender.displayName ?? sender.username;
     contextPrefix = `[${name} | registered but not yet staked]`;
   } else {

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "./index.js";
-import { users } from "./schema.js";
+import { users, UserFlags } from "./schema.js";
 
 export async function seedDefaultUser(): Promise<void> {
   const username = process.env.DEFAULT_USERNAME;
@@ -10,7 +10,7 @@ export async function seedDefaultUser(): Promise<void> {
 
   if (!username || !password || !email) return;
 
-  const existingHuman = await db.query.users.findFirst({ where: eq(users.isBot, false) });
+  const existingHuman = await db.query.users.findFirst({ where: sql`(${users.flags} & ${UserFlags.BOT}) = 0` });
   if (existingHuman) return;
 
   const passwordHash = await bcrypt.hash(password, 12);

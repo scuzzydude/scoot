@@ -3,7 +3,7 @@ import { parseArgs } from "node:util";
 import { readFileSync } from "node:fs";
 import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
-import { users, bots } from "../db/schema.js";
+import { users, bots, UserFlags } from "../db/schema.js";
 
 const { values } = parseArgs({
   options: {
@@ -34,7 +34,7 @@ const username = values.username;
 if (!username) usage("--username is required");
 
 const user = await db.query.users.findFirst({ where: eq(users.username, username) });
-if (!user || !user.isBot) {
+if (!user || (user.flags & UserFlags.BOT) === 0) {
   process.stderr.write(`bot '${username}' not found\n`);
   process.exit(2);
 }

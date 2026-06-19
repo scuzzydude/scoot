@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { bots, messages, roomMembers, users } from "../db/schema.js";
+import { bots, messages, roomMembers, users, UserFlags } from "../db/schema.js";
 import { getProvider } from "../llm/provider.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { log } from "../log.js";
@@ -54,7 +54,7 @@ export async function findMentionedBot(
     })
     .from(users)
     .innerJoin(bots, eq(bots.userId, users.id))
-    .where(and(eq(users.isBot, true), eq(bots.enabled, true), inArray(users.username, mentionLower)));
+    .where(and(sql`(${users.flags} & ${UserFlags.BOT}) != 0`, eq(bots.enabled, true), inArray(users.username, mentionLower)));
 
   if (rows.length === 0) return null;
 

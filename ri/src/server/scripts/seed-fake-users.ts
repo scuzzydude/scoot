@@ -44,7 +44,6 @@ for (const f of FAKES) {
     email: `${f.username}@fakes.scoot.local`,
     passwordHash,
     displayName: f.displayName,
-    isBot: false,
   });
   created++;
 }

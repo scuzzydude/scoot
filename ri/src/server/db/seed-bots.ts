@@ -2,9 +2,9 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { readFileSync } from "fs";
 import { resolve } from "path";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { db } from "./index.js";
-import { users, bots, chatRooms, roomMembers } from "./schema.js";
+import { users, bots, chatRooms, roomMembers, UserFlags } from "./schema.js";
 
 function loadPersonality(username: string): string {
   const p = resolve(process.cwd(), `ri/personalities/${username}/personality.md`);
@@ -38,10 +38,10 @@ async function ensureBot(spec: BotSeedSpec, systemPrompt: string): Promise<numbe
   let userId: number;
   if (existing) {
     userId = existing.id;
-    if (!existing.isBot) {
+    if ((existing.flags & UserFlags.BOT) === 0) {
       await db
         .update(users)
-        .set({ isBot: true, displayName: spec.displayName })
+        .set({ flags: sql`${users.flags} | ${UserFlags.BOT}`, displayName: spec.displayName })
         .where(eq(users.id, userId));
     }
   } else {
@@ -53,7 +53,7 @@ async function ensureBot(spec: BotSeedSpec, systemPrompt: string): Promise<numbe
         email: spec.email,
         passwordHash,
         displayName: spec.displayName,
-        isBot: true,
+        flags: UserFlags.BOT,
       })
       .returning({ id: users.id });
     userId = u.id;

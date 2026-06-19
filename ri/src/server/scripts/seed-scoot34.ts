@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { db, pool } from "../db/index.js";
-import { scoots, scootMembers, scootPages, scootPageBlocks, users } from "../db/schema.js";
-import { eq, and } from "drizzle-orm";
+import { scoots, scootMembers, scootPages, scootPageBlocks, users, UserFlags } from "../db/schema.js";
+import { eq, and, sql } from "drizzle-orm";
 
 const SCOOT = {
   slug: "dream-laboratory",
@@ -90,9 +90,9 @@ if (existingPage) {
 }
 
 // Add all existing users as members (skip bots and existing members)
-const allUsers = await db.select({ id: users.id, username: users.username, isBot: users.isBot })
+const allUsers = await db.select({ id: users.id, username: users.username })
   .from(users)
-  .where(eq(users.isBot, false));
+  .where(sql`(${users.flags} & ${UserFlags.BOT}) = 0`);
 
 let added = 0;
 let skipped = 0;

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { stakingCodes, users } from "../db/schema.js";
+import { stakingCodes, users, UserFlags } from "../db/schema.js";
 import { eq, and, gt } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { log } from "../log.js";
@@ -16,7 +16,7 @@ function generateCode(): string {
 // Unstaked user calls this to get a 5-digit code to hand to a staker in person.
 router.post("/request-code", async (req, res) => {
   const u = req.user as typeof users.$inferSelect;
-  if (u.isStaked) {
+  if ((u.flags & UserFlags.STAKED) !== 0) {
     res.status(400).json({ ok: false, error: "Already staked" });
     return;
   }
@@ -37,7 +37,7 @@ router.post("/request-code", async (req, res) => {
 // GET /api/v1/staking/status
 router.get("/status", (req, res) => {
   const u = req.user as typeof users.$inferSelect;
-  res.json({ ok: true, data: { isStaked: u.isStaked } });
+  res.json({ ok: true, data: { isStaked: (u.flags & UserFlags.STAKED) !== 0 } });
 });
 
 export default router;

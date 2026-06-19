@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
-import { users, bots } from "../db/schema.js";
+import { users, bots, UserFlags } from "../db/schema.js";
 
 const { values } = parseArgs({
   options: {
@@ -52,7 +52,7 @@ if (existing) {
 const passwordHash = await bcrypt.hash(randomBytes(48).toString("hex"), 12);
 const [u] = await db
   .insert(users)
-  .values({ username, email, passwordHash, displayName, isBot: true })
+  .values({ username, email, passwordHash, displayName, flags: UserFlags.BOT })
   .returning({ id: users.id });
 
 await db.insert(bots).values({

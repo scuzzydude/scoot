@@ -2,7 +2,7 @@ import "dotenv/config";
 import { parseArgs } from "node:util";
 import { and, eq } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
-import { users, chatRooms, roomMembers } from "../db/schema.js";
+import { users, chatRooms, roomMembers, UserFlags } from "../db/schema.js";
 
 const { values } = parseArgs({
   options: {
@@ -25,7 +25,7 @@ if (!botUsername) usage("--bot is required");
 if (!values["room-id"] && !values["room-name"]) usage("--room-id or --room-name required");
 
 const bot = await db.query.users.findFirst({ where: eq(users.username, botUsername) });
-if (!bot || !bot.isBot) {
+if (!bot || (bot.flags & UserFlags.BOT) === 0) {
   process.stderr.write(`bot '${botUsername}' not found\n`);
   process.exit(2);
 }
