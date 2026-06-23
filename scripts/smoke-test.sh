@@ -74,7 +74,10 @@ fi
 
 # ── 7. BigMo bot registered ──────────────────────────────────────────────────
 CONTAINER_LOGS=$(docker logs scoot-app-1 2>&1 || true)
-if echo "$CONTAINER_LOGS" | grep -q "Bot ready: bigmo"; then
+# Here-string, not `echo | grep`: under `set -o pipefail`, grep -q closes the
+# pipe on first match and echo dies with SIGPIPE (141), which pipefail then
+# reports as the pipeline status — a false negative on large logs.
+if grep -q "Bot ready: bigmo" <<< "$CONTAINER_LOGS"; then
   ok "BigMo bot registered on startup"
 else
   fail "BigMo bot not found in container logs"
