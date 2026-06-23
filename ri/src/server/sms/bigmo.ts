@@ -4,7 +4,7 @@ import { db } from "../db/index.js";
 import { users, UserFlags } from "../db/schema.js";
 import { eq, sql } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
-import { withTimeContext } from "../llm/time-context.js";
+import { withScheduleContext } from "../llm/schedule.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -83,7 +83,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   pushHistory(histKey, "user", userMessage);
 
   try {
-    const reply = await getProvider().chat([...hist], { system: withTimeContext(systemPrompt), maxTokens: 160 });
+    const reply = await getProvider().chat([...hist], { system: withScheduleContext(systemPrompt), maxTokens: 160 });
     pushHistory(histKey, "assistant", reply);
     log.info({ phone, sender: sender?.username ?? "unknown", reply }, "bigmo sms reply sent");
     return reply;
