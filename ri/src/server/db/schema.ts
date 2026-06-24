@@ -4,7 +4,16 @@ import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, jsonb }
 export const UserFlags = {
   BOT:      1 << 0,  // 1
   STAKED:   1 << 1,  // 2
-  GYMBOSS:  1 << 2,  // 4
+  GYMBOSS:  1 << 2,  // 4  (deprecated — migrating to per-Scoot ScootFlags.GYMBOSS)
+} as const;
+
+// Bit positions for scoot_members.user_flags (per-Scoot 64-bit mask, stored as
+// text, read with BigInt). Bits 1|2 are legacy "engineer roles" on other Scoots
+// (see rc-webhook.ts) — gym roles use higher bits to stay clear. See arch/sms-rooms.md.
+export const ScootFlags = {
+  STAKED:   1n << 2n,  // 4   — staked member of this Scoot
+  LEADER:   1n << 3n,  // 8   — oversight: read all messages, enable SMS-mirror
+  GYMBOSS:  1n << 4n,  // 16  — schedule authority: set/clear scoot_sessions
 } as const;
 
 export const users = pgTable("users", {
@@ -16,6 +25,7 @@ export const users = pgTable("users", {
   displayName: text("display_name"),
   flags: integer("flags").notNull().default(0),
   yearOfBirth: integer("year_of_birth"),
+  privacyDisclaimerAt: timestamp("privacy_disclaimer_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -40,6 +50,7 @@ export const chatRooms = pgTable("chat_rooms", {
   isDm: boolean("is_dm").notNull().default(false),
   accessMask: text("access_mask").notNull().default("0"),  // bigint as text — JS can't hold 64-bit int safely
   postMask: text("post_mask").notNull().default("0"),
+  smsMirror: boolean("sms_mirror").notNull().default(false),  // room may fan out to SMS (LEADER-gated)
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -61,12 +72,14 @@ export const roomMembers = pgTable("room_members", {
   userId: integer("user_id").references(() => users.id).notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
   lastReadAt: timestamp("last_read_at"),
+  smsEnabled: boolean("sms_enabled").notNull().default(false),  // this member wants this room on their phone
 });
 
 export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   roomId: integer("room_id").references(() => chatRooms.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
+  sessionId: integer("session_id").references(() => scootSessions.id, { onDelete: "set null" }),  // optional: tag a field note to a session
   content: text("content").notNull(),
   mediaUrl: text("media_url"),
   mediaName: text("media_name"),
@@ -156,6 +169,42 @@ export const pledges = pgTable("pledges", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Authoritative schedule — GYMBOSS-only structured data. BigMo answers from the
+// next non-cancelled session (no runtime day-of-week math). See arch/sms-rooms.md.
+// Named scoot_sessions to avoid the connect-pg-simple `session` table.
+export const scootSessions = pgTable("scoot_sessions", {
+  id: serial("id").primaryKey(),
+  scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+  location: text("location"),
+  status: text("status").notNull().default("tentative"),  // tentative | confirmed | cancelled
+  note: text("note"),  // e.g. "moved to 5pm"
+  updatedBy: integer("updated_by").references(() => users.id),  // must hold ScootFlags.GYMBOSS
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Per-user SMS routing state — persisted so a restart doesn't lose a user mid-convo.
+export const smsState = pgTable("sms_state", {
+  userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  activeRoomId: integer("active_room_id").references(() => chatRooms.id),
+  pending: jsonb("pending"),  // e.g. { kind: 'route_confirm', candidates: [...], body: '...' }
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Per-user SMS log — truthful record of what actually went over the wire.
+export const smsDeliveries = pgTable("sms_deliveries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  messageId: integer("message_id").references(() => messages.id, { onDelete: "set null" }),  // null for BigMo system replies
+  roomId: integer("room_id").references(() => chatRooms.id),
+  direction: text("direction").notNull(),  // 'in' | 'out'
+  body: text("body").notNull(),
+  twilioSid: text("twilio_sid"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Bot = typeof bots.$inferSelect;
@@ -165,3 +214,7 @@ export type Message = typeof messages.$inferSelect;
 export type Scoot = typeof scoots.$inferSelect;
 export type ScootPage = typeof scootPages.$inferSelect;
 export type ScootPageBlock = typeof scootPageBlocks.$inferSelect;
+export type ScootSession = typeof scootSessions.$inferSelect;
+export type NewScootSession = typeof scootSessions.$inferInsert;
+export type SmsState = typeof smsState.$inferSelect;
+export type SmsDelivery = typeof smsDeliveries.$inferSelect;
