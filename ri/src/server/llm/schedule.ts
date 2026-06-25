@@ -78,14 +78,14 @@ export async function scheduleFactsForScoot(scootId: number, now: Date = new Dat
   return `${today} Next session is normally ${line}, but it has NOT been confirmed for that day yet — tell the Brother that's the standing time and to check before he drives out.`;
 }
 
-// Append verified schedule facts to a system prompt. On any DB error, inject a
-// safe "unavailable" fact so BigMo hedges rather than inventing a time.
-export async function withScheduleContext(systemPrompt: string, scootId: number): Promise<string> {
-  let facts: string;
+// Verified schedule facts, never throwing. On any DB error returns a safe
+// "unavailable" fact so BigMo hedges rather than inventing a time. Inject this
+// into the LATEST message (not just the system prompt) so it overrides any
+// stale schedule answers sitting in the conversation history.
+export async function scheduleFactsSafe(scootId: number): Promise<string> {
   try {
-    facts = await scheduleFactsForScoot(scootId);
+    return await scheduleFactsForScoot(scootId);
   } catch {
-    facts = "Schedule data is unavailable right now — tell the Brother you can't pull up the schedule at the moment, don't guess a time.";
+    return "Schedule data is unavailable right now — tell the Brother you can't pull up the schedule at the moment, don't guess a time.";
   }
-  return `${systemPrompt}\n\n## Verified Schedule (use these facts exactly — do NOT compute dates or times yourself)\n${facts}`;
 }

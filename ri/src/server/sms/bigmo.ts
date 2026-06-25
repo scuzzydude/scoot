@@ -4,7 +4,8 @@ import { db } from "../db/index.js";
 import { users, scoots, scootMembers, ScootFlags } from "../db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
-import { withScheduleContext } from "../llm/schedule.js";
+import { scheduleFactsSafe } from "../llm/schedule.js";
+import { getActiveRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -31,20 +32,11 @@ async function getStake(scootId: number, userId: number): Promise<bigint | null>
   return m ? BigInt(m.userFlags) : null;
 }
 
-// Per-phone conversation history — short window so SMS stays crisp
+// Conversation window — short so SMS stays crisp. Known users get DB-backed,
+// room-scoped history (see conversation.ts); strangers (no user row, can't write
+// to messages) fall back to this ephemeral in-memory map.
 const HISTORY_CAP = 10;
-const history = new Map<string, { role: string; content: string }[]>();
-
-function getHistory(phone: string) {
-  if (!history.has(phone)) history.set(phone, []);
-  return history.get(phone)!;
-}
-
-function pushHistory(phone: string, role: string, content: string) {
-  const h = getHistory(phone);
-  h.push({ role, content });
-  if (h.length > HISTORY_CAP) h.splice(0, h.length - HISTORY_CAP);
-}
+const strangerHistory = new Map<string, { role: string; content: string }[]>();
 
 async function getMemberRoster(scootId: number): Promise<string> {
   const rows = await db.select({
@@ -89,36 +81,65 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   const isStaked = stake !== null && (stake & ScootFlags.STAKED) !== 0n;
   const isGymboss = stake !== null && (stake & ScootFlags.GYMBOSS) !== 0n;
 
-  let contextPrefix: string;
+  // Sender identity is stable per user → it belongs in the system prompt, not
+  // smuggled into every message (which would pollute the persisted app view).
   let systemPrompt = SYSTEM_PROMPT;
-
+  let who: string;
   if (!sender) {
-    contextPrefix = "[Unknown prospect | not registered]";
+    who = "an unknown prospect who is not registered yet";
   } else if (!isStaked) {
-    const name = sender.displayName ?? sender.username;
-    contextPrefix = `[${name} | registered but not yet staked into the Brotherhood]`;
+    who = `${sender.displayName ?? sender.username}, registered but not yet staked into the Brotherhood`;
   } else {
     const name = sender.displayName ?? sender.username;
-    const role = isGymboss ? "staked Fonde Brotherhood member, GYMBOSS" : "staked Fonde Brotherhood member";
-    const roster = await getMemberRoster(scootId);
-    contextPrefix = `[${name} | ${role}]`;
-    systemPrompt = `${SYSTEM_PROMPT}\n\n## Current Brotherhood Roster\n${roster}`;
+    who = isGymboss
+      ? `${name}, a staked Fonde Brotherhood member who is a GYMBOSS (schedule authority)`
+      : `${name}, a staked Fonde Brotherhood member`;
+    systemPrompt = `${SYSTEM_PROMPT}\n\n## Current Brotherhood Roster\n${await getMemberRoster(scootId)}`;
+  }
+  systemPrompt = `${systemPrompt}\n\n## Who you're texting with\nYou are texting with ${who}.`;
+
+  // Load PRIOR history (room-scoped + persisted for known users; ephemeral for
+  // strangers). The current inbound is added transiently below and only persisted
+  // on a successful reply, so a failed LLM call leaves no orphaned turn.
+  const strangerKey = forceStranger ? `${phone}:dev-stranger` : phone;
+  let roomId: number | null = null;
+  let bigmoId: number | null = null;
+  let priorHist: { role: string; content: string }[];
+  if (sender) {
+    roomId = await getActiveRoom(sender.id);
+    bigmoId = await getBigmoId();
+    priorHist = await loadHistory(roomId, HISTORY_CAP);
+  } else {
+    priorHist = [...(strangerHistory.get(strangerKey) ?? [])];
   }
 
-  const userMessage = `${contextPrefix}: ${trimmed}`;
-  const histKey = forceStranger ? `${phone}:dev-stranger` : phone;
-  const hist = getHistory(histKey);
-  pushHistory(histKey, "user", userMessage);
+  // The current inbound carries the live verified schedule (transient — never
+  // persisted with the facts). Riding on the freshest turn with an explicit
+  // override beats any stale schedule answer earlier in the history.
+  const facts = await scheduleFactsSafe(scootId);
+  const llmMessages = [
+    ...priorHist,
+    {
+      role: "user",
+      content: `${trimmed}\n\n## Verified Schedule — current as of THIS message; it OVERRIDES any day/time you stated earlier in this conversation. Use it exactly; do NOT compute or recall times.\n${facts}`,
+    },
+  ];
 
   try {
-    const reply = await getProvider().chat([...hist], { system: await withScheduleContext(systemPrompt, scootId), maxTokens: 160 });
-    pushHistory(histKey, "assistant", reply);
-    log.info({ phone, sender: sender?.username ?? "unknown", reply }, "bigmo sms reply sent");
+    const reply = await getProvider().chat(llmMessages, { system: systemPrompt, maxTokens: 160 });
+    // Persist both turns (plain text) only now that we have a good reply.
+    if (sender && roomId != null && bigmoId != null) {
+      await appendTurn(roomId, sender.id, trimmed);
+      await appendTurn(roomId, bigmoId, reply);
+    } else {
+      const h = strangerHistory.get(strangerKey) ?? [];
+      h.push({ role: "user", content: trimmed }, { role: "assistant", content: reply });
+      strangerHistory.set(strangerKey, h.slice(-HISTORY_CAP));
+    }
+    log.info({ phone, sender: sender?.username ?? "unknown", roomId, reply }, "bigmo sms reply sent");
     return reply;
   } catch (err) {
     log.error({ err, phone }, "bigmo sms: LLM error");
-    // Remove the failed user message so it doesn't pollute history
-    getHistory(histKey).pop();
     return "I'm havin' a technical moment. Try again in a minute.";
   }
 }
