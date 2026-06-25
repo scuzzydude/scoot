@@ -3,7 +3,12 @@ import { db, pool } from "../db/index.js";
 import { scoots, scootMembers, scootPages, scootPageBlocks, users, UserFlags } from "../db/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 
+// The Scoot's primary key IS its canonical Foundation index (Scoot(34)) — a
+// natural key, not a serial surrogate. Future Scoots insert their real index too.
+const SCOOT_INDEX = 34;
+
 const SCOOT = {
+  id: SCOOT_INDEX,
   slug: "dream-laboratory",
   name: "The Dream Laboratory",
   description: "Scoot(34) — Fonde Brotherhood",
@@ -66,6 +71,9 @@ if (existing) {
 } else {
   const [inserted] = await db.insert(scoots).values(SCOOT).returning({ id: scoots.id });
   scootId = inserted.id;
+  // Keep the serial sequence ahead of explicitly-assigned indices so a future
+  // insert that omits id can't collide with an assigned Scoot index.
+  await db.execute(sql`SELECT setval(pg_get_serial_sequence('scoots','id'), (SELECT max(id) FROM scoots))`);
   process.stdout.write(`Created Scoot(34) id=${scootId}\n`);
 }
 
