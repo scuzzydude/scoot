@@ -14,3 +14,4 @@
 - [Twilio US SMS needs A2P 10DLC registration](twilio_a2p_10dlc_registration.md) — Fonde Brotherhood account, +13614232253 long-code; undelivered + errorCode 30034 means reg gap, not a code bug
 - [Git remote: use SSH not HTTPS](infra_git_remote_ssh.md) — `git@github.com:scuzzydude/scoot.git`; SSH keys uploaded on all 3 machines; switch remote without asking if it's HTTPS
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
+- [Memory Vault MCP on steve](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
