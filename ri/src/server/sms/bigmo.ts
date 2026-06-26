@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
 import { scheduleFactsSafe } from "../llm/schedule.js";
 import { getActiveRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
+import { tryHandleCommand } from "./commands.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -108,6 +109,13 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   if (sender) {
     roomId = await getActiveRoom(sender.id);
     bigmoId = await getBigmoId();
+    // Explicit member-write commands (note:/post:/follow/mute) are handled
+    // directly and short-circuit before any LLM work — see arch/sms-rooms.md §8.3.
+    const cmd = await tryHandleCommand(sender.id, roomId, trimmed);
+    if (cmd != null) {
+      log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
+      return cmd;
+    }
     priorHist = await loadHistory(roomId, HISTORY_CAP);
   } else {
     priorHist = [...(strangerHistory.get(strangerKey) ?? [])];
