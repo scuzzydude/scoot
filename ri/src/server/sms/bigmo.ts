@@ -116,7 +116,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     bigmoId = await getBigmoId();
     // Explicit member-write commands (note:/post:/follow/mute) are handled
     // directly and short-circuit before any LLM work — see arch/sms-rooms.md §8.3.
-    const cmd = await tryHandleCommand(sender.id, roomId, trimmed);
+    const cmd = await tryHandleCommand(sender.id, roomId, trimmed, stake);
     if (cmd != null) {
       log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
       return cmd;

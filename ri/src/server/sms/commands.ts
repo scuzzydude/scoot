@@ -5,18 +5,21 @@
 // through to BigMo's conversational reply path, so normal chatter is never
 // silently posted or misinterpreted.
 //
-// Two command families:
+// Command families:
 //   - post_note : "note: <text>" / "post: <text>"  → write <text> into the
 //                 sender's active room as a real message authored by THEM
 //                 (visible to the room / app, fanned out to SMS in §8.4).
 //   - sms opt-in: "follow" / "mute" / "sms on" / "sms off"  → toggle this
 //                 member's room_members.sms_enabled for the active room.
+//   - mirror    : "mirror on" / "mirror off"  → LEADER-only; flip the active
+//                 room's sms_mirror flag (whether it fans out to SMS at all).
+//                 The A2P safety gate from arch/sms-rooms.md §5.
 //
 // Every reply carries the [room] context tag (arch/sms-rooms.md §4) so a Brother
 // always sees where his text landed.
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { chatRooms, messages, roomMembers } from "../db/schema.js";
+import { chatRooms, messages, roomMembers, ScootFlags } from "../db/schema.js";
 import { fanOutToSms } from "./fanout.js";
 import { log } from "../log.js";
 
@@ -28,11 +31,13 @@ async function roomTag(roomId: number): Promise<string> {
 
 // Try to handle an inbound as an explicit member-write command.
 // Returns the ack string when handled, or null when the text is NOT a command
-// (→ caller runs the BigMo conversation path).
+// (→ caller runs the BigMo conversation path). `stake` is the sender's per-Scoot
+// role mask (null = not staked) — used to gate LEADER-only commands.
 export async function tryHandleCommand(
   userId: number,
   roomId: number,
   body: string,
+  stake: bigint | null,
 ): Promise<string | null> {
   // post_note — colon required, so a sentence that merely starts with "post"
   // ("post game we hit the gym") is NOT swallowed.
@@ -67,6 +72,22 @@ export async function tryHandleCommand(
     return enable
       ? `[${tag}] You'll get this group's messages by text. Reply "mute" to stop.`
       : `[${tag}] Muted — no more texts from this group. Reply "follow" to turn it back on.`;
+  }
+
+  // mirror on/off — LEADER-only control over whether the active room fans out to
+  // SMS at all (arch/sms-rooms.md §5: keeps a chatty room from blowing A2P limits).
+  if (opt === "mirror on" || opt === "mirror off") {
+    const tag = await roomTag(roomId);
+    const isLeader = stake !== null && (stake & ScootFlags.LEADER) !== 0n;
+    if (!isLeader) {
+      return `[${tag}] Only a group leader can turn SMS mirroring on or off.`;
+    }
+    const enable = opt === "mirror on";
+    await db.update(chatRooms).set({ smsMirror: enable }).where(eq(chatRooms.id, roomId));
+    log.info({ userId, roomId, enable }, "sms mirror toggle (LEADER)");
+    return enable
+      ? `[${tag}] SMS mirror ON — members who "follow" this group now get its messages by text.`
+      : `[${tag}] SMS mirror OFF — this group is app-only again.`;
   }
 
   return null;
