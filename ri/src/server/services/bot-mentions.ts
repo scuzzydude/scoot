@@ -3,6 +3,7 @@ import { db } from "../db/index.js";
 import { bots, messages, roomMembers, users, UserFlags } from "../db/schema.js";
 import { getProvider } from "../llm/provider.js";
 import { broadcast } from "../ws/chat-ws.js";
+import { fanOutToSms } from "../sms/fanout.js";
 import { log } from "../log.js";
 
 export const MENTION_REGEX = /(?:^|\s)@([a-zA-Z0-9_]+)/g;
@@ -141,6 +142,15 @@ async function postBotMessage(
       createdAt: msg.createdAt.toISOString(),
     },
   });
+
+  // Mirror bot replies to SMS for opted-in members of an sms_mirror room.
+  void fanOutToSms({
+    messageId: msg.id,
+    roomId,
+    authorId: bot.userId,
+    authorName: bot.displayName ?? bot.username,
+    content: msg.content,
+  }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "fanOutToSms (bot) threw"));
 }
 
 interface MentionContext {

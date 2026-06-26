@@ -6,6 +6,7 @@ import { requireAuth } from "../middleware/auth.js";
 import { createRoomSchema, moveRoomSchema, sendMessageSchema } from "../../shared/schema.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { handleMentions } from "../services/bot-mentions.js";
+import { fanOutToSms } from "../sms/fanout.js";
 import { log } from "../log.js";
 
 const router = Router();
@@ -408,6 +409,15 @@ router.post("/rooms/:id/messages", async (req, res) => {
     authorIsBot: (user.flags & UserFlags.BOT) !== 0,
     content: msg.content,
   }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "handleMentions threw"));
+
+  // Mirror to SMS for opted-in members of an sms_mirror room (no-op otherwise).
+  void fanOutToSms({
+    messageId: msg.id,
+    roomId,
+    authorId: user.id,
+    authorName: user.displayName ?? user.username,
+    content: msg.content,
+  }).catch((err) => log.error({ err, roomId, messageId: msg.id }, "fanOutToSms threw"));
 });
 
 async function requireRoomMember(
