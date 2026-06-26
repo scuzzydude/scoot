@@ -38,6 +38,18 @@ services:
       - node_modules:/app/node_modules
       - ${DATA_DIR:-/tmp/scoot-data}/media:/var/scoot/media
       - ../../../scoot-chat:/app/scoot-chat
+    networks:
+      # default = scoot's own network (postgres lives here). memvault is the
+      # Memory Vault stack's network, joined so BigMo can reach its REST API at
+      # http://memory-vault-app-1:8000 (MEMORY_VAULT_URL). External: managed by
+      # the separate ~/memory-vault compose project — see infra_memory_vault memory.
+      - default
+      - memvault
+
+networks:
+  memvault:
+    external: true
+    name: memory-vault_default
 
 volumes:
   node_modules:

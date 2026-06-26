@@ -7,6 +7,7 @@ import { getProvider } from "../llm/provider.js";
 import { scheduleFactsSafe } from "../llm/schedule.js";
 import { getActiveRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
 import { tryHandleCommand } from "./commands.js";
+import { recall, remember } from "./memory.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -16,6 +17,10 @@ const SYSTEM_PROMPT = readFileSync(
 
 // BigMo serves Scoot(34). Reference it by slug, never a hardcoded number.
 const SCOOT_SLUG = "dream-laboratory";
+// Per-Scoot Memory Vault namespace for BigMo's long-term member memory (kept
+// separate from the dev-project `scoot` space). Structured per-Scoot so a second
+// Scoot gets its own memory, not Fonde's.
+const MEMORY_SPACE = `bigmo-${SCOOT_SLUG}`;
 let scootIdCache: number | null = null;
 async function getScootId(): Promise<number> {
   if (scootIdCache != null) return scootIdCache;
@@ -117,6 +122,17 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
       return cmd;
     }
     priorHist = await loadHistory(roomId, HISTORY_CAP);
+    // Long-term semantic recall across all past Brotherhood texts (degrades to
+    // nothing if the vault is unset/down — see memory.ts). Surfaced as BACKGROUND
+    // in the system prompt; the Verified Schedule on the inbound still wins for
+    // any date/time so this can never reintroduce a wrong time (cardinal sin).
+    const memories = await recall(trimmed, MEMORY_SPACE);
+    if (memories.length) {
+      const lines = memories
+        .map((m) => `- ${m.speaker ? `${m.speaker}: ` : ""}${m.content.slice(0, 240)}`)
+        .join("\n");
+      systemPrompt += `\n\n## What you remember from past texts (background only — may be OUTDATED; NEVER use this for dates, days, or times — only the Verified Schedule is authoritative)\n${lines}`;
+    }
   } else {
     priorHist = [...(strangerHistory.get(strangerKey) ?? [])];
   }
@@ -143,6 +159,12 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
       const h = strangerHistory.get(strangerKey) ?? [];
       h.push({ role: "user", content: trimmed }, { role: "assistant", content: reply });
       strangerHistory.set(strangerKey, h.slice(-HISTORY_CAP));
+    }
+    // Persist a durable, attributable memory of substantive member messages
+    // (skip strangers and one-word acks). Fire-and-forget — a memory write must
+    // never block or fail the reply that's already in hand.
+    if (sender && trimmed.length >= 12) {
+      void remember(trimmed, MEMORY_SPACE, sender.displayName ?? sender.username);
     }
     log.info({ phone, sender: sender?.username ?? "unknown", roomId, reply }, "bigmo sms reply sent");
     return reply;

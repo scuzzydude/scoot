@@ -25,4 +25,10 @@ done
 python -m src.cli status   # Database: healthy, chunk counts
 ```
 
+**BigMo runtime integration (the product use, separate from Claude Code's MCP):**
+BigMo (the SMS bot) uses Memory Vault as long-term semantic memory **via the REST API, NOT MCP** — MCP is only for Claude Code. Code: `ri/src/server/sms/memory.ts` (graceful `recall`/`remember`/`ensureSpace`; degrades to no-op if `MEMORY_VAULT_URL` unset or the service is slow/down — a vault hiccup must NEVER break/delay an SMS reply), wired into `handleSmsMessage` (`bigmo.ts`): recall-before-reply injects relevant past member texts into the system prompt as BACKGROUND (the Verified Schedule still wins for any date/time), and remember-after stores substantive (≥12 char) member messages fire-and-forget, attributed via the API's `speaker` field. Space is per-Scoot: `bigmo-${slug}` = `bigmo-dream-laboratory` (separate from the dev `scoot` space).
+- **Networking:** scoot-app reaches it at `http://memory-vault-app-1:8000`. The scoot compose (`ri/physical/docker-compose.yml`) joins the app to the external `memory-vault_default` network (alongside `default`). Host-loopback binding doesn't block container-to-container traffic on the shared network.
+- **Auth/env:** bearer token (`memory-vault token create bigmo`) + `MEMORY_VAULT_URL`/`MEMORY_VAULT_TOKEN`/`MEMORY_VAULT_TIMEOUT_MS` in scoot `.env` (gitignored — token never committed); placeholders in `.env.example`. Recreate app to pick up env: `cd ri/physical && docker compose up -d app` (DATA_DIR auto-loads from `ri/physical/.env`; only `app` recreates, postgres untouched — dry-run first).
+- Ties into [[scoot_identity_and_sms_rooms]] / [[bigmo_no_llm_time_math]].
+
 **Status / gotchas:** evaluation/early use — git memory is still primary; if MV proves out, cross-machine (one shared vault via tunnel/bearer-token) is the deferred next step (MV is single-instance by design). Each CLI invocation cold-loads the embedding model (~10s) — batch seeds run in background. DB creds are the local defaults `memory_vault/memory_vault` (loopback-only, low risk). Relates to [[infra_prod_server]], [[infra_claude_runs_on_steve]].
