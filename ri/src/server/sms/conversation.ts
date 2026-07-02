@@ -18,7 +18,7 @@ export async function getBigmoId(): Promise<number> {
 
 // Get-or-create the DM room between a user and BigMo (mirrors chat.ts dm logic,
 // incl. the concurrent-create race recovery).
-async function getBigmoDmRoom(userId: number): Promise<number> {
+export async function getBigmoDmRoom(userId: number): Promise<number> {
   const bigmoId = await getBigmoId();
   const lo = Math.min(userId, bigmoId);
   const hi = Math.max(userId, bigmoId);

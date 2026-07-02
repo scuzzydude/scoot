@@ -5,8 +5,9 @@ import { users, scoots, scootMembers, ScootFlags } from "../db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
 import { scheduleFactsSafe } from "../llm/schedule.js";
-import { getActiveRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
+import { getActiveRoom, getBigmoDmRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
 import { tryHandleCommand } from "./commands.js";
+import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { log } from "../log.js";
 
@@ -121,6 +122,18 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
       log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
       return cmd;
     }
+
+    // §8.5 inbound routing: hard-switch the sticky active room, or auto-post to
+    // the active GROUP. Only a plain message with the BigMo DM active falls
+    // through (handled:false) to the conversational path below.
+    const dmRoomId = await getBigmoDmRoom(sender.id);
+    const route = await routeInbound(sender.id, dmRoomId, roomId, trimmed);
+    if (route.newActiveRoomId != null) roomId = route.newActiveRoomId;
+    if (route.handled) {
+      log.info({ phone, sender: sender.username, roomId }, "bigmo sms routed");
+      return route.reply ?? "";
+    }
+
     priorHist = await loadHistory(roomId, HISTORY_CAP);
     // Long-term semantic recall across all past Brotherhood texts (degrades to
     // nothing if the vault is unset/down — see memory.ts). Surfaced as BACKGROUND

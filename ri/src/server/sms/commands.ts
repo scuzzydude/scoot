@@ -19,8 +19,8 @@
 // always sees where his text landed.
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { chatRooms, messages, roomMembers, ScootFlags } from "../db/schema.js";
-import { fanOutToSms } from "./fanout.js";
+import { chatRooms, roomMembers, ScootFlags } from "../db/schema.js";
+import { postMemberMessage } from "./post.js";
 import { log } from "../log.js";
 
 // Short room label for the [room] context tag that prefixes every ack.
@@ -46,11 +46,8 @@ export async function tryHandleCommand(
     const tag = await roomTag(roomId);
     const text = body.slice(postMatch[0].length).trim();
     if (!text) return `[${tag}] Nothing to post — try "note: <your message>".`;
-    const [posted] = await db.insert(messages).values({ roomId, userId, content: text }).returning({ id: messages.id });
+    await postMemberMessage(roomId, userId, text);
     log.info({ userId, roomId, len: text.length }, "sms post_note");
-    // Mirror the note to other opted-in members if this is an sms_mirror room.
-    void fanOutToSms({ messageId: posted.id, roomId, authorId: userId, content: text })
-      .catch((err) => log.error({ err, roomId }, "fanOutToSms (post_note) threw"));
     return `[${tag}] Posted.`;
   }
 
