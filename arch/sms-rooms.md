@@ -42,6 +42,7 @@ Legacy: bits `1|2` are "engineer roles" on other Scoots (`& 3n`, see
 | `STAKED`  | 1<<2 | 4  | staked member of this Scoot |
 | `LEADER`  | 1<<3 | 8  | oversight: can read all messages, enable SMS-mirror |
 | `GYMBOSS` | 1<<4 | 16 | schedule authority: set/clear `scoot_sessions` |
+| `BETA`    | 1<<5 | 32 | beta/dev tester: early SMS features + rollout announcements before general release |
 
 (`ScootFlags` constant to be added to `schema.ts`. The global `UserFlags.GYMBOSS`
 is deprecated by this; migrate Fonde gymbosses into the per-Scoot mask, then

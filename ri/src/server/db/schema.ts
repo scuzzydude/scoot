@@ -14,6 +14,7 @@ export const ScootFlags = {
   STAKED:   1n << 2n,  // 4   — staked member of this Scoot
   LEADER:   1n << 3n,  // 8   — oversight: read all messages, enable SMS-mirror
   GYMBOSS:  1n << 4n,  // 16  — schedule authority: set/clear scoot_sessions
+  BETA:     1n << 5n,  // 32  — beta/dev tester: gets early SMS features + rollout announcements
 } as const;
 
 export const users = pgTable("users", {
