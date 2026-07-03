@@ -2,6 +2,7 @@
 
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
+- [SMS build resume — pick up at §8.6](project_sms_build_resume.md) — §8.1–8.5 + user-id reservation + storage tooling done; NEXT = §8.6 GYMBOSS schedule-by-SMS
 - [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat polish first; staking ritual is core identity primitive; token after; scootchain last
 - [Staking ritual — QR + code + selfie pledge](social_graph_staking.md) — In-person ceremony A→B: QR scan, one-time code, second scan, selfie saved as pledge proof. Chains form trust graph
 - [Chat bots — multi-bot, @mention triggered](chat_bots_design.md) — Bots are users w/ is_bot=true, personality in `bots` table, `@name` triggers, provider abstraction (Anthropic v1), typing indicators on
@@ -14,4 +15,5 @@
 - [Twilio US SMS needs A2P 10DLC registration](twilio_a2p_10dlc_registration.md) — Fonde Brotherhood account, +13614232253 long-code; undelivered + errorCode 30034 means reg gap, not a code bug
 - [Git remote: use SSH not HTTPS](infra_git_remote_ssh.md) — `git@github.com:scuzzydude/scoot.git`; SSH keys uploaded on all 3 machines; switch remote without asking if it's HTTPS
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
+- [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on steve](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
