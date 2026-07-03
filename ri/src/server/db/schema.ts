@@ -15,6 +15,7 @@ export const ScootFlags = {
   LEADER:   1n << 3n,  // 8   — oversight: read all messages, enable SMS-mirror
   GYMBOSS:  1n << 4n,  // 16  — schedule authority: set/clear scoot_sessions
   BETA:     1n << 5n,  // 32  — beta/dev tester: gets early SMS features + rollout announcements
+  LEGEND_NUMBER: 1n << 6n,  // 64  — awarded a reserved legend's/patron's number (honor; e.g. a deceased legend's # given to an OG). See arch/sms-rooms.md.
 } as const;
 
 export const users = pgTable("users", {
