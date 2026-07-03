@@ -91,6 +91,13 @@ const REDACTION_PATTERNS = [
   { name: 'perplexity-key', re: /pplx-[A-Za-z0-9_\-]{20,}/g },
   { name: 'tavily-key',     re: /tvly-[A-Za-z0-9_\-]{20,}/g },
   { name: 'google-api-key', re: /AIza[A-Za-z0-9_\-]{30,}/g },
+  // Azure storage account keys: 64 bytes -> exactly 88 base64 chars ending "==".
+  // The lookbehind/lookahead require the 88-char run to be a standalone token
+  // (bounded by non-base64 on both sides), so it catches a pasted key or a
+  // `key = ...` / `AccountKey=...` value but NOT a slice of a much longer base64
+  // blob (e.g. an embedded image), which is part of a continuous run. Placed
+  // before `hex` so it claims the whole key first.
+  { name: 'azure-storage-key', re: /(?<![A-Za-z0-9+\/])[A-Za-z0-9+\/]{86}==(?![A-Za-z0-9+\/=])/g },
   { name: 'hex',            re: /\b[0-9a-fA-F]{32,}\b/g },
   // NANP phone numbers (US/Canada). Area code and exchange must start with 2-9
   // per the numbering plan, and digit-boundary lookarounds prevent matching
@@ -222,7 +229,7 @@ for (const e of entries) {
 // Insert a redaction note into the frontmatter so readers know masking was applied.
 const noteIdx = lines.findIndex(l => l === '---');
 if (noteIdx > 0) {
-  lines.splice(noteIdx, 0, `> Redactions: ${redactionCount} pattern hit${redactionCount === 1 ? '' : 's'} masked (api keys, long hex, db credentials).`, '');
+  lines.splice(noteIdx, 0, `> Redactions: ${redactionCount} pattern hit${redactionCount === 1 ? '' : 's'} masked (api keys, azure storage keys, long hex, db credentials).`, '');
 }
 
 fs.writeFileSync(outMd, lines.join('\n'));
