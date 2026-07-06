@@ -7,6 +7,7 @@ import { getProvider } from "../llm/provider.js";
 import { scheduleFactsSafe } from "../llm/schedule.js";
 import { getActiveRoom, getBigmoDmRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
 import { tryHandleCommand } from "./commands.js";
+import { tryHandleGymbossCommand } from "./schedule-commands.js";
 import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { log } from "../log.js";
@@ -121,6 +122,15 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     if (cmd != null) {
       log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
       return cmd;
+    }
+
+    // §8.6 GYMBOSS schedule control: "gym confirm/cancel/time/note" edits the
+    // authoritative scoot_sessions (flag-gated, deterministic time math). An
+    // unrecognized "gym ..." returns null and falls through to BigMo below.
+    const gym = await tryHandleGymbossCommand(sender.id, scootId, trimmed, stake);
+    if (gym != null) {
+      log.info({ phone, sender: sender.username, scootId }, "bigmo sms gymboss command");
+      return gym;
     }
 
     // §8.5 inbound routing: hard-switch the sticky active room, or auto-post to
