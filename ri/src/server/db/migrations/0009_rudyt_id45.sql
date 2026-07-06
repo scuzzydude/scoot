@@ -1,0 +1,14 @@
+BEGIN;
+SET session_replication_role = replica;
+UPDATE users          SET id          = 49 WHERE id          = 45;
+UPDATE chat_rooms     SET created_by  = 49 WHERE created_by  = 45;
+UPDATE dm_pairs       SET user_lo     = 49 WHERE user_lo     = 45;
+UPDATE dm_pairs       SET user_hi     = 49 WHERE user_hi     = 45;
+UPDATE media          SET uploaded_by = 49 WHERE uploaded_by = 45;
+UPDATE room_members   SET user_id     = 49 WHERE user_id     = 45;
+UPDATE scoot_members  SET user_id     = 49 WHERE user_id     = 45;
+UPDATE scoot_sessions SET updated_by  = 49 WHERE updated_by  = 45;
+UPDATE sms_state      SET user_id     = 49 WHERE user_id     = 45;
+SET session_replication_role = origin;
+INSERT INTO users (id, username, display_name, flags) VALUES (45,'rudyt','Rudy Tomjanovich',0);
+COMMIT;
