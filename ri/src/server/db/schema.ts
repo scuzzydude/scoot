@@ -118,6 +118,10 @@ export const scootMembers = pgTable(
     scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
     userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     userFlags: text("user_flags").notNull().default("0"),  // 64-bit permission bitmask as text
+    // Reserved legend/patron jersey # this member is awarded to "wear" (pairs with
+    // ScootFlags.LEGEND_NUMBER). The number stays a reserved seat in `users`; the
+    // member keeps their own id. e.g. McGhee (member) wears 24. See arch/sms-rooms.md.
+    wornNumber: integer("worn_number"),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (t) => ({
