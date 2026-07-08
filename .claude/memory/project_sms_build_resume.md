@@ -1,6 +1,6 @@
 ---
 name: project_sms_build_resume
-description: "SMS⇄Rooms §8 build plan COMPLETE (8.1–8.8). Next: staking ritual (Phase 4) or SMS polish (§8.7 UI / routing v2)"
+description: "SMS⇄Rooms §8 COMPLETE + SMS polish DONE + Phase 4 staking ritual v1 DONE. See arch/staking.md"
 metadata: 
   node_type: memory
   type: project
@@ -30,14 +30,26 @@ routing v2 (routing.ts §4 scored topical + confirm + undo, sms_state.pending);
 migration 0014: conflicting confirm/cancel polls all GYMBOSSes Y/N, first decisive
 reply applies). 74 tests.
 
-**NEXT — Phase 4 (Staking ritual)** is the agreed next MAJOR build per [[project_plan]]:
-QR + one-time code + selfie pledge ceremony; trust graph / scootage from the pledge
-graph. (Brandon wanted to PLAY with the SMS framework before starting Phase 4.)
+**Phase 4 staking ritual v1 DONE** (simplified vs. original QR-ceremony design —
+Brandon's call): prospect texts BigMo "stake"/"stake me" → 5-digit code (creates
+a placeholder user if new — this IS how a prospect gets an account); staker texts
+"stake <code>" → multi-turn SMS Q&A (photo, then age tier: senior 55+/og 70+/
+member, "cancel" anytime) → `scoot_members.STAKED`(+tier) set, `pledges` row
+inserted. Age tier is a direct staker ATTESTATION — no birthdate ever stored;
+`ScootFlags.SENIOR`(256)/`OG`(512). New `sms/staking.ts` + shared `sms/pending.ts`
+(extracted from routing.ts so both flows share one sms_state.pending union).
+Retired the old Phase-2 stub (`routes/staking.ts`, global UserFlags.STAKED) —
+deleted. Full design + what's deferred (graph traversal, revocation, live QR
+handshake): `arch/staking.md`. 86 tests total.
 
-Still deferred (not blocking Phase 4): `chat_rooms.scoot_id` to scope oversight
-per-Scoot (returns all rooms today — fine for single Fonde Scoot). Ops: storage
-plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure Blob, log→Cold,
-`ri/physical/storage-plan.md`). Later: Phase 5 C core + wallet; Phase 6 mobile.
+**NEXT — pick one:**
+- Phase 4 continued: trust-graph queries (distance-from-root via `pledges`),
+  revocation, or the client staking UI (currently 100% SMS-only, no app screen).
+- `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
+  fine for single Fonde Scoot).
+- Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure
+  Blob, log→Cold, `ri/physical/storage-plan.md`).
+- Later: Phase 5 C core + wallet; Phase 6 mobile.
 
 Roster/infra done this session (not blocking §8.7):
 - User-id reservation: reserved band 1–99 (family 1–5 + Rockets legend/patron

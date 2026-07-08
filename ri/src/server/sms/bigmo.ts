@@ -12,6 +12,7 @@ import { tryResolveVerification } from "./escalation.js";
 import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { ensureDisclaimer } from "./disclaimer.js";
+import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -69,10 +70,11 @@ function normalizePhone(from: string): string {
 
 const DEV_PHONE = process.env.DEV_PHONE ?? "7133055620";
 
-export async function handleSmsMessage(from: string, body: string): Promise<string> {
+export async function handleSmsMessage(from: string, body: string, mediaUrls: string[] = []): Promise<string> {
   const phone = normalizePhone(from);
+  const hasPhoto = mediaUrls.length > 0;
   let trimmed = body.trim();
-  if (!trimmed) return "";
+  if (!trimmed && !hasPhoto) return "";
 
   // Dev mode: $ prefix from DEV_PHONE simulates an unknown stranger texting in
   let forceStranger = false;
@@ -82,6 +84,15 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   }
 
   const scootId = await getScootId();
+
+  // Phase 4 staking, prospect side: "stake"/"stake me" works for a total
+  // stranger — this IS how a brand-new prospect gets an account. Checked before
+  // sender resolution since it must work with no user row at all.
+  const stakeReq = await tryHandleStakeRequest(phone, scootId, trimmed);
+  if (stakeReq != null) {
+    log.info({ phone }, "bigmo sms stake request");
+    return stakeReq;
+  }
 
   // Identify sender (global Foundation identity) + their stake in this Scoot
   const sender = forceStranger
@@ -124,9 +135,10 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     who = `${sender.displayName ?? sender.username}, registered but not yet staked into the Brotherhood`;
   } else {
     const name = sender.displayName ?? sender.username;
+    const tier = stake! & ScootFlags.OG ? " (an OG)" : stake! & ScootFlags.SENIOR ? " (a Senior)" : "";
     who = isGymboss
-      ? `${name}, a staked Fonde Brotherhood member who is a GYMBOSS (schedule authority)`
-      : `${name}, a staked Fonde Brotherhood member`;
+      ? `${name}${tier}, a staked Fonde Brotherhood member who is a GYMBOSS (schedule authority)`
+      : `${name}${tier}, a staked Fonde Brotherhood member`;
     systemPrompt = `${SYSTEM_PROMPT}\n\n## Current Brotherhood Roster\n${await getMemberRoster(scootId)}`;
   }
   systemPrompt = `${systemPrompt}\n\n## Who you're texting with\nYou are texting with ${who}.`;
@@ -141,6 +153,17 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   if (sender) {
     roomId = await getActiveRoom(sender.id);
     bigmoId = await getBigmoId();
+
+    // Phase 4 staking, staker side: "stake 12345" starts a Q&A (photo, then age
+    // tier) that spans several turns — checked first so a bare photo or a bare
+    // "senior"/"og"/"member" reply mid-flow isn't misrouted to another command.
+    const stakeFlow = await tryHandleStakerFlow(sender, scootId, trimmed, hasPhoto, mediaUrls[0]);
+    if (stakeFlow != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms staking flow");
+      return finish(stakeFlow, roomId);
+    }
+    if (!trimmed) return finish("", roomId); // a bare photo with no active flow — nothing to do
+
     // Explicit member-write commands (note:/post:/follow/mute) are handled
     // directly and short-circuit before any LLM work — see arch/sms-rooms.md §8.3.
     const cmd = await tryHandleCommand(sender.id, roomId, trimmed, stake);
@@ -190,6 +213,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
       systemPrompt += `\n\n## What you remember from past texts (background only — may be OUTDATED; NEVER use this for dates, days, or times — only the Verified Schedule is authoritative)\n${lines}`;
     }
   } else {
+    if (!trimmed) return ""; // a stranger's bare photo — nothing to do
     priorHist = [...(strangerHistory.get(strangerKey) ?? [])];
   }
 

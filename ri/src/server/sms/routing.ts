@@ -14,6 +14,7 @@ import { and, eq, gt, inArray } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { chatRooms, messages, roomMembers, smsDeliveries, smsState } from "../db/schema.js";
 import { postMemberMessage } from "./post.js";
+import { getPending, setPending } from "./pending.js";
 import { log } from "../log.js";
 
 interface UserRoom {
@@ -38,23 +39,6 @@ export async function setActiveRoom(userId: number, roomId: number): Promise<voi
     .insert(smsState)
     .values({ userId, activeRoomId: roomId })
     .onConflictDoUpdate({ target: smsState.userId, set: { activeRoomId: roomId, updatedAt: new Date() } });
-}
-
-// --- pending routing state (confirm / undo) --------------------------------
-type Pending =
-  | { kind: "route_confirm"; body: string; candidates: { id: number; name: string }[] }
-  | { kind: "posted"; messageId: number; roomId: number; roomName: string };
-
-async function getPending(userId: number): Promise<Pending | null> {
-  const [r] = await db.select({ p: smsState.pending }).from(smsState).where(eq(smsState.userId, userId));
-  return (r?.p as Pending | undefined) ?? null;
-}
-
-async function setPending(userId: number, p: Pending | null): Promise<void> {
-  await db
-    .insert(smsState)
-    .values({ userId, pending: p })
-    .onConflictDoUpdate({ target: smsState.userId, set: { pending: p, updatedAt: new Date() } });
 }
 
 // --- scoring (§4) ----------------------------------------------------------

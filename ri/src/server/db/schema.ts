@@ -17,6 +17,12 @@ export const ScootFlags = {
   BETA:     1n << 5n,  // 32  — beta/dev tester: gets early SMS features + rollout announcements
   LEGEND_NUMBER: 1n << 6n,  // 64  — awarded a reserved legend's/patron's number (honor; e.g. a deceased legend's # given to an OG). See arch/sms-rooms.md.
   TEXT_AUDIT: 1n << 7n,  // 128 — may view the global sequential SMS log (every user's texts), not just their own. Grantable independently of LEADER.
+  // Age tiers (Phase 4 staking ritual) — attested by the STAKER at staking time,
+  // never a stored birthdate. The 55/70-by-birth-YEAR rule is the human rule the
+  // staker applies in the field; the system only ever stores the resulting tier.
+  // Mutually exclusive; OG supersedes SENIOR. Neither bit set = regular member.
+  SENIOR: 1n << 8n,  // 256 — senior (55+), the senior-basketball cutoff
+  OG:     1n << 9n,  // 512 — OG (70+)
 } as const;
 
 export const users = pgTable("users", {

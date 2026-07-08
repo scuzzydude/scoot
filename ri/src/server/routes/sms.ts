@@ -3,9 +3,6 @@ import { requireAuth } from "../middleware/auth.js";
 import { getProvider } from "../sms/provider.js";
 import { log } from "../log.js";
 import type { InboundMessage } from "../sms/provider.js";
-import { db } from "../db/index.js";
-import { users, stakingCodes, pledges, UserFlags } from "../db/schema.js";
-import { eq, and, gt, sql } from "drizzle-orm";
 import { handleSmsMessage } from "../sms/bigmo.js";
 import { getUserSmsLog } from "../sms/log.js";
 
@@ -48,18 +45,10 @@ router.post("/inbound", async (req, res) => {
     numMedia: msg.numMedia, numSegments: msg.numSegments,
   }, "sms inbound");
 
-  // Staking: staked member texts a 5-digit code + selfie to stake a new member.
-  // BigMo identifies the staker by their registered phone number.
-  const codeMatch = msg.body.trim().match(/\b(\d{5})\b/);
-  if (codeMatch && msg.mediaUrls.length > 0) {
-    const twimlReply = await handleStaking(msg, codeMatch[1]);
-    res.type("text/xml").send(`<Response><Message>${twimlReply}</Message></Response>`);
-    return;
-  }
-
-  // BigMo responds to all plain text messages
-  if (msg.body.trim()) {
-    const reply = await handleSmsMessage(msg.from, msg.body);
+  // BigMo responds to all plain text AND bare-photo messages (Phase 4 staking's
+  // Q&A steps include a photo-only turn with no caption).
+  if (msg.body.trim() || msg.mediaUrls.length > 0) {
+    const reply = await handleSmsMessage(msg.from, msg.body, msg.mediaUrls);
     if (reply) {
       const safe = reply.replace(/[<&>'"]/g, (c) => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;", "'": "&apos;", '"': "&quot;" }[c]!));
       res.type("text/xml").send(`<Response><Message>${safe}</Message></Response>`);
@@ -69,55 +58,6 @@ router.post("/inbound", async (req, res) => {
 
   res.type("text/xml").send("<Response></Response>");
 });
-
-async function handleStaking(msg: InboundMessage, code: string): Promise<string> {
-  // Strip country code — Twilio sends +1XXXXXXXXXX, store as 10 digits
-  const rawPhone = msg.from.replace(/^\+1/, "").replace(/\D/g, "");
-
-  const staker = await db.query.users.findFirst({ where: eq(users.phone, rawPhone) });
-  if (!staker) {
-    log.warn({ from: msg.from }, "staking attempt from unknown phone");
-    return "I don&apos;t recognize your number. Are you registered on Scoot?";
-  }
-  if ((staker.flags & UserFlags.STAKED) === 0) {
-    log.warn({ stakerId: staker.id }, "unstaked user attempted to stake");
-    return "You need to be staked yourself before you can stake others.";
-  }
-
-  const stakingCode = await db.query.stakingCodes.findFirst({
-    where: and(
-      eq(stakingCodes.code, code),
-      eq(stakingCodes.used, false),
-      gt(stakingCodes.expiresAt, new Date()),
-    ),
-  });
-  if (!stakingCode) {
-    log.warn({ from: msg.from, code }, "staking: invalid or expired code");
-    return "That code is invalid or expired. Ask your buddy to request a new one in the app.";
-  }
-
-  const stakee = await db.query.users.findFirst({ where: eq(users.id, stakingCode.userId) });
-  if (!stakee) {
-    return "Something went wrong — user not found.";
-  }
-  if ((stakee.flags & UserFlags.STAKED) !== 0) {
-    return `${stakee.displayName ?? stakee.username} is already staked!`;
-  }
-
-  const selfieUrl = msg.mediaUrls[0];
-
-  await db.update(stakingCodes).set({ used: true }).where(eq(stakingCodes.id, stakingCode.id));
-  await db.update(users).set({ flags: sql`${users.flags} | ${UserFlags.STAKED}` }).where(eq(users.id, stakee.id));
-  await db.insert(pledges).values({
-    stakerId: staker.id,
-    stakeeId: stakee.id,
-    selfieUrl,
-    stakingCode: code,
-  });
-
-  log.info({ stakerId: staker.id, stakeeId: stakee.id, code }, "user staked successfully");
-  return `${stakee.displayName ?? stakee.username} is now staked! Welcome to the Fonde Brotherhood.`;
-}
 
 // All endpoints below require auth.
 router.use(requireAuth);
