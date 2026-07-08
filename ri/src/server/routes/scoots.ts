@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { db } from "../db/index.js";
-import { scoots, scootMembers, scootPages, scootPageBlocks } from "../db/schema.js";
+import { scoots, scootMembers, scootPages, scootPageBlocks, ScootFlags } from "../db/schema.js";
 import { eq, and, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
-import { userIsLeader, getLeaderMessageFeed } from "../sms/oversight.js";
-import { getUserSmsLog } from "../sms/log.js";
+import { userIsLeader, userHasScootFlag, getLeaderMessageFeed } from "../sms/oversight.js";
+import { getUserSmsLog, getAllSmsLog } from "../sms/log.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -26,6 +26,24 @@ router.get("/:id/oversight/messages", async (req, res) => {
     beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
   });
   res.json({ ok: true, data: feed });
+});
+
+// Global sequential SMS log — every user's texts. Gated on ScootFlags.TEXT_AUDIT
+// (a privilege grantable independently of LEADER).
+router.get("/:id/oversight/all-texts", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+  if (!(await userHasScootFlag(scootId, userId, ScootFlags.TEXT_AUDIT))) {
+    return res.status(403).json({ ok: false, error: "not permitted" });
+  }
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+  const beforeId = req.query.beforeId ? parseInt(req.query.beforeId as string) : undefined;
+  const data = await getAllSmsLog({
+    limit: Number.isNaN(limit as number) ? undefined : limit,
+    beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
+  });
+  res.json({ ok: true, data });
 });
 
 // §8.8 LEADER view of one member's SMS transcript (what texts they see).

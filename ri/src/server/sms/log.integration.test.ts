@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { eq, inArray } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
 import { chatRooms, smsDeliveries, users } from "../db/schema.js";
-import { getUserSmsLog } from "./log.js";
+import { getUserSmsLog, getAllSmsLog } from "./log.js";
 
 const SFX = `smslog-${Date.now()}`;
 let userId: number;
@@ -57,5 +57,14 @@ describe("per-user SMS log (§8.8)", () => {
     const log = await getUserSmsLog(userId, { beforeId: delIds[1], limit: 100 });
     const mine = log.filter((l) => delIds.includes(l.id));
     assert.deepEqual(mine.map((l) => l.id), [delIds[0]]); // only the oldest is < delIds[1]
+  });
+
+  it("getAllSmsLog spans every user's deliveries, each tagged with 'who'", async () => {
+    const all = await getAllSmsLog({ limit: 1000 });
+    const ours = all.filter((l) => delIds.includes(l.id));
+    assert.equal(ours.length, 4); // all 4, including the other user's row
+    const notMine = ours.find((l) => l.id === delIds[3])!; // the otherId row
+    assert.equal(notMine.userId, otherId);
+    assert.equal(notMine.who, `o-${SFX}`);
   });
 });

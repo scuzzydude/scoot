@@ -7,13 +7,18 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { chatRooms, messages, scootMembers, users, ScootFlags } from "../db/schema.js";
 
-// Does this user hold LEADER in this Scoot? (The oversight gate.)
-export async function userIsLeader(scootId: number, userId: number): Promise<boolean> {
+// Does this user hold a given ScootFlags bit in this Scoot?
+export async function userHasScootFlag(scootId: number, userId: number, flag: bigint): Promise<boolean> {
   const [m] = await db
     .select({ f: scootMembers.userFlags })
     .from(scootMembers)
     .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
-  return !!m && (BigInt(m.f) & ScootFlags.LEADER) !== 0n;
+  return !!m && (BigInt(m.f) & flag) !== 0n;
+}
+
+// Does this user hold LEADER in this Scoot? (The oversight gate.)
+export function userIsLeader(scootId: number, userId: number): Promise<boolean> {
+  return userHasScootFlag(scootId, userId, ScootFlags.LEADER);
 }
 
 export interface FeedItem {

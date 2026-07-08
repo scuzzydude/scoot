@@ -6,7 +6,7 @@
 // keyset-paginated by delivery id.
 import { desc, eq, lt, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { chatRooms, smsDeliveries } from "../db/schema.js";
+import { chatRooms, smsDeliveries, users } from "../db/schema.js";
 
 export interface SmsLogItem {
   id: number;
@@ -51,5 +51,49 @@ export async function getUserSmsLog(
     roomName: r.roomName,
     twilioSid: r.twilioSid,
     createdAt: r.createdAt,
+  }));
+}
+
+// Every user's SMS delivery, newest-first — the global sequential audit log
+// (ScootFlags.TEXT_AUDIT gated). Each row carries whose text it is.
+export interface AllSmsLogItem extends SmsLogItem {
+  userId: number;
+  who: string;
+}
+
+export async function getAllSmsLog(
+  opts: { limit?: number; beforeId?: number } = {},
+): Promise<AllSmsLogItem[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 200, 1), 1000);
+  const rows = await db
+    .select({
+      id: smsDeliveries.id,
+      direction: smsDeliveries.direction,
+      body: smsDeliveries.body,
+      roomId: smsDeliveries.roomId,
+      roomName: chatRooms.name,
+      twilioSid: smsDeliveries.twilioSid,
+      createdAt: smsDeliveries.createdAt,
+      userId: smsDeliveries.userId,
+      displayName: users.displayName,
+      username: users.username,
+    })
+    .from(smsDeliveries)
+    .leftJoin(chatRooms, eq(chatRooms.id, smsDeliveries.roomId))
+    .innerJoin(users, eq(users.id, smsDeliveries.userId))
+    .where(opts.beforeId ? lt(smsDeliveries.id, opts.beforeId) : undefined)
+    .orderBy(desc(smsDeliveries.id))
+    .limit(limit);
+
+  return rows.map((r) => ({
+    id: r.id,
+    direction: r.direction as "in" | "out",
+    body: r.body,
+    roomId: r.roomId,
+    roomName: r.roomName,
+    twilioSid: r.twilioSid,
+    createdAt: r.createdAt,
+    userId: r.userId,
+    who: r.displayName ?? r.username ?? `user ${r.userId}`,
   }));
 }

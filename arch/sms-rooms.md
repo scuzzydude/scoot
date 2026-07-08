@@ -44,6 +44,7 @@ Legacy: bits `1|2` are "engineer roles" on other Scoots (`& 3n`, see
 | `GYMBOSS` | 1<<4 | 16 | schedule authority: set/clear `scoot_sessions` |
 | `BETA`    | 1<<5 | 32 | beta/dev tester: early SMS features + rollout announcements before general release |
 | `LEGEND_NUMBER` | 1<<6 | 64 | awarded a reserved legend's/patron's number (an honor). Rule: a champ keeps their #; a *deceased* legend's # may be awarded to an OG. Pairs with `scoot_members.worn_number` = the jersey # worn: the member keeps their own id (e.g. McGhee is member 130, `worn_number=24`), and the number stays an empty reserved seat in `users`. |
+| `TEXT_AUDIT` | 1<<7 | 128 | may view the **global sequential SMS log** (every user's texts), not just their own. Grantable independently of LEADER. The "Texts" page shows a My/All view switcher when set. |
 
 (`ScootFlags` constant to be added to `schema.ts`. The global `UserFlags.GYMBOSS`
 is deprecated by this; migrate Fonde gymbosses into the per-Scoot mask, then

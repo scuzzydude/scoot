@@ -60,6 +60,19 @@ function pageQuery(opts?: { limit?: number; beforeId?: number }): string {
   return s ? `?${s}` : "";
 }
 
+// Global sequential SMS log row (TEXT_AUDIT gated) — carries whose text it is.
+export interface AllSmsLogItem {
+  id: number;
+  direction: "in" | "out";
+  body: string;
+  roomId: number | null;
+  roomName: string | null;
+  twilioSid: string | null;
+  createdAt: string;
+  userId: number;
+  who: string;
+}
+
 export const scootsApi = {
   list: () => apiFetch<ScootConfig[]>("/scoots"),
   get: (id: number) => apiFetch<ScootConfig>(`/scoots/${id}`),
@@ -68,10 +81,16 @@ export const scootsApi = {
   // LEADER-only (server 403s otherwise): all messages across all rooms.
   oversightMessages: (scootId: number, opts?: { limit?: number; beforeId?: number }) =>
     apiFetch<OversightMessage[]>(`/scoots/${scootId}/oversight/messages${pageQuery(opts)}`),
+  // TEXT_AUDIT-only: the global sequential SMS log (every user's texts).
+  allTexts: (scootId: number, opts?: { limit?: number; beforeId?: number }) =>
+    apiFetch<AllSmsLogItem[]>(`/scoots/${scootId}/oversight/all-texts${pageQuery(opts)}`),
 };
 
-// Per-Scoot LEADER bit (ScootFlags.LEADER = 1<<3) test on the text bitmask.
-export function hasLeader(userFlags: string | undefined | null): boolean {
+function hasBit(userFlags: string | undefined | null, bit: bigint): boolean {
   if (!userFlags) return false;
-  try { return (BigInt(userFlags) & 8n) !== 0n; } catch { return false; }
+  try { return (BigInt(userFlags) & bit) !== 0n; } catch { return false; }
 }
+// Per-Scoot LEADER bit (ScootFlags.LEADER = 1<<3).
+export const hasLeader = (userFlags: string | undefined | null) => hasBit(userFlags, 8n);
+// Per-Scoot TEXT_AUDIT bit (ScootFlags.TEXT_AUDIT = 1<<7) — may see all texts.
+export const hasTextAudit = (userFlags: string | undefined | null) => hasBit(userFlags, 128n);
