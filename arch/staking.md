@@ -45,12 +45,52 @@ no-LLM-date-math posture (see `bigmo_no_llm_time_math` memory / `llm/schedule.ts
 Neither bit set = regular member. The bits are mutually exclusive in practice
 (OG supersedes senior); nothing enforces that at the DB level.
 
+## Trust graph (`ri/src/server/trust/`)
+
+`pledges` **is** the directed graph (`stakerId → stakeeId` edges). Two modules:
+
+- **`trust/ledger.ts`** — the only sanctioned way to insert a pledge
+  (`recordPledge()`; never `db.insert(pledges)` directly). Pledges are treated
+  as **append-only events**: nothing ever `UPDATE`s or `DELETE`s a pledge's core
+  fields once inserted. Any future correction (e.g. revocation) must be recorded
+  as a *new* event referencing the pledge, never a mutation. Each pledge gets a
+  `contentHash` — a sha256 fingerprint of its immutable fields, computed at
+  insert time with an explicit (never DB-default) timestamp, so there's zero
+  ambiguity about what got hashed.
+- **`trust/graph.ts`** — read-side queries: `traceToRoot(userId)` walks the
+  pledge chain back to `ROOT_USER_ID` (rocketman, user id 1 — the platform's
+  single global root), cycle-safe and tolerant of members who are `STAKED` but
+  have no pledge on record (early/manually-seeded members predate the ritual —
+  reported as `no-pledge-on-record`, not crashed on). `depthFromRoot()` and
+  `listStakedByMe()` (a staker's own recall list — the ritual's actual point:
+  recognizing someone who reappears after years) build on it.
+
+Exposed over SMS (`sms/trust-commands.ts`): text BigMo **`my pledges`** (who
+you've staked, newest first) or **`my chain`** (your trace back to root, by
+name).
+
+### Why this is "blockchain-ready" without building a blockchain
+
+The two properties that actually matter for Phase 5's `scootd` to later ingest
+this table as a chain genesis are (1) **immutability discipline** — the ledger
+is a clean, ordered event log, never mutated — and (2) a **canonical
+per-event hash** with no ambiguity about its inputs. Both are in place now.
+What's deliberately **not** built: a self-referential hash chain (each pledge
+linking to the previous) with the locking that would require. That's real
+tamper-evidence machinery nobody consumes yet, and the actual chain will do
+proper hashing/linking in C when it exists — building it twice in the meantime
+would be pure waste.
+
 ## Deliberately deferred vs. the original design
 
 - **Live QR/device handshake** — replaced by the SMS code+photo+Q&A above.
-- **Trust graph traversal / distance-from-root queries** — `pledges` records the
-  edges; nothing yet computes chains or gates features on graph distance.
 - **Revocation** — no revoke path yet; the design memory's confirmed-human vs.
-  bogus-pledge distinction is unbuilt.
+  bogus-pledge governance question (admin-only? staker + their staker must
+  agree?) is genuinely unresolved and deliberately not decided here. When
+  built, it must be a new event type (e.g. a `pledge_revocations` table), never
+  a mutation of the original pledge — the ledger's append-only contract holds.
 - **Root of trust** — `rocketman` (user id 1) is the de facto root per this
-  session's user-id reservation work, but nothing encodes that formally yet.
+  session's user-id reservation work; `trust/graph.ts`'s `ROOT_USER_ID`
+  constant is the one place this is encoded.
+- **LEADER-facing graph visualization** — `traceToRoot`/`listStakedByMe` exist
+  and are tested, but there's no admin UI over them yet (SMS-only so far).

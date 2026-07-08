@@ -16,8 +16,9 @@
 // hooper turned out to be a scammer" case — not primarily a public artifact.
 import { and, eq, gt } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { users, scootMembers, stakingCodes, pledges, ScootFlags, type User } from "../db/schema.js";
+import { users, scootMembers, stakingCodes, ScootFlags, type User } from "../db/schema.js";
 import { getPending, setPending } from "./pending.js";
+import { recordPledge } from "../trust/ledger.js";
 import { log } from "../log.js";
 
 function generateCode(): string {
@@ -153,7 +154,7 @@ export async function tryHandleStakerFlow(
     await setScootFlags(scootId, pending.stakeeId, finalFlags);
     await db.update(stakingCodes).set({ used: true }).where(eq(stakingCodes.id, pending.stakingCodeId));
     const [stakingCodeRow] = await db.select({ code: stakingCodes.code }).from(stakingCodes).where(eq(stakingCodes.id, pending.stakingCodeId));
-    await db.insert(pledges).values({
+    await recordPledge({
       stakerId: staker.id,
       stakeeId: pending.stakeeId,
       selfieUrl: pending.selfieUrl ?? "",

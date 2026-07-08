@@ -13,6 +13,7 @@ import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { ensureDisclaimer } from "./disclaimer.js";
 import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
+import { tryHandleTrustQuery } from "./trust-commands.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -163,6 +164,15 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
       return finish(stakeFlow, roomId);
     }
     if (!trimmed) return finish("", roomId); // a bare photo with no active flow — nothing to do
+
+    // Trust-graph read queries: "my pledges" (recall list) / "my chain" (trace
+    // to root). Read-only, no state, so priority relative to other commands
+    // doesn't matter much — placed here since it's staking-adjacent.
+    const trustReply = await tryHandleTrustQuery(sender.id, trimmed);
+    if (trustReply != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms trust query");
+      return finish(trustReply, roomId);
+    }
 
     // Explicit member-write commands (note:/post:/follow/mute) are handled
     // directly and short-circuit before any LLM work — see arch/sms-rooms.md §8.3.

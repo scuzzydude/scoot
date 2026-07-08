@@ -173,6 +173,13 @@ export const stakingCodes = pgTable("staking_codes", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// The trust graph's edge list (staker -> stakee) — see arch/staking.md. APPEND-
+// ONLY: a pledge's core fields (staker/stakee/selfie/code/timestamp) are never
+// UPDATEd or DELETEd once inserted. Any future correction (e.g. revocation) must
+// be recorded as a NEW event referencing this pledge, never a mutation — this is
+// what lets Phase 5's scootd later ingest this table as a clean chain genesis.
+// Always insert via trust/ledger.ts's recordPledge(), never db.insert(pledges)
+// directly, so contentHash stays a trustworthy fingerprint of what happened.
 export const pledges = pgTable("pledges", {
   id: serial("id").primaryKey(),
   stakerId: integer("staker_id").notNull().references(() => users.id),
@@ -180,6 +187,9 @@ export const pledges = pgTable("pledges", {
   selfieUrl: text("selfie_url").notNull(),
   stakingCode: text("staking_code").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  // sha256 fingerprint of the immutable fields above, computed at insert time
+  // with the exact createdAt used (never the DB default) — see trust/ledger.ts.
+  contentHash: text("content_hash").notNull(),
 });
 
 // Authoritative schedule — GYMBOSS-only structured data. BigMo answers from the
@@ -248,3 +258,4 @@ export type ScootSession = typeof scootSessions.$inferSelect;
 export type NewScootSession = typeof scootSessions.$inferInsert;
 export type SmsState = typeof smsState.$inferSelect;
 export type SmsDelivery = typeof smsDeliveries.$inferSelect;
+export type Pledge = typeof pledges.$inferSelect;

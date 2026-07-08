@@ -42,9 +42,21 @@ Retired the old Phase-2 stub (`routes/staking.ts`, global UserFlags.STAKED) —
 deleted. Full design + what's deferred (graph traversal, revocation, live QR
 handshake): `arch/staking.md`. 86 tests total.
 
+**Trust graph DONE** (`ri/src/server/trust/{ledger,graph}.ts`): pledges are an
+append-only ledger (`recordPledge()` only — never raw insert), each row gets a
+sha256 `contentHash` (explicit timestamp, no DB-default ambiguity) so Phase 5's
+scootd can later ingest this table as a chain genesis without rebuilding
+history. Deliberately NOT a self-referential hash chain — that's scootd's job
+in C, building it twice in Postgres now would be waste. `traceToRoot()`
+(cycle-safe, tolerates untraceable legacy members), `depthFromRoot()`,
+`listStakedByMe()` (the staker's own recall list — the ritual's actual point).
+SMS: `my pledges` / `my chain`. `ROOT_USER_ID=1` (rocketman) is the one place
+root-of-trust is encoded. Full design: `arch/staking.md`. 100 tests total.
+
 **NEXT — pick one:**
-- Phase 4 continued: trust-graph queries (distance-from-root via `pledges`),
-  revocation, or the client staking UI (currently 100% SMS-only, no app screen).
+- Phase 4 continued: revocation (governance question deliberately unresolved —
+  admin-only vs. staker+their-staker consensus, see arch/staking.md), or a
+  client staking/graph UI (currently 100% SMS-only, no app screen).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure
