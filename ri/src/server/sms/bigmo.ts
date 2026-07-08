@@ -10,6 +10,7 @@ import { tryHandleCommand } from "./commands.js";
 import { tryHandleGymbossCommand } from "./schedule-commands.js";
 import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
+import { ensureDisclaimer } from "./disclaimer.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -88,6 +89,11 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   const stake = sender ? await getStake(scootId, sender.id) : null;
   const isStaked = stake !== null && (stake & ScootFlags.STAKED) !== 0n;
   const isGymboss = stake !== null && (stake & ScootFlags.GYMBOSS) !== 0n;
+
+  // §8.7: mandatory no-privacy disclaimer, at most once/year (LEADER can read all
+  // messages). Fire-and-forget — it sends its own SMS and must never delay or
+  // break the reply we're about to build.
+  if (sender) void ensureDisclaimer(sender);
 
   // Sender identity is stable per user → it belongs in the system prompt, not
   // smuggled into every message (which would pollute the persisted app view).

@@ -3,9 +3,29 @@ import { db } from "../db/index.js";
 import { scoots, scootMembers, scootPages, scootPageBlocks } from "../db/schema.js";
 import { eq, and, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
+import { userIsLeader, getLeaderMessageFeed } from "../sms/oversight.js";
 
 const router = Router();
 router.use(requireAuth);
+
+// §8.7 LEADER oversight — all messages across all rooms, bypassing accessMask.
+// Gated: caller must hold ScootFlags.LEADER in this Scoot (the disclaimer warns
+// every member this view exists). Keyset pagination via ?beforeId, ?limit.
+router.get("/:id/oversight/messages", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+  if (!(await userIsLeader(scootId, userId))) {
+    return res.status(403).json({ ok: false, error: "leader only" });
+  }
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+  const beforeId = req.query.beforeId ? parseInt(req.query.beforeId as string) : undefined;
+  const feed = await getLeaderMessageFeed({
+    limit: Number.isNaN(limit as number) ? undefined : limit,
+    beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
+  });
+  res.json({ ok: true, data: feed });
+});
 
 router.get("/", async (req, res) => {
   const userId = (req.user as { id: number }).id;

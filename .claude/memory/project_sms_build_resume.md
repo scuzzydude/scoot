@@ -1,26 +1,29 @@
 ---
 name: project_sms_build_resume
-description: "SMS⇄Rooms build plan resume point — §8.1–8.6 done, NEXT is §8.7 leader oversight + yearly disclaimer"
+description: "SMS⇄Rooms build plan resume point — §8.1–8.7 backend done, NEXT is §8.8 app SMS log (+ §8.7 UI)"
 metadata: 
   node_type: memory
   type: project
   originSessionId: e0188e1f-d820-46a3-a539-4550075074c5
 ---
 
-**Resume the `arch/sms-rooms.md` §8 build plan at §8.7.**
+**Resume the `arch/sms-rooms.md` §8 build plan at §8.8 (+ §8.7 UI).**
 
 Done (committed): §8.1 data foundation, §8.2 read path, §8.3 member write
 (`commands.ts`), §8.4 outbound fan-out (`fanout.ts`) + LEADER `mirror on/off`,
 §8.5 inbound routing (`routing.ts`), §8.6 GYMBOSS schedule-by-SMS
-(`schedule-commands.ts` + `tz.ts`: `gym confirm/cancel/time/note/clear`, flag-gated,
-deterministic time math, 10 tests). Plus BigMo→Memory Vault (`memory.ts`), `ScootFlags.BETA`.
+(`schedule-commands.ts` + `tz.ts`), §8.7 leader oversight + disclaimer BACKEND
+(`oversight.ts`: LEADER-gated all-messages feed + `GET /api/scoots/:id/oversight/messages`;
+`disclaimer.ts`: yearly no-privacy SMS via shared throttle `send.ts`, recorded to
+`sms_deliveries`, wired fire-and-forget in `bigmo.ts`). 60 tests. Plus BigMo→Memory
+Vault (`memory.ts`), `ScootFlags.BETA/LEGEND_NUMBER`, `scoot_members.worn_number`.
 
-**NEXT — §8.7 leader oversight + disclaimer:** LEADER all-messages view across rooms
-(bypass accessMask); mandatory no-privacy disclaimer on join + yearly
-(`users.privacy_disclaimer_at`), over SMS + app, delivery recorded. Then §8.8 app
-per-user SMS log (render `sms_deliveries`). Deferred: routing v2 (scored topical +
-confirm/undo, §4); the §6 multi-GYMBOSS Y/N verification-escalation (§8.6 shipped the
-core set/clear without it).
+**NEXT — §8.8 app per-user SMS log:** render `sms_deliveries` as an SMS transcript
+in the app. Also remaining from §8.7: the FRONTEND — a LEADER oversight React page
+(consumes the oversight endpoint) + showing the disclaimer in the app.
+Deferred: routing v2 (scored topical + confirm/undo, §4); §6 multi-GYMBOSS Y/N
+verification-escalation; `chat_rooms.scoot_id` to scope oversight per-Scoot (today
+it returns all rooms — fine for the single Fonde Scoot).
 
 Roster/infra done this session (not blocking §8.7):
 - User-id reservation: reserved band 1–99 (family 1–5 + Rockets legend/patron

@@ -15,33 +15,8 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { chatRooms, roomMembers, smsDeliveries, users, UserFlags } from "../db/schema.js";
-import { getProvider } from "./provider.js";
+import { throttledSend } from "./send.js";
 import { log } from "../log.js";
-
-// Long-code A2P 10DLC safe ceiling ≈ 1 msg/sec. One global chain serializes ALL
-// fan-out sends and inserts this gap after each, so concurrent fan-outs can't
-// sum past the limit. Read at call-time so tests can zero it.
-const gapMs = () => Number(process.env.SMS_SEND_GAP_MS ?? 1100);
-let sendChain: Promise<unknown> = Promise.resolve();
-
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-// Serialized, throttled send. Returns the Twilio SID or null on failure (a bad
-// recipient or an uninitialized provider never aborts the rest of the fan-out).
-function throttledSend(to: string, body: string): Promise<string | null> {
-  const result = sendChain.then(async () => {
-    try {
-      const res = await getProvider().send(to, body);
-      return res.sid;
-    } catch (err) {
-      log.error({ err, to }, "sms fan-out: send failed");
-      return null;
-    }
-  });
-  // The next queued send waits the gap after this one settles (success or not).
-  sendChain = result.then(() => delay(gapMs()));
-  return result;
-}
 
 export interface FanOutInput {
   messageId: number | null;
