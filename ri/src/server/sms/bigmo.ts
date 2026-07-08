@@ -14,6 +14,7 @@ import { recall, remember } from "./memory.js";
 import { ensureDisclaimer } from "./disclaimer.js";
 import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
+import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -102,6 +103,7 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
   const stake = sender ? await getStake(scootId, sender.id) : null;
   const isStaked = stake !== null && (stake & ScootFlags.STAKED) !== 0n;
   const isGymboss = stake !== null && (stake & ScootFlags.GYMBOSS) !== 0n;
+  const isLeader = stake !== null && (stake & ScootFlags.LEADER) !== 0n;
 
   // §8.7: mandatory no-privacy disclaimer, at most once/year (LEADER can read all
   // messages). Fire-and-forget — it sends its own SMS and must never delay or
@@ -172,6 +174,14 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (trustReply != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms trust query");
       return finish(trustReply, roomId);
+    }
+
+    // Pledge revocation: "revoke <name>" (bogus, self-service) or a LEADER
+    // revoking a confirmed-human pledge — see revoke-commands.ts.
+    const revokeReply = await tryHandleRevokeCommand(sender.id, scootId, trimmed, isLeader);
+    if (revokeReply != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms revoke command");
+      return finish(revokeReply, roomId);
     }
 
     // Explicit member-write commands (note:/post:/follow/mute) are handled

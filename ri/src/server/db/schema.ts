@@ -192,6 +192,21 @@ export const pledges = pgTable("pledges", {
   contentHash: text("content_hash").notNull(),
 });
 
+// A correction event for a pledge — the ledger's append-only contract in
+// practice: a revocation is a NEW row referencing the pledge, never an UPDATE/
+// DELETE of it. At most one per pledge (unique). Two paths (arch/staking.md):
+// 'bogus' (the staker was tricked / broke ritual rules — freely self-service by
+// the original staker) and 'confirmed_human' (the person WAS real but the
+// community un-vouches anyway, e.g. a later-discovered bad actor — LEADER-only).
+export const pledgeRevocations = pgTable("pledge_revocations", {
+  id: serial("id").primaryKey(),
+  pledgeId: integer("pledge_id").notNull().references(() => pledges.id).unique(),
+  revokedBy: integer("revoked_by").notNull().references(() => users.id),
+  reason: text("reason").notNull(), // 'bogus' | 'confirmed_human'
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Authoritative schedule — GYMBOSS-only structured data. BigMo answers from the
 // next non-cancelled session (no runtime day-of-week math). See arch/sms-rooms.md.
 // Named scoot_sessions to avoid the connect-pg-simple `session` table.
@@ -259,3 +274,4 @@ export type NewScootSession = typeof scootSessions.$inferInsert;
 export type SmsState = typeof smsState.$inferSelect;
 export type SmsDelivery = typeof smsDeliveries.$inferSelect;
 export type Pledge = typeof pledges.$inferSelect;
+export type PledgeRevocation = typeof pledgeRevocations.$inferSelect;

@@ -81,16 +81,47 @@ tamper-evidence machinery nobody consumes yet, and the actual chain will do
 proper hashing/linking in C when it exists — building it twice in the meantime
 would be pure waste.
 
+## Revocation (`trust/revocation.ts`)
+
+The governance question is resolved (Brandon's call): **confirmed-human
+revocation is admin-only** (LEADER-gated), not a multi-party consensus.
+
+One SMS entry point resolves which path applies based on who's asking:
+
+- **`revoke <name>`** where the sender is the pledge's **original staker** →
+  the **bogus** path (they were tricked, the prospect wasn't real/unique, or
+  they broke the ritual rules). Freely self-service, no gate — trusts the
+  staker's judgment, same as the ritual itself.
+- **`revoke <name>`** where the sender is a **LEADER** and the name matches
+  *any* staked member → the **confirmed_human** path (the person WAS real but
+  the community un-vouches anyway, e.g. a later-discovered bad actor).
+  LEADER-only, deliberately admin-only.
+- Neither → "I don't see anyone matching that in your staked pledges" — a
+  non-LEADER never learns whether someone *else* staked the name they typed.
+
+Either path asks a short reason next ("Why? Reply with a short reason, or
+'skip'"), mirroring the staking ritual's multi-turn Q&A rather than demanding
+it all in one message; `cancel` abandons with nothing changed.
+
+`revokePledge()` records the correction as a **new event** in
+`pledge_revocations` (never a mutation of the `pledges` row — at most one
+revocation per pledge, enforced by a unique constraint) and clears **only**
+the bits staking added (`STAKED`, `SENIOR`, `OG`) from the stakee's
+`scoot_members` row — other flags (`BETA`, `GYMBOSS`, `LEADER`, …) are
+untouched. A revoked pledge no longer counts as a trust-graph edge:
+`traceToRoot()` treats it as if it never existed.
+
+**Deliberately still out of scope:** downstream impact on the *revoked
+stakee's own* pledges (people they in turn staked) — the design memory
+explicitly defers this "until building the staking-gated chat/wallet
+features"; nothing cascades today.
+
 ## Deliberately deferred vs. the original design
 
 - **Live QR/device handshake** — replaced by the SMS code+photo+Q&A above.
-- **Revocation** — no revoke path yet; the design memory's confirmed-human vs.
-  bogus-pledge governance question (admin-only? staker + their staker must
-  agree?) is genuinely unresolved and deliberately not decided here. When
-  built, it must be a new event type (e.g. a `pledge_revocations` table), never
-  a mutation of the original pledge — the ledger's append-only contract holds.
 - **Root of trust** — `rocketman` (user id 1) is the de facto root per this
   session's user-id reservation work; `trust/graph.ts`'s `ROOT_USER_ID`
   constant is the one place this is encoded.
 - **LEADER-facing graph visualization** — `traceToRoot`/`listStakedByMe` exist
   and are tested, but there's no admin UI over them yet (SMS-only so far).
+- **Downstream revocation cascade** — see above.

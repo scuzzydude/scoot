@@ -53,10 +53,21 @@ in C, building it twice in Postgres now would be waste. `traceToRoot()`
 SMS: `my pledges` / `my chain`. `ROOT_USER_ID=1` (rocketman) is the one place
 root-of-trust is encoded. Full design: `arch/staking.md`. 100 tests total.
 
+**Revocation DONE** (governance resolved — Brandon's call: admin-only, not
+consensus): `trust/revocation.ts` `revokePledge()` — records a new
+`pledge_revocations` event (never mutates the pledge; at most one per pledge,
+unique-constrained), clears ONLY STAKED/SENIOR/OG from scoot_members (leaves
+BETA/GYMBOSS/LEADER/etc untouched), and `traceToRoot` now treats a revoked
+pledge as if it never existed. SMS: one entry point `revoke <name>` branches by
+asker — sender is the pledge's staker → 'bogus' path, freely self-service;
+sender is LEADER + name matches any staked member → 'confirmed_human' path,
+LEADER-only. Either way, a short reason Q&A follows (mirrors staking's Q&A UX);
+`cancel` abandons. Downstream cascade to the revoked stakee's OWN pledges
+stays deliberately out of scope (design memory defers it explicitly). 111
+tests total.
+
 **NEXT — pick one:**
-- Phase 4 continued: revocation (governance question deliberately unresolved —
-  admin-only vs. staker+their-staker consensus, see arch/staking.md), or a
-  client staking/graph UI (currently 100% SMS-only, no app screen).
+- Client staking/graph/revocation UI (currently 100% SMS-only, no app screen).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure

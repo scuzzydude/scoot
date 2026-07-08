@@ -5,9 +5,9 @@
 // the design memory) and tolerant of members who are STAKED but have no pledge
 // on record — early/manually-seeded members predate this ritual; they're
 // reported as untraceable, not crashed on.
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { pledges, users } from "../db/schema.js";
+import { pledges, pledgeRevocations, users } from "../db/schema.js";
 
 export const ROOT_USER_ID = 1; // rocketman — see arch/staking.md
 
@@ -30,8 +30,12 @@ export async function traceToRoot(userId: number, maxDepth = 64): Promise<TraceR
   let current = userId;
 
   while (current !== ROOT_USER_ID) {
+    // A revoked pledge no longer counts as a valid trust edge — same as if it
+    // never happened.
     const [edge] = await db.select({ stakerId: pledges.stakerId }).from(pledges)
-      .where(eq(pledges.stakeeId, current)).orderBy(desc(pledges.id)).limit(1);
+      .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
+      .where(and(eq(pledges.stakeeId, current), isNull(pledgeRevocations.id)))
+      .orderBy(desc(pledges.id)).limit(1);
     if (!edge) return { chain, reached: false, reason: "no-pledge-on-record" };
     if (visited.has(edge.stakerId)) return { chain, reached: false, reason: "cycle-detected" };
     chain.push(edge.stakerId);
@@ -54,10 +58,13 @@ export interface StakedPledge {
   stakeeName: string;
   selfieUrl: string;
   createdAt: Date;
+  revoked: boolean;
 }
 
 // A staker's own "who have I staked" recall list — the design's central use
 // case: when someone returns after years, the staker recognizes them via this.
+// Includes revoked pledges (flagged) — still worth remembering for the staker's
+// own recall, even if the stake no longer stands.
 export async function listStakedByMe(stakerId: number): Promise<StakedPledge[]> {
   const rows = await db
     .select({
@@ -67,9 +74,11 @@ export async function listStakedByMe(stakerId: number): Promise<StakedPledge[]> 
       username: users.username,
       selfieUrl: pledges.selfieUrl,
       createdAt: pledges.createdAt,
+      revokedId: pledgeRevocations.id,
     })
     .from(pledges)
     .innerJoin(users, eq(users.id, pledges.stakeeId))
+    .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
     .where(eq(pledges.stakerId, stakerId))
     .orderBy(desc(pledges.createdAt));
 
@@ -79,5 +88,40 @@ export async function listStakedByMe(stakerId: number): Promise<StakedPledge[]> 
     stakeeName: r.displayName ?? r.username ?? `user ${r.stakeeId}`,
     selfieUrl: r.selfieUrl,
     createdAt: r.createdAt,
+    revoked: r.revokedId != null,
   }));
+}
+
+export interface PledgeMatch {
+  pledgeId: number;
+  stakerId: number;
+  stakeeId: number;
+  stakeeName: string;
+}
+
+// Find a non-revoked pledge whose stakee's name matches (case-insensitive),
+// regardless of who staked them — used for the LEADER-only confirmed_human
+// revoke path. Most-recent match wins if the name is ambiguous.
+export async function findActivePledgeForStakeeName(name: string): Promise<PledgeMatch | null> {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return null;
+  const [row] = await db
+    .select({
+      pledgeId: pledges.id,
+      stakerId: pledges.stakerId,
+      stakeeId: pledges.stakeeId,
+      displayName: users.displayName,
+      username: users.username,
+    })
+    .from(pledges)
+    .innerJoin(users, eq(users.id, pledges.stakeeId))
+    .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
+    .where(and(
+      isNull(pledgeRevocations.id),
+      sql`(lower(${users.displayName}) = ${needle} OR lower(${users.username}) = ${needle})`,
+    ))
+    .orderBy(desc(pledges.id))
+    .limit(1);
+  if (!row) return null;
+  return { pledgeId: row.pledgeId, stakerId: row.stakerId, stakeeId: row.stakeeId, stakeeName: row.displayName ?? row.username ?? `user ${row.stakeeId}` };
 }
