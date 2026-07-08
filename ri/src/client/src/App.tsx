@@ -10,6 +10,7 @@ import ChatPage from "./pages/chat-page.js";
 import WalletPage from "./pages/wallet-page.js";
 import BotPage from "./pages/bot-page.js";
 import SmsLogPage from "./pages/sms-log-page.js";
+import OversightPage from "./pages/oversight-page.js";
 import ScootPage from "./pages/scoot-page.js";
 import PrivacyPage from "./pages/privacy-page.js";
 import TermsPage from "./pages/terms-page.js";
@@ -40,6 +41,9 @@ export default function App() {
               </Route>
               <Route path="/sms-log">
                 <ProtectedRoute><SmsLogPage /></ProtectedRoute>
+              </Route>
+              <Route path="/oversight">
+                <ProtectedRoute><OversightPage /></ProtectedRoute>
               </Route>
               <Route path="/page/:slug">
                 <ProtectedRoute><ScootPage /></ProtectedRoute>

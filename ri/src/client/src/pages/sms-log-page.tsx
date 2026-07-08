@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { smsApi, type SmsLogItem } from "../api/sms.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
+import { PrivacyNotice } from "../components/privacy-notice.js";
 import { MessageSquare } from "lucide-react";
 
 function fmtTime(iso: string): string {
@@ -47,6 +48,7 @@ export default function SmsLogPage() {
       <p className="pb-2 text-xs text-white/50">
         Every text that went to or from your phone — BigMo replies, group messages, and notices.
       </p>
+      <div className="pb-2"><PrivacyNotice /></div>
       <ScrollArea className="flex-1">
         {isLoading && <p className="py-8 text-center text-sm text-white/50">Loading…</p>}
         {isError && (

@@ -1,11 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Wallet, Bot, FileText } from "lucide-react";
+import { MessageSquare, Wallet, Bot, FileText, Inbox, Eye } from "lucide-react";
 import { useScoot } from "../../hooks/use-scoot.js";
+import { hasLeader } from "../../api/scoots.js";
 
 const FIXED_NAV = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/bot", label: "Bot", icon: Bot },
+  { href: "/sms-log", label: "Texts", icon: Inbox },
 ];
 
 export function BottomNav() {
@@ -16,7 +18,12 @@ export function BottomNav() {
     .filter((item) => !item.external)
     .map((item) => ({ href: item.href, label: item.label, icon: FileText }));
 
-  const allItems = [...FIXED_NAV, ...dynamicItems];
+  // Oversight tab only for a per-Scoot LEADER (server also gates the endpoint).
+  const leaderItems = hasLeader(activeScoot?.userFlags)
+    ? [{ href: "/oversight", label: "Oversight", icon: Eye }]
+    : [];
+
+  const allItems = [...FIXED_NAV, ...dynamicItems, ...leaderItems];
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 h-16 w-full max-w-[640px] bg-black border-t border-border flex">
