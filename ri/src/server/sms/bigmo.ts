@@ -8,6 +8,7 @@ import { scheduleFactsSafe } from "../llm/schedule.js";
 import { getActiveRoom, getBigmoDmRoom, getBigmoId, loadHistory, appendTurn } from "./conversation.js";
 import { tryHandleCommand } from "./commands.js";
 import { tryHandleGymbossCommand } from "./schedule-commands.js";
+import { tryResolveVerification } from "./escalation.js";
 import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { ensureDisclaimer } from "./disclaimer.js";
@@ -146,6 +147,14 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     if (cmd != null) {
       log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
       return finish(cmd, roomId);
+    }
+
+    // §6 escalation: a GYMBOSS "yes"/"no" resolves an open schedule-conflict poll
+    // (must run before the gym-command + routing paths so a bare Y/N isn't posted).
+    const verdict = await tryResolveVerification(sender.id, scootId, trimmed, stake);
+    if (verdict != null) {
+      log.info({ phone, sender: sender.username, scootId }, "bigmo sms verify reply");
+      return finish(verdict, roomId);
     }
 
     // §8.6 GYMBOSS schedule control: "gym confirm/cancel/time/note" edits the

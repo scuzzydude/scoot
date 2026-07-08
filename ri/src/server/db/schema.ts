@@ -191,6 +191,23 @@ export const scootSessions = pgTable("scoot_sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Schedule change verification — §6 escalation. When a GYMBOSS confirm/cancel
+// conflicts with another GYMBOSS's recent opposite change, BigMo opens a poll
+// (texts all GYMBOSSes Y/N) instead of silently flip-flopping. First decisive
+// reply resolves it; only then is the change applied.
+export const scheduleVerifications = pgTable("schedule_verifications", {
+  id: serial("id").primaryKey(),
+  scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+  sessionId: integer("session_id").references(() => scootSessions.id, { onDelete: "cascade" }).notNull(),
+  requestedBy: integer("requested_by").references(() => users.id).notNull(),
+  action: text("action").notNull(),   // 'confirm' | 'cancel'
+  question: text("question").notNull(),
+  status: text("status").notNull().default("open"),  // open | approved | rejected
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+});
+
 // Per-user SMS routing state — persisted so a restart doesn't lose a user mid-convo.
 export const smsState = pgTable("sms_state", {
   userId: integer("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),

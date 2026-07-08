@@ -23,16 +23,21 @@ wrapper); `sms/log.ts` + `GET /api/v1/sms/log` (own) + LEADER
 `GET /api/scoots/:id/oversight/sms-log/:userId`; React transcript at
 `/sms-log` (`pages/sms-log-page.tsx`, `api/sms.ts`). 63 tests.
 
-**NEXT — pick one:**
-- SMS polish (deferred bits): §8.7 FRONTEND (LEADER oversight React page + in-app
-  disclaimer); routing v2 (§4 scored topical + confirm/undo); §6 multi-GYMBOSS Y/N
-  verification-escalation; `chat_rooms.scoot_id` to scope oversight per-Scoot;
-  BottomNav link to /sms-log (route exists, not yet in nav).
-- **Phase 4 — Staking ritual** (the next MAJOR build per [[project_plan]]): QR +
-  one-time code + selfie pledge ceremony; trust graph / scootage from the pledge graph.
-- Ops: storage plan actions awaiting go-ahead (docker build-cache prune ~1.2G,
-  media→Azure Blob hot, log→Cold) — see `ri/physical/storage-plan.md`.
-- Later phases: Phase 5 C core + wallet; Phase 6 native mobile.
+SMS POLISH DONE (this session): §8.7 frontend (oversight-page.tsx + privacy-notice
++ nav Texts/Oversight; LEADER granted to Brandon 1 + Karen 127, migration 0013);
+routing v2 (routing.ts §4 scored topical + confirm + undo, sms_state.pending);
+§6 GYMBOSS conflict escalation (escalation.ts + schedule_verifications table
+migration 0014: conflicting confirm/cancel polls all GYMBOSSes Y/N, first decisive
+reply applies). 74 tests.
+
+**NEXT — Phase 4 (Staking ritual)** is the agreed next MAJOR build per [[project_plan]]:
+QR + one-time code + selfie pledge ceremony; trust graph / scootage from the pledge
+graph. (Brandon wanted to PLAY with the SMS framework before starting Phase 4.)
+
+Still deferred (not blocking Phase 4): `chat_rooms.scoot_id` to scope oversight
+per-Scoot (returns all rooms today — fine for single Fonde Scoot). Ops: storage
+plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure Blob, log→Cold,
+`ri/physical/storage-plan.md`). Later: Phase 5 C core + wallet; Phase 6 mobile.
 
 Roster/infra done this session (not blocking §8.7):
 - User-id reservation: reserved band 1–99 (family 1–5 + Rockets legend/patron

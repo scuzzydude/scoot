@@ -20,6 +20,7 @@ import { and, asc, eq, gt, ne } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { scootSessions, ScootFlags, type ScootSession } from "../db/schema.js";
 import { TZ, centralWallToUtc, centralYMD } from "./tz.js";
+import { escalateIfConflict } from "./escalation.js";
 import { log } from "../log.js";
 
 const WEEKDAYS: Record<string, number> = {
@@ -135,11 +136,15 @@ export async function tryHandleGymbossCommand(
 
   switch (verb) {
     case "confirm": {
+      const escalated = await escalateIfConflict(scootId, target, "confirm", userId, fmtDay(target.startsAt), now);
+      if (escalated) return escalated;
       await db.update(scootSessions).set({ status: "confirmed", ...stamp }).where(eq(scootSessions.id, target.id));
       log.info({ userId, scootId, sessionId: target.id }, "gymboss confirm");
       return `✓ CONFIRMED: ${fmtSession(target)}. Brothers who ask will now hear it's ON.`;
     }
     case "cancel": {
+      const escalated = await escalateIfConflict(scootId, target, "cancel", userId, fmtDay(target.startsAt), now);
+      if (escalated) return escalated;
       await db.update(scootSessions).set({ status: "cancelled", ...stamp }).where(eq(scootSessions.id, target.id));
       log.info({ userId, scootId, sessionId: target.id }, "gymboss cancel");
       return `✓ CANCELLED: ${fmtSession(target)}. Brothers who ask will now hear there's no ball then.`;
