@@ -4,6 +4,7 @@ import { scoots, scootMembers, scootPages, scootPageBlocks } from "../db/schema.
 import { eq, and, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { userIsLeader, getLeaderMessageFeed } from "../sms/oversight.js";
+import { getUserSmsLog } from "../sms/log.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -25,6 +26,24 @@ router.get("/:id/oversight/messages", async (req, res) => {
     beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
   });
   res.json({ ok: true, data: feed });
+});
+
+// §8.8 LEADER view of one member's SMS transcript (what texts they see).
+router.get("/:id/oversight/sms-log/:userId", async (req, res) => {
+  const requesterId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  const targetId = parseInt(req.params.userId);
+  if (isNaN(scootId) || isNaN(targetId)) return res.status(400).json({ ok: false, error: "invalid id" });
+  if (!(await userIsLeader(scootId, requesterId))) {
+    return res.status(403).json({ ok: false, error: "leader only" });
+  }
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+  const beforeId = req.query.beforeId ? parseInt(req.query.beforeId as string) : undefined;
+  const data = await getUserSmsLog(targetId, {
+    limit: Number.isNaN(limit as number) ? undefined : limit,
+    beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
+  });
+  res.json({ ok: true, data });
 });
 
 router.get("/", async (req, res) => {

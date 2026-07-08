@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { db } from "../db/index.js";
-import { users, scoots, scootMembers, ScootFlags } from "../db/schema.js";
+import { users, scoots, scootMembers, smsDeliveries, ScootFlags } from "../db/schema.js";
 import { and, eq } from "drizzle-orm";
 import { getProvider } from "../llm/provider.js";
 import { scheduleFactsSafe } from "../llm/schedule.js";
@@ -95,6 +95,24 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
   // break the reply we're about to build.
   if (sender) void ensureDisclaimer(sender);
 
+  // §8.8: truthful wire transcript. Every exit routes its reply through finish(),
+  // which records the inbound + the reply to sms_deliveries (one exit fires per
+  // call, so each pair is logged once). Strangers have no user row → skipped.
+  // Best-effort: a transcript-log failure must never break the reply.
+  const finish = async (reply: string, rid: number | null): Promise<string> => {
+    if (sender && reply) {
+      try {
+        await db.insert(smsDeliveries).values([
+          { userId: sender.id, roomId: rid, direction: "in", body: trimmed, messageId: null, twilioSid: null },
+          { userId: sender.id, roomId: rid, direction: "out", body: reply, messageId: null, twilioSid: null },
+        ]);
+      } catch (err) {
+        log.error({ err, userId: sender.id }, "sms_deliveries transcript log failed");
+      }
+    }
+    return reply;
+  };
+
   // Sender identity is stable per user → it belongs in the system prompt, not
   // smuggled into every message (which would pollute the persisted app view).
   let systemPrompt = SYSTEM_PROMPT;
@@ -127,7 +145,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     const cmd = await tryHandleCommand(sender.id, roomId, trimmed, stake);
     if (cmd != null) {
       log.info({ phone, sender: sender.username, roomId, cmd }, "bigmo sms command handled");
-      return cmd;
+      return finish(cmd, roomId);
     }
 
     // §8.6 GYMBOSS schedule control: "gym confirm/cancel/time/note" edits the
@@ -136,7 +154,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     const gym = await tryHandleGymbossCommand(sender.id, scootId, trimmed, stake);
     if (gym != null) {
       log.info({ phone, sender: sender.username, scootId }, "bigmo sms gymboss command");
-      return gym;
+      return finish(gym, roomId);
     }
 
     // §8.5 inbound routing: hard-switch the sticky active room, or auto-post to
@@ -147,7 +165,7 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
     if (route.newActiveRoomId != null) roomId = route.newActiveRoomId;
     if (route.handled) {
       log.info({ phone, sender: sender.username, roomId }, "bigmo sms routed");
-      return route.reply ?? "";
+      return finish(route.reply ?? "", roomId);
     }
 
     priorHist = await loadHistory(roomId, HISTORY_CAP);
@@ -196,9 +214,9 @@ export async function handleSmsMessage(from: string, body: string): Promise<stri
       void remember(trimmed, MEMORY_SPACE, sender.displayName ?? sender.username);
     }
     log.info({ phone, sender: sender?.username ?? "unknown", roomId, reply }, "bigmo sms reply sent");
-    return reply;
+    return finish(reply, roomId);
   } catch (err) {
     log.error({ err, phone }, "bigmo sms: LLM error");
-    return "I'm havin' a technical moment. Try again in a minute.";
+    return finish("I'm havin' a technical moment. Try again in a minute.", roomId);
   }
 }

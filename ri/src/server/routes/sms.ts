@@ -7,6 +7,7 @@ import { db } from "../db/index.js";
 import { users, stakingCodes, pledges, UserFlags } from "../db/schema.js";
 import { eq, and, gt, sql } from "drizzle-orm";
 import { handleSmsMessage } from "../sms/bigmo.js";
+import { getUserSmsLog } from "../sms/log.js";
 
 const router = Router();
 
@@ -141,6 +142,19 @@ router.post("/send", async (req, res) => {
 // GET /api/v1/sms/inbox — recent inbound messages (newest last)
 router.get("/inbox", (_req, res) => {
   res.json({ ok: true, data: inbox });
+});
+
+// GET /api/v1/sms/log — the caller's own SMS transcript (§8.8), newest-first.
+// Keyset pagination via ?beforeId, ?limit.
+router.get("/log", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+  const beforeId = req.query.beforeId ? parseInt(req.query.beforeId as string) : undefined;
+  const data = await getUserSmsLog(userId, {
+    limit: Number.isNaN(limit as number) ? undefined : limit,
+    beforeId: Number.isNaN(beforeId as number) ? undefined : beforeId,
+  });
+  res.json({ ok: true, data });
 });
 
 export default router;

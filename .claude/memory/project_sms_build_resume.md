@@ -1,13 +1,13 @@
 ---
 name: project_sms_build_resume
-description: "SMS⇄Rooms build plan resume point — §8.1–8.7 backend done, NEXT is §8.8 app SMS log (+ §8.7 UI)"
+description: "SMS⇄Rooms §8 build plan COMPLETE (8.1–8.8). Next: staking ritual (Phase 4) or SMS polish (§8.7 UI / routing v2)"
 metadata: 
   node_type: memory
   type: project
   originSessionId: e0188e1f-d820-46a3-a539-4550075074c5
 ---
 
-**Resume the `arch/sms-rooms.md` §8 build plan at §8.8 (+ §8.7 UI).**
+**The `arch/sms-rooms.md` §8 build plan is COMPLETE (§8.1–§8.8).**
 
 Done (committed): §8.1 data foundation, §8.2 read path, §8.3 member write
 (`commands.ts`), §8.4 outbound fan-out (`fanout.ts`) + LEADER `mirror on/off`,
@@ -18,12 +18,21 @@ Done (committed): §8.1 data foundation, §8.2 read path, §8.3 member write
 `sms_deliveries`, wired fire-and-forget in `bigmo.ts`). 60 tests. Plus BigMo→Memory
 Vault (`memory.ts`), `ScootFlags.BETA/LEGEND_NUMBER`, `scoot_members.worn_number`.
 
-**NEXT — §8.8 app per-user SMS log:** render `sms_deliveries` as an SMS transcript
-in the app. Also remaining from §8.7: the FRONTEND — a LEADER oversight React page
-(consumes the oversight endpoint) + showing the disclaimer in the app.
-Deferred: routing v2 (scored topical + confirm/undo, §4); §6 multi-GYMBOSS Y/N
-verification-escalation; `chat_rooms.scoot_id` to scope oversight per-Scoot (today
-it returns all rooms — fine for the single Fonde Scoot).
+§8.8 DONE: bigmo.ts now records every inbound+reply to `sms_deliveries` (finish()
+wrapper); `sms/log.ts` + `GET /api/v1/sms/log` (own) + LEADER
+`GET /api/scoots/:id/oversight/sms-log/:userId`; React transcript at
+`/sms-log` (`pages/sms-log-page.tsx`, `api/sms.ts`). 63 tests.
+
+**NEXT — pick one:**
+- SMS polish (deferred bits): §8.7 FRONTEND (LEADER oversight React page + in-app
+  disclaimer); routing v2 (§4 scored topical + confirm/undo); §6 multi-GYMBOSS Y/N
+  verification-escalation; `chat_rooms.scoot_id` to scope oversight per-Scoot;
+  BottomNav link to /sms-log (route exists, not yet in nav).
+- **Phase 4 — Staking ritual** (the next MAJOR build per [[project_plan]]): QR +
+  one-time code + selfie pledge ceremony; trust graph / scootage from the pledge graph.
+- Ops: storage plan actions awaiting go-ahead (docker build-cache prune ~1.2G,
+  media→Azure Blob hot, log→Cold) — see `ri/physical/storage-plan.md`.
+- Later phases: Phase 5 C core + wallet; Phase 6 native mobile.
 
 Roster/infra done this session (not blocking §8.7):
 - User-id reservation: reserved band 1–99 (family 1–5 + Rockets legend/patron
