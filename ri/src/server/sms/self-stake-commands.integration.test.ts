@@ -1,27 +1,39 @@
 import "dotenv/config";
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, pool } from "../db/index.js";
-import { scoots, scootMembers, pledges, ScootFlags, smsState } from "../db/schema.js";
+import { scoots, scootMembers, stakingCodes, ScootFlags } from "../db/schema.js";
 import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
+import { setPending } from "./pending.js";
 import { ROOT_USER_ID } from "../trust/graph.js";
 
+// IMPORTANT — DATA SAFETY: self-pledges are GLOBAL per user (pledges has no
+// scootId — see arch/staking.md), and ROOT_USER_ID (1) is Brandon's REAL
+// production identity, who has ALREADY completed a real self-stake over SMS.
+// This suite must NEVER query-and-revoke "whatever active self-pledge exists"
+// for ROOT_USER_ID — that would be indistinguishable from destroying real
+// production data. It also means the "start fresh and complete successfully"
+// path can no longer be exercised for the real root (it's permanently done —
+// see trust/self-stake.integration.test.ts for why that's fine and what it
+// still verifies safely via a synthetic user).
+//
+// This file instead verifies the SMS-layer mechanics by DIRECTLY constructing
+// pending state (setPending) rather than relying on the "self stake" trigger
+// to grant a fresh flow — that never touches pledges/pledgeRevocations, so
+// it's safe regardless of the real root's permanent staked status.
 const SFX = `sscmd-${Date.now()}`;
 let scootId: number;
-const pledgeIds: number[] = [];
+const codeIds: number[] = [];
 
-async function flags(userId: number): Promise<bigint> {
-  const [m] = await db.select({ f: scootMembers.userFlags }).from(scootMembers)
-    .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
-  return m ? BigInt(m.f) : 0n;
+async function seedPendingFlow(): Promise<void> {
+  const [row] = await db.insert(stakingCodes).values({
+    userId: ROOT_USER_ID, code: String(10000 + codeIds.length), expiresAt: new Date(Date.now() + 3600_000),
+  }).returning({ id: stakingCodes.id });
+  codeIds.push(row.id);
+  await setPending(ROOT_USER_ID, { kind: "self_stake_flow", stakingCodeId: row.id });
 }
 
-// NOTE: self-pledges are GLOBAL per user (pledges has no scootId — see
-// arch/staking.md), so once ROOT_USER_ID successfully self-stakes ANYWHERE in
-// this test run, every subsequent attempt reports "already self-staked". Tests
-// below are ordered deliberately: cancel (doesn't complete) must run BEFORE the
-// one test that actually finishes the flow.
 describe("tryHandleSelfStakeCommand (SMS)", () => {
   before(async () => {
     const [sc] = await db.insert(scoots).values({ slug: SFX, name: `T ${SFX}` }).returning({ id: scoots.id });
@@ -29,8 +41,10 @@ describe("tryHandleSelfStakeCommand (SMS)", () => {
   });
 
   after(async () => {
-    await db.delete(pledges).where(inArray(pledges.id, pledgeIds));
-    await db.delete(smsState).where(eq(smsState.userId, ROOT_USER_ID));
+    // Only delete the specific codes THIS file created — never a blanket
+    // query for "any staking code belonging to ROOT_USER_ID" (real data risk).
+    for (const id of codeIds) await db.delete(stakingCodes).where(eq(stakingCodes.id, id));
+    await setPending(ROOT_USER_ID, null); // never leave a dangling pending state behind
     await db.delete(scootMembers).where(eq(scootMembers.scootId, scootId));
     await db.delete(scoots).where(eq(scoots.id, scootId));
     await pool.end();
@@ -46,44 +60,38 @@ describe("tryHandleSelfStakeCommand (SMS)", () => {
     assert.match(r ?? "", /Only the root engineer/i);
   });
 
-  it("cancel mid-flow abandons without self-staking", async () => {
+  it("'self stake' against the real (permanently already-staked) root reports so, without mutating anything", async () => {
     await db.update(scootMembers).set({ userFlags: String(ScootFlags.STAKED | ScootFlags.ENGINEER) })
-      .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, ROOT_USER_ID)));
-    const r1 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "self stake", false, undefined);
-    assert.match(r1 ?? "", /self-stake code is \d{5}/);
-    const r2 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "cancel", false, undefined);
-    assert.match(r2 ?? "", /cancelled/i);
-    // still not staked
-    assert.equal((await flags(ROOT_USER_ID)) & ScootFlags.STAKED, ScootFlags.STAKED); // bit was already set above, unrelated to self-stake
-    const [pledge] = await db.select().from(pledges)
-      .where(and(eq(pledges.stakerId, ROOT_USER_ID), eq(pledges.stakeeId, ROOT_USER_ID)));
-    assert.equal(pledge, undefined); // no self-pledge recorded
+      .where(eq(scootMembers.scootId, scootId));
+    const r = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "self stake", false, undefined);
+    assert.match(r ?? "", /already self-staked/i);
   });
 
-  it("a text-only reply mid-flow (no photo) re-prompts, doesn't finalize", async () => {
-    await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "self stake", false, undefined);
+  // The three tests below construct pending state DIRECTLY (bypassing the
+  // "start" trigger's hasSelfStaked gate entirely), so they exercise the Q&A
+  // mechanics without depending on — or touching — the real root's pledge.
+  it("mid-flow: cancel abandons cleanly", async () => {
+    await seedPendingFlow();
+    const r = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "cancel", false, undefined);
+    assert.match(r ?? "", /cancelled/i);
+  });
+
+  it("mid-flow: a text-only reply (no photo) re-prompts for a photo", async () => {
+    await seedPendingFlow();
     const r = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "here", false, undefined);
     assert.match(r ?? "", /Send a photo/i);
-    await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "cancel", false, undefined); // clean up the pending state
+    await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "cancel", false, undefined); // clean up
   });
 
-  it("full flow: 'self stake' issues a code, a bare photo completes it", async () => {
-    const r1 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "self stake", false, undefined);
-    assert.match(r1 ?? "", /self-stake code is \d{5}/);
-
-    const r2 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "", true, "https://x/root-sms.jpg");
-    assert.match(r2 ?? "", /now self-staked/i);
-
-    assert.equal((await flags(ROOT_USER_ID)) & ScootFlags.STAKED, ScootFlags.STAKED);
-    const [pledge] = await db.select().from(pledges)
-      .where(and(eq(pledges.stakerId, ROOT_USER_ID), eq(pledges.stakeeId, ROOT_USER_ID)));
-    assert.ok(pledge);
-    pledgeIds.push(pledge.id);
-    assert.equal(pledge.selfieUrl, "https://x/root-sms.jpg");
-  });
-
-  it("'self stake' again reports already done, no new code issued", async () => {
-    const r = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "selfstake", false, undefined);
-    assert.match(r ?? "", /already self-staked/i);
+  it("mid-flow: a bare photo calls through to selfStake and clears pending either way", async () => {
+    await seedPendingFlow();
+    const r1 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "", true, "https://x/mid-flow-test.jpg");
+    // The real root is permanently already-staked, so this correctly resolves
+    // to the already-staked relay — still proves the photo path calls through
+    // to selfStake() and produces a coherent reply.
+    assert.match(r1 ?? "", /already self-staked|now self-staked/i);
+    // pending must be cleared regardless of outcome
+    const r2 = await tryHandleSelfStakeCommand(ROOT_USER_ID, scootId, "", true, "https://x/should-not-reopen.jpg");
+    assert.equal(r2, null);
   });
 });

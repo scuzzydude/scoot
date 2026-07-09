@@ -14,6 +14,7 @@ import { db } from "../db/index.js";
 import { stakingCodes } from "../db/schema.js";
 import { getPending, setPending } from "./pending.js";
 import { canSelfStake, hasSelfStaked, selfStake } from "../trust/self-stake.js";
+import { localizeSelfieUrl } from "./media-download.js";
 import { log } from "../log.js";
 
 function generateCode(): string {
@@ -39,7 +40,10 @@ export async function tryHandleSelfStakeCommand(
       return `Send a photo of yourself to complete self-staking (or reply "cancel").`;
     }
     await db.update(stakingCodes).set({ used: true }).where(eq(stakingCodes.id, pending.stakingCodeId));
-    const result = await selfStake(senderId, scootId, photoUrl!);
+    // Localize the MMS photo (Twilio's URL isn't browser-viewable or durable —
+    // see media-download.ts). Falls back to the raw URL if the download fails.
+    const selfieUrl = await localizeSelfieUrl(photoUrl!);
+    const result = await selfStake(senderId, scootId, selfieUrl);
     await setPending(senderId, null);
     if (!result.ok) {
       return result.reason === "already-staked"

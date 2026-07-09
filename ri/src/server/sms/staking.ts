@@ -19,6 +19,7 @@ import { db } from "../db/index.js";
 import { users, scootMembers, stakingCodes, ScootFlags, type User } from "../db/schema.js";
 import { getPending, setPending } from "./pending.js";
 import { recordPledge } from "../trust/ledger.js";
+import { localizeSelfieUrl } from "./media-download.js";
 import { log } from "../log.js";
 
 function generateCode(): string {
@@ -136,7 +137,11 @@ export async function tryHandleStakerFlow(
     if (!hasPhoto) {
       return `Almost there — send a photo of you and ${pending.stakeeName} together to continue (or reply "cancel").`;
     }
-    await setPending(staker.id, { ...pending, step: "awaiting_tier", selfieUrl: photoUrl });
+    // Localize the MMS photo now (Twilio's URL isn't browser-viewable and isn't
+    // guaranteed durable) — see media-download.ts. Falls back to the raw URL on
+    // any failure so the ritual never gets stuck on a download hiccup.
+    const selfieUrl = photoUrl ? await localizeSelfieUrl(photoUrl) : "";
+    await setPending(staker.id, { ...pending, step: "awaiting_tier", selfieUrl });
     return `Got the photo. Is ${pending.stakeeName} a senior (55+), an OG (70+), or just a regular member? Reply "senior", "og", or "member".`;
   }
 

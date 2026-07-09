@@ -175,6 +175,30 @@ Shares the exact same `selfStake()` — whichever path (app button or SMS)
 gets there first wins; the other correctly reports "already self-staked"
 since that check is keyed off the self-pledge, not the transport.
 
+### Selfies are localized, not left on Twilio (`sms/media-download.ts`)
+
+An MMS photo's `MediaUrl` is a **Twilio-authenticated API URL** — a browser
+can't render it (no Twilio credentials client-side, confirmed: unauthenticated
+fetch → 401), and it isn't guaranteed durable (selfies must "survive years of
+storage" per the design memory). `localizeSelfieUrl()` downloads the photo
+once, at pledge-creation time (Basic Auth with the account's own Twilio
+credentials), into the same local media store everything else uses
+(`MEDIA_DIR`, served at `/media`), and returns that URL instead. Falls back to
+the raw Twilio URL on any download failure — never blocks the ritual. Wired
+into both `staking.ts` (the 2-person selfie) and `self-stake-commands.ts`.
+
+**Testing hazard, permanently on the record:** pledges are keyed to real user
+ids with no scoot-scoped isolation, so a naive test that "resets" or
+"revokes whatever self-pledge currently exists for `ROOT_USER_ID`" would
+operate on Brandon's real pledge, not test data — there is no test/prod
+separation for this specific table. `trust/self-stake.integration.test.ts`
+and `sms/self-stake-commands.integration.test.ts` are written to never query
+"any existing pledge" for the real root; state-machine mechanics (cancel,
+photo-prompt) are tested by directly constructing `sms_state.pending` rather
+than by trying to win a fresh completion, since that path is now permanently
+exercised for real (Brandon completed it 2026-07-09) and can't be safely
+re-exercised without touching production data.
+
 ## Deliberately deferred vs. the original design
 
 - **Live QR/device handshake** — replaced by the SMS code+photo+Q&A above.

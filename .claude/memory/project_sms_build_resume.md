@@ -90,11 +90,33 @@ IMPORTANT gotcha for future tests touching this: self-pledges are GLOBAL per
 user (pledges has no scootId) — ROOT_USER_ID can only ever self-stake ONCE
 across the whole test run/prod, so tests must order "cancel" before "complete".
 
+**Brandon self-staked for real over SMS on 2026-07-09** (pledge id 234, prod).
+Found + fixed a real bug this surfaced: MMS `MediaUrl` is a Twilio-authenticated
+URL (401 unauthenticated — browsers can't render it, and it's not durable
+long-term). Added `sms/media-download.ts` (`localizeSelfieUrl` — downloads once
+at pledge-creation time into local MEDIA_DIR, falls back to the raw URL on
+failure), wired into both staking.ts and self-stake-commands.ts. Backfilled
+pledge 234's selfie_url + recomputed contentHash to point at the durable local
+copy (verified 200 OK, image/jpeg, matches the ledger's hash contract).
+
+**IMPORTANT DATA-SAFETY LESSON (read before touching self-stake tests again):**
+pledges/self-pledges have NO scoot-scoped isolation — ROOT_USER_ID=1 IS
+Brandon's real identity, with no test/prod separation possible for this table.
+Never write a test that queries-and-revokes "whatever self-pledge currently
+exists" for ROOT_USER_ID — that's indistinguishable from destroying real prod
+data. Caught this before executing it (verified pledge 234 untouched
+throughout). Current tests (trust/self-stake.integration.test.ts,
+sms/self-stake-commands.integration.test.ts) never touch pre-existing pledges
+for the real root; Q&A mechanics are tested via direct sms_state.pending
+construction, not by trying to win a fresh completion (impossible now —
+permanently already-staked for real). 128 tests total, stable across repeated
+runs.
+
 **NEXT — pick one:**
 - Anything else — Phase 4 is now feature-complete (ritual, trust graph,
-  revocation, self-stake bootstrap reachable via app AND SMS, client catalog
-  UI) modulo the explicitly deferred items above (downstream cascade,
-  per-Scoot pledges, live QR).
+  revocation, self-stake bootstrap reachable via app AND SMS + durable selfie
+  storage, client catalog UI) modulo the explicitly deferred items above
+  (downstream cascade, per-Scoot pledges, live QR).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure
