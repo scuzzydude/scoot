@@ -5,9 +5,43 @@ import { eq, and, asc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import { userIsLeader, userHasScootFlag, getLeaderMessageFeed } from "../sms/oversight.js";
 import { getUserSmsLog, getAllSmsLog } from "../sms/log.js";
+import { getTrustCatalog } from "../trust/graph.js";
+import { canSelfStake, selfStake } from "../trust/self-stake.js";
 
 const router = Router();
 router.use(requireAuth);
+
+// Staking catalog (Phase 4 continued, see arch/staking.md) — "Brotherhood
+// public info, but restricted": visible to any STAKED member of the Scoot, not
+// the general public or an unstaked registered user.
+router.get("/:id/staking-catalog", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+  if (!(await userHasScootFlag(scootId, userId, ScootFlags.STAKED))) {
+    return res.status(403).json({ ok: false, error: "staked members only" });
+  }
+  const catalog = await getTrustCatalog(scootId);
+  const viewerCanSelfStake = await canSelfStake(userId, scootId);
+  res.json({ ok: true, data: { ...catalog, viewerCanSelfStake } });
+});
+
+// Self-stake bootstrap — hard-gated (see trust/self-stake.ts): the caller must
+// be BOTH ROOT_USER_ID and hold ScootFlags.ENGINEER. selfieUrl comes from an
+// already-uploaded file (POST /api/v1/media/upload).
+router.post("/:id/self-stake", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+  if (!(await canSelfStake(userId, scootId))) {
+    return res.status(403).json({ ok: false, error: "not permitted" });
+  }
+  const { selfieUrl } = req.body as { selfieUrl?: string };
+  if (!selfieUrl) return res.status(400).json({ ok: false, error: "selfieUrl required" });
+  const result = await selfStake(userId, scootId, selfieUrl);
+  if (!result.ok) return res.status(400).json({ ok: false, error: result.reason });
+  res.json({ ok: true });
+});
 
 // §8.7 LEADER oversight — all messages across all rooms, bypassing accessMask.
 // Gated: caller must hold ScootFlags.LEADER in this Scoot (the disclaimer warns

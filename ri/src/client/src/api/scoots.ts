@@ -73,6 +73,32 @@ export interface AllSmsLogItem {
   who: string;
 }
 
+// Staking catalog (Phase 4 continued) — "Brotherhood public info, but
+// restricted": staked-members-only. See arch/staking.md.
+export type Tier = "member" | "senior" | "og";
+
+export interface CatalogEdge {
+  pledgeId: number;
+  stakerId: number;
+  stakerName: string;
+  stakeeId: number;
+  stakeeName: string;
+  selfieUrl: string;
+  tier: Tier;
+  createdAt: string;
+}
+export interface CatalogLegacyMember {
+  userId: number;
+  name: string;
+  tier: Tier;
+}
+export interface TrustCatalog {
+  root: { userId: number; name: string; selfieUrl: string | null };
+  edges: CatalogEdge[];
+  legacyMembers: CatalogLegacyMember[];
+  viewerCanSelfStake: boolean;
+}
+
 export const scootsApi = {
   list: () => apiFetch<ScootConfig[]>("/scoots"),
   get: (id: number) => apiFetch<ScootConfig>(`/scoots/${id}`),
@@ -84,6 +110,12 @@ export const scootsApi = {
   // TEXT_AUDIT-only: the global sequential SMS log (every user's texts).
   allTexts: (scootId: number, opts?: { limit?: number; beforeId?: number }) =>
     apiFetch<AllSmsLogItem[]>(`/scoots/${scootId}/oversight/all-texts${pageQuery(opts)}`),
+  // Staked-members-only: the trust graph catalog.
+  stakingCatalog: (scootId: number) => apiFetch<TrustCatalog>(`/scoots/${scootId}/staking-catalog`),
+  // Hard-gated server-side (ROOT_USER_ID + ScootFlags.ENGINEER) — selfieUrl from
+  // an already-uploaded file (chatApi.uploadMedia).
+  selfStake: (scootId: number, selfieUrl: string) =>
+    apiFetch<void>(`/scoots/${scootId}/self-stake`, { method: "POST", body: JSON.stringify({ selfieUrl }) }),
 };
 
 function hasBit(userFlags: string | undefined | null, bit: bigint): boolean {
@@ -94,3 +126,5 @@ function hasBit(userFlags: string | undefined | null, bit: bigint): boolean {
 export const hasLeader = (userFlags: string | undefined | null) => hasBit(userFlags, 8n);
 // Per-Scoot TEXT_AUDIT bit (ScootFlags.TEXT_AUDIT = 1<<7) — may see all texts.
 export const hasTextAudit = (userFlags: string | undefined | null) => hasBit(userFlags, 128n);
+// Per-Scoot STAKED bit (ScootFlags.STAKED = 1<<2) — gates the staking catalog.
+export const hasStaked = (userFlags: string | undefined | null) => hasBit(userFlags, 4n);

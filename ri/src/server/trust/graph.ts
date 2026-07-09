@@ -5,9 +5,13 @@
 // the design memory) and tolerant of members who are STAKED but have no pledge
 // on record — early/manually-seeded members predate this ritual; they're
 // reported as untraceable, not crashed on.
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, notInArray, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "../db/index.js";
-import { pledges, pledgeRevocations, users } from "../db/schema.js";
+import { pledges, pledgeRevocations, users, scootMembers, ScootFlags } from "../db/schema.js";
+
+const stakerUsers = alias(users, "staker_users");
+const stakeeUsers = alias(users, "stakee_users");
 
 export const ROOT_USER_ID = 1; // rocketman — see arch/staking.md
 
@@ -124,4 +128,117 @@ export async function findActivePledgeForStakeeName(name: string): Promise<Pledg
     .limit(1);
   if (!row) return null;
   return { pledgeId: row.pledgeId, stakerId: row.stakerId, stakeeId: row.stakeeId, stakeeName: row.displayName ?? row.username ?? `user ${row.stakeeId}` };
+}
+
+// --- staking catalog (Phase 4 continued) -----------------------------------
+// Brotherhood-public-but-restricted view of who's staked, by whom, with their
+// selfie (see arch/staking.md) — "public info, but restricted" to STAKED
+// members of the Scoot (gated at the route, not here).
+
+export type Tier = "member" | "senior" | "og";
+
+function tierFromFlags(flags: bigint): Tier {
+  if ((flags & ScootFlags.OG) !== 0n) return "og";
+  if ((flags & ScootFlags.SENIOR) !== 0n) return "senior";
+  return "member";
+}
+
+export interface CatalogEdge {
+  pledgeId: number;
+  stakerId: number;
+  stakerName: string;
+  stakeeId: number;
+  stakeeName: string;
+  selfieUrl: string;
+  tier: Tier;
+  createdAt: Date;
+}
+
+export interface CatalogLegacyMember {
+  userId: number;
+  name: string;
+  tier: Tier;
+}
+
+export interface TrustCatalog {
+  root: { userId: number; name: string; selfieUrl: string | null };
+  edges: CatalogEdge[]; // non-revoked, non-self pledges — the hierarchy proper
+  legacyMembers: CatalogLegacyMember[]; // staked, no pledge on record (pre-ritual), not root
+}
+
+// Full catalog for a Scoot: the root (+ their self-stake selfie if any), every
+// live (non-revoked) staking pledge with the stakee's current tier, and staked
+// members who predate the ritual and have no traceable pledge at all.
+export async function getTrustCatalog(scootId: number): Promise<TrustCatalog> {
+  const [rootUser] = await db.select({ id: users.id, displayName: users.displayName, username: users.username })
+    .from(users).where(eq(users.id, ROOT_USER_ID));
+  const [rootSelfPledge] = await db.select({ selfieUrl: pledges.selfieUrl }).from(pledges)
+    .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
+    .where(and(eq(pledges.stakerId, ROOT_USER_ID), eq(pledges.stakeeId, ROOT_USER_ID), isNull(pledgeRevocations.id)))
+    .orderBy(desc(pledges.id)).limit(1);
+
+  const edgeRows = await db.select({
+    pledgeId: pledges.id,
+    stakerId: pledges.stakerId,
+    stakerDisplayName: stakerUsers.displayName,
+    stakerUsername: stakerUsers.username,
+    stakeeId: pledges.stakeeId,
+    stakeeDisplayName: stakeeUsers.displayName,
+    stakeeUsername: stakeeUsers.username,
+    selfieUrl: pledges.selfieUrl,
+    createdAt: pledges.createdAt,
+    stakeeFlags: scootMembers.userFlags,
+  })
+    .from(pledges)
+    .innerJoin(stakerUsers, eq(stakerUsers.id, pledges.stakerId))
+    .innerJoin(stakeeUsers, eq(stakeeUsers.id, pledges.stakeeId))
+    .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
+    .leftJoin(scootMembers, and(eq(scootMembers.userId, pledges.stakeeId), eq(scootMembers.scootId, scootId)))
+    .where(and(isNull(pledgeRevocations.id), ne(pledges.stakerId, pledges.stakeeId)))
+    .orderBy(pledges.id);
+
+  const edges: CatalogEdge[] = edgeRows.map((r) => ({
+    pledgeId: r.pledgeId,
+    stakerId: r.stakerId,
+    stakerName: r.stakerDisplayName ?? r.stakerUsername ?? `user ${r.stakerId}`,
+    stakeeId: r.stakeeId,
+    stakeeName: r.stakeeDisplayName ?? r.stakeeUsername ?? `user ${r.stakeeId}`,
+    selfieUrl: r.selfieUrl,
+    tier: tierFromFlags(r.stakeeFlags ? BigInt(r.stakeeFlags) : 0n),
+    createdAt: r.createdAt,
+  }));
+
+  // staked members with no non-revoked pledge naming them as stakee, excluding root
+  const tracedStakeeIds = await db.select({ stakeeId: pledges.stakeeId }).from(pledges)
+    .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
+    .where(and(isNull(pledgeRevocations.id), ne(pledges.stakerId, pledges.stakeeId)));
+  const tracedIds = tracedStakeeIds.map((r) => r.stakeeId);
+
+  const legacyRows = await db.select({
+    userId: users.id, displayName: users.displayName, username: users.username, flags: scootMembers.userFlags,
+  })
+    .from(scootMembers)
+    .innerJoin(users, eq(users.id, scootMembers.userId))
+    .where(and(
+      eq(scootMembers.scootId, scootId),
+      sql`(${scootMembers.userFlags}::bigint & ${Number(ScootFlags.STAKED)}) != 0`,
+      ne(scootMembers.userId, ROOT_USER_ID),
+      tracedIds.length ? notInArray(scootMembers.userId, tracedIds) : sql`true`,
+    ));
+
+  const legacyMembers: CatalogLegacyMember[] = legacyRows.map((r) => ({
+    userId: r.userId,
+    name: r.displayName ?? r.username ?? `user ${r.userId}`,
+    tier: tierFromFlags(BigInt(r.flags)),
+  }));
+
+  return {
+    root: {
+      userId: ROOT_USER_ID,
+      name: rootUser?.displayName ?? rootUser?.username ?? `user ${ROOT_USER_ID}`,
+      selfieUrl: rootSelfPledge?.selfieUrl ?? null,
+    },
+    edges,
+    legacyMembers,
+  };
 }

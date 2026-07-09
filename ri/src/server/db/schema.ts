@@ -23,6 +23,15 @@ export const ScootFlags = {
   // Mutually exclusive; OG supersedes SENIOR. Neither bit set = regular member.
   SENIOR: 1n << 8n,  // 256 — senior (55+), the senior-basketball cutoff
   OG:     1n << 9n,  // 512 — OG (70+)
+  // Self-stake bootstrap authority (Phase 4 continued — see trust/self-stake.ts).
+  // NOT the same concept as the legacy rc-webhook "engineer" bits 1|2 above
+  // (a different, vestigial RC-chat-role display feature) — a fresh bit on
+  // purpose, so this high-stakes gate can never be widened by touching an
+  // unrelated legacy flag. Self-stake requires BOTH this flag AND being
+  // ROOT_USER_ID (hardcoded in trust/graph.ts) — a "hard cut" so a future
+  // engineer granted this flag for legitimate dev-access reasons still can't
+  // self-stake; they go through the normal pledge ritual like anyone else.
+  ENGINEER: 1n << 10n,  // 1024
 } as const;
 
 export const users = pgTable("users", {

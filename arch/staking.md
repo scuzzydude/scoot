@@ -116,12 +116,58 @@ stakee's own* pledges (people they in turn staked) — the design memory
 explicitly defers this "until building the staking-gated chat/wallet
 features"; nothing cascades today.
 
+## Self-stake bootstrap (`trust/self-stake.ts`)
+
+The pledge ritual needs a starting point: the root of trust has nobody to
+stake them, since they're the base case every chain traces back to.
+**Self-stake** is that one-time bootstrap, hard-gated to a narrow two-factor
+check — the caller must be **both**:
+
+1. `ROOT_USER_ID` (hardcoded in `trust/graph.ts`, currently rocketman/user 1), **and**
+2. hold `ScootFlags.ENGINEER` (a fresh bit, 1<<10=1024 — deliberately *not* the
+   legacy rc-webhook "engineer" bits 1|2, an unrelated vestigial RC-chat-role
+   feature; reusing that would risk accidentally widening a high-stakes gate).
+
+Either alone is insufficient — a future engineer granted `ENGINEER` for
+legitimate dev-access reasons still cannot self-stake unless they're *also*
+the hardcoded root; they go through the normal ritual like anyone else.
+
+Self-stake is recorded as a **self-referencing pledge** (`stakerId ===
+stakeeId === root`), reusing the exact same `recordPledge()` ledger — no
+parallel bootstrap data model. "Already done" is judged by **whether a
+self-pledge already exists**, not by the `STAKED` bit — root's bit may already
+be set from historical bulk seeding with no pledge/selfie behind it (this was
+in fact true in prod), and self-stake must not block on that alone.
+
+## Staking catalog (client UI)
+
+`GET /api/v1/scoots/:id/staking-catalog` — **"Brotherhood public info, but
+restricted"**: gated to any `STAKED` member of the Scoot (not the general
+public, not an unstaked registered user). Returns `trust/graph.ts`'s
+`getTrustCatalog()`: the root (+ their self-stake selfie, if any), every live
+(non-revoked) pledge as a hierarchy edge with the stakee's current tier, and
+a `legacyMembers` bucket for staked members who predate the ritual and have no
+traceable pledge at all (most of the current real roster, seeded before this
+system existed). Also carries `viewerCanSelfStake` so the client only shows
+the self-stake action to whoever the server would actually permit.
+
+Client: `pages/staking-page.tsx` (nav: **Brotherhood**, shown to staked
+members only) renders the hierarchy as an indented tree with selfie
+thumbnails and tier badges, the legacy bucket below it, and — only when
+`viewerCanSelfStake` and no self-pledge exists yet — a **"Self-stake with a
+photo"** button (reuses the existing chat media upload endpoint for the
+photo, then calls `POST /scoots/:id/self-stake`).
+
 ## Deliberately deferred vs. the original design
 
 - **Live QR/device handshake** — replaced by the SMS code+photo+Q&A above.
 - **Root of trust** — `rocketman` (user id 1) is the de facto root per this
   session's user-id reservation work; `trust/graph.ts`'s `ROOT_USER_ID`
   constant is the one place this is encoded.
-- **LEADER-facing graph visualization** — `traceToRoot`/`listStakedByMe` exist
-  and are tested, but there's no admin UI over them yet (SMS-only so far).
 - **Downstream revocation cascade** — see above.
+- **Pledges are global, not per-Scoot** — `pledges` has no `scootId` column
+  (consistent with "is this a real human" being a platform-wide question, not
+  a per-Scoot one per the design memory). One practical consequence: a user
+  can only ever have ONE live self-pledge across the whole platform, not one
+  per Scoot. Fine today (single Scoot); worth revisiting if a second Scoot
+  ever needs its own bootstrap root.

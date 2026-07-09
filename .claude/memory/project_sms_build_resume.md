@@ -66,8 +66,26 @@ LEADER-only. Either way, a short reason Q&A follows (mirrors staking's Q&A UX);
 stays deliberately out of scope (design memory defers it explicitly). 111
 tests total.
 
+**Client staking UI DONE**: self-stake bootstrap (`trust/self-stake.ts`) —
+hard two-factor gate: caller must be BOTH `ROOT_USER_ID` (hardcoded, rocketman)
+AND hold new `ScootFlags.ENGINEER` (1<<10=1024, deliberately a FRESH bit, not
+the legacy rc-webhook engineer bits 1|2 which are an unrelated dead feature).
+Recorded as a self-referencing pledge; "already done" checked via existing
+self-pledge, NOT the STAKED bit (root's bit was already set from historical
+bulk seeding in prod, with zero pledge/selfie behind it — a real gap the fix
+specifically covers). `GET /scoots/:id/staking-catalog` (STAKED-members-only —
+"Brotherhood public, but restricted"): root + selfie hierarchy tree (via
+`getTrustCatalog`) + a `legacyMembers` bucket for pre-ritual staked members
+with no pledge on record (most of the real current roster). Client:
+`pages/staking-page.tsx`, nav "Brotherhood" (staked-only), self-stake button
+shown only when server says `viewerCanSelfStake`. Brandon (user 1) already
+holds ENGINEER on prod (migration 0018) — ready to self-stake for real. 117
+tests total.
+
 **NEXT — pick one:**
-- Client staking/graph/revocation UI (currently 100% SMS-only, no app screen).
+- Anything else — Phase 4 is now feature-complete (ritual, trust graph,
+  revocation, self-stake bootstrap, client catalog UI) modulo the explicitly
+  deferred items above (downstream cascade, per-Scoot pledges, live QR).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure
