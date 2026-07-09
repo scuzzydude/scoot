@@ -82,10 +82,19 @@ shown only when server says `viewerCanSelfStake`. Brandon (user 1) already
 holds ENGINEER on prod (migration 0018) — ready to self-stake for real. 117
 tests total.
 
+**Self-stake also reachable over SMS** (`sms/self-stake-commands.ts`, same hard
+gate + selfStake()): "self stake"/"selfstake" -> code, bare photo completes it,
+"cancel" abandons. Mirrors the app button; whichever path completes first wins
+(hasSelfStaked() is keyed off the self-pledge, not the transport). 123 tests.
+IMPORTANT gotcha for future tests touching this: self-pledges are GLOBAL per
+user (pledges has no scootId) — ROOT_USER_ID can only ever self-stake ONCE
+across the whole test run/prod, so tests must order "cancel" before "complete".
+
 **NEXT — pick one:**
 - Anything else — Phase 4 is now feature-complete (ritual, trust graph,
-  revocation, self-stake bootstrap, client catalog UI) modulo the explicitly
-  deferred items above (downstream cascade, per-Scoot pledges, live QR).
+  revocation, self-stake bootstrap reachable via app AND SMS, client catalog
+  UI) modulo the explicitly deferred items above (downstream cascade,
+  per-Scoot pledges, live QR).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure

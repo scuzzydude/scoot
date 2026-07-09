@@ -13,6 +13,7 @@ import { routeInbound } from "./routing.js";
 import { recall, remember } from "./memory.js";
 import { ensureDisclaimer } from "./disclaimer.js";
 import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
+import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { log } from "../log.js";
@@ -164,6 +165,15 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (stakeFlow != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms staking flow");
       return finish(stakeFlow, roomId);
+    }
+
+    // Self-stake bootstrap (hard-gated: ROOT_USER_ID + ScootFlags.ENGINEER) —
+    // an SMS-native path to the same action the app's self-stake button
+    // triggers. Also checked before the bare-photo guard below.
+    const selfStakeFlow = await tryHandleSelfStakeCommand(sender.id, scootId, trimmed, hasPhoto, mediaUrls[0]);
+    if (selfStakeFlow != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms self-stake flow");
+      return finish(selfStakeFlow, roomId);
     }
     if (!trimmed) return finish("", roomId); // a bare photo with no active flow — nothing to do
 

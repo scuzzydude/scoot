@@ -158,6 +158,23 @@ thumbnails and tier badges, the legacy bucket below it, and — only when
 photo"** button (reuses the existing chat media upload endpoint for the
 photo, then calls `POST /scoots/:id/self-stake`).
 
+### Self-stake over SMS (`sms/self-stake-commands.ts`)
+
+Same hard two-factor gate, reachable over text — SMS is the platform's
+primary interface, so self-stake shouldn't be the one app-only feature.
+Mirrors the code-then-photo shape of the normal ritual (the code itself is
+largely ceremonial here — there's no second party to prove co-presence with,
+so the real security boundary is the gate, not the code):
+
+- `"self stake"` / `"selfstake"` → issues a one-time code (reuses
+  `staking_codes`, 24h expiry), or reports already-done / not-permitted.
+- A bare photo mid-flow completes it; `"cancel"` abandons with nothing
+  changed.
+
+Shares the exact same `selfStake()` — whichever path (app button or SMS)
+gets there first wins; the other correctly reports "already self-staked"
+since that check is keyed off the self-pledge, not the transport.
+
 ## Deliberately deferred vs. the original design
 
 - **Live QR/device handshake** — replaced by the SMS code+photo+Q&A above.

@@ -30,17 +30,20 @@ export interface SelfStakeResult {
   reason?: "not-permitted" | "already-staked";
 }
 
-export async function selfStake(userId: number, scootId: number, selfieUrl: string, now: Date = new Date()): Promise<SelfStakeResult> {
-  if (!(await canSelfStake(userId, scootId))) return { ok: false, reason: "not-permitted" };
-
-  // "Already done" means a self-pledge already exists — NOT whether the STAKED
-  // bit happens to be set. Root's bit may already be set from historical bulk
-  // seeding with no pledge/selfie behind it; that's exactly the gap self-stake
-  // exists to fill, so it must not block on the bit alone.
-  const [existingSelfPledge] = await db.select({ id: pledges.id }).from(pledges)
+// "Already done" means a self-pledge already exists — NOT whether the STAKED
+// bit happens to be set. Root's bit may already be set from historical bulk
+// seeding with no pledge/selfie behind it; that's exactly the gap self-stake
+// exists to fill, so it must not block on the bit alone.
+export async function hasSelfStaked(userId: number): Promise<boolean> {
+  const [row] = await db.select({ id: pledges.id }).from(pledges)
     .leftJoin(pledgeRevocations, eq(pledgeRevocations.pledgeId, pledges.id))
     .where(and(eq(pledges.stakerId, userId), eq(pledges.stakeeId, userId), isNull(pledgeRevocations.id)));
-  if (existingSelfPledge) return { ok: false, reason: "already-staked" };
+  return !!row;
+}
+
+export async function selfStake(userId: number, scootId: number, selfieUrl: string, now: Date = new Date()): Promise<SelfStakeResult> {
+  if (!(await canSelfStake(userId, scootId))) return { ok: false, reason: "not-permitted" };
+  if (await hasSelfStaked(userId)) return { ok: false, reason: "already-staked" };
 
   const [m] = await db.select({ f: scootMembers.userFlags }).from(scootMembers)
     .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
