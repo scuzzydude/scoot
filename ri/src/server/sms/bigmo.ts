@@ -16,6 +16,7 @@ import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
+import { tryHandleShutdownGate } from "./shutdown.js";
 import { log } from "../log.js";
 
 const SYSTEM_PROMPT = readFileSync(
@@ -84,6 +85,15 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
   if (phone === DEV_PHONE && trimmed.startsWith("$")) {
     trimmed = trimmed.slice(1).trimStart();
     forceStranger = true;
+  }
+
+  // Global outbound-SMS kill switch — checked FIRST, before anything else
+  // (even a brand-new prospect's "stake"), so shutdown truly silences everyone.
+  // Hard-gated to ROOT_USER_ID's own phone (see shutdown.ts) — not a role grant.
+  const shutdownReply = await tryHandleShutdownGate(phone, trimmed, mediaUrls);
+  if (shutdownReply != null) {
+    log.info({ phone }, "bigmo sms shutdown gate handled");
+    return shutdownReply;
   }
 
   const scootId = await getScootId();

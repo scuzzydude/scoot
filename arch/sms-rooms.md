@@ -201,6 +201,27 @@ seniors).
 
 ---
 
+## 8.9 Global outbound-SMS kill switch (`sms/shutdown.ts`)
+
+An emergency stop, hard-gated to `ROOT_USER_ID`'s **own phone number** —
+deliberately not a `ScootFlags` permission, so it can never be delegated via a
+role grant (LEADER/GYMBOSS have no say). Checked FIRST in the inbound
+pipeline, before even a brand-new prospect's `stake` request.
+
+- **`shutdown`** (from the control number only) → BigMo stops sending **any**
+  outbound SMS to **anyone**, for any reason — no LLM chat, no command acks,
+  no fan-out, no disclaimers. Every inbound text (from anyone, including the
+  control number saying anything other than `resume`) is logged into
+  `sms_shutdown_queue` instead of being processed or answered.
+- **`resume`** (control number only) → lifts it, reports how many messages
+  queued while down.
+
+Singleton row (`bigmo_shutdown`, id=1) tracks `active`/`activatedBy`/
+`activatedAt` for an audit trail. Queued messages are never auto-replayed —
+they're a log to review, not a to-do list BigMo works through on its own.
+
+---
+
 ## 9. Open / deferred decisions
 
 - Exact scoring weights & thresholds — start with §4, tune against real traffic.

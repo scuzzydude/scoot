@@ -112,11 +112,21 @@ construction, not by trying to win a fresh completion (impossible now —
 permanently already-staked for real). 128 tests total, stable across repeated
 runs.
 
+**Global SMS kill switch DONE** (`sms/shutdown.ts`, arch/sms-rooms.md §8.9):
+"shutdown"/"resume" hard-gated to ROOT_USER_ID's own phone (NOT a ScootFlags
+grant — can't be delegated). Checked FIRST in bigmo.ts's pipeline, before even
+a stranger's "stake" request. While active: zero outbound SMS to anyone;
+inbound texts logged to sms_shutdown_queue instead (never auto-replayed).
+Singleton row bigmo_shutdown (id=1) — DEFAULT_SHUTDOWN_ROW_ID is parametrized
+specifically so tests use a disposable row and never touch the real one (this
+literally controls whether the live bot responds to real texts — verified
+untouched before/after every test run). 136 tests total.
+
 **NEXT — pick one:**
-- Anything else — Phase 4 is now feature-complete (ritual, trust graph,
-  revocation, self-stake bootstrap reachable via app AND SMS + durable selfie
-  storage, client catalog UI) modulo the explicitly deferred items above
-  (downstream cascade, per-Scoot pledges, live QR).
+- Anything else — Phase 4 is feature-complete (ritual, trust graph, revocation,
+  self-stake bootstrap via app AND SMS + durable selfie storage, client catalog
+  UI), §8 is complete incl. the new kill switch, modulo the explicitly deferred
+  items noted above (downstream cascade, per-Scoot pledges, live QR).
 - `chat_rooms.scoot_id` to scope oversight per-Scoot (returns all rooms today —
   fine for single Fonde Scoot).
 - Ops: storage plan actions awaiting go-ahead (docker prune ~1.2G, media→Azure

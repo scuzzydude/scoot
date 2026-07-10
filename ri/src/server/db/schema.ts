@@ -269,6 +269,27 @@ export const smsDeliveries = pgTable("sms_deliveries", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Global outbound-SMS kill switch (see sms/shutdown.ts). Singleton row (id=1).
+// Hard-gated to ROOT_USER_ID's own phone number — not a ScootFlags permission —
+// so it can never be delegated via a role grant. While active, BigMo sends NO
+// outbound SMS to anyone, for any reason; every inbound text is captured in
+// sms_shutdown_queue instead.
+export const bigmoShutdown = pgTable("bigmo_shutdown", {
+  id: integer("id").primaryKey(),
+  active: boolean("active").notNull().default(false),
+  activatedBy: integer("activated_by").references(() => users.id),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+});
+
+// Inbound texts received while shutdown is active — logged, not replied to.
+export const smsShutdownQueue = pgTable("sms_shutdown_queue", {
+  id: serial("id").primaryKey(),
+  fromPhone: text("from_phone").notNull(),
+  body: text("body").notNull(),
+  mediaUrls: jsonb("media_urls").$type<string[]>(),
+  receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Bot = typeof bots.$inferSelect;
