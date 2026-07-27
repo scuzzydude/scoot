@@ -7,7 +7,7 @@ metadata:
   originSessionId: 23cf48e3-58b9-4e04-9be6-778c29961de4
 ---
 
-Operational facts for migrating/deploying the Scoot stack on **steve** (prod). See [[infra_prod_server]] and [[infra_claude_runs_on_steve]].
+Operational facts for migrating/deploying the Scoot stack on **dreamlab** (prod, formerly named steve — renamed 2026-07-27). See [[infra_prod_server]] and [[infra_claude_runs_on_dreamlab]].
 
 **Never `npm run db:push` (drizzle-kit push) against prod.** The Passport session store (`connect-pg-simple`) creates a `session` table that is NOT in `ri/src/server/db/schema.ts`. drizzle-kit sees it as drift and proposes **dropping it** — "data-loss statements: about to delete session table". Confirming would wipe all logged-in sessions (and signals push will make other unintended changes too). For additive schema changes, apply them surgically instead:
 

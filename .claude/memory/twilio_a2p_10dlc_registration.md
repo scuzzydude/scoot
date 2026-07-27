@@ -13,7 +13,7 @@ The Scoot Twilio account is "**The Fonde Brotherhood**" (account type: Full, act
 
 **Cause:** since 2023, US mobile carriers (Verizon/AT&T/T-Mobile) filter all SMS sent from unregistered 10-digit long codes to US destinations. Twilio accepts the API call, attempts delivery, the carrier filter blocks it, Twilio surfaces 30034. This is *not* a code, env, signature, or auth bug — the wiring is fine.
 
-**Why:** Established 2026-05-27 during outbound smoke test from steve. Spent two cycles confirming creds load, the `twilio` package installs in the container, env vars reach the SDK, and the routes mount with auth/signature gating — all passed. The carrier-level block was the only remaining cause. See [[infra_claude_runs_on_steve]] for the steve context this test ran against.
+**Why:** Established 2026-05-27 during outbound smoke test from prod (hostname `dreamlab`, renamed 2026-07-27 from `steve`). Spent two cycles confirming creds load, the `twilio` package installs in the container, env vars reach the SDK, and the routes mount with auth/signature gating — all passed. The carrier-level block was the only remaining cause. See [[infra_claude_runs_on_dreamlab]] for the prod-host context this test ran against.
 
 **Status as of 2026-05-31:** Brand `BN3a14060b678891aaae81425d52c498aa` = **APPROVED / VETTED_VERIFIED**. Campaign `QE2c6890da8086d771620e9b13fadeba0b` (Messaging Service `MG845da3c50d78ebb95ba456d2dae6c1c7`, use case **2FA**) was **REJECTED**, then **RESUBMITTED** after Brandon updated the website (the logged-out landing page now states the SMS purpose + "Text 361-423-2253 for latest updates", plus the existing /privacy + /terms pages). Awaiting re-review; outbound still 30034 until approved.
 

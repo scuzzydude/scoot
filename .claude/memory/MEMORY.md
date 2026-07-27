@@ -8,12 +8,12 @@
 - [Chat bots — multi-bot, @mention triggered](chat_bots_design.md) — Bots are users w/ is_bot=true, personality in `bots` table, `@name` triggers, provider abstraction (Anthropic v1), typing indicators on
 - [Keep SETUP.md current with install procedure](feedback_setup_procedure.md) — update SETUP.md in the same commit whenever env vars or first-run steps change
 - [WSL2 remote access — mirrored networking + SSH](infra_wsl_network.md) — LAN IP 192.168.1.118; SSH :22 passwordless from work laptop; Vite :5173, RC :3100 reachable on LAN
-- [Prod server — steve (Azure VM)](infra_prod_server.md) — 13.64.77.78, hosts fairchildlabs.org + thedreamlaboratory.org; Scoot stack on Docker, API :3000, Vite :5174, DATA_DIR=/var/lib/scoot
-- [Claude Code runs ON prod steve, not WSL](infra_claude_runs_on_steve.md) — when in /home/brandon/scoot, the host IS prod; no SSH-to-deploy; edits go straight to prod
+- [Prod server — dreamlab (Azure VM, renamed from steve 2026-07-27)](infra_prod_server.md) — 13.64.77.78, hosts fairchildlabs.org + thedreamlaboratory.org; Scoot stack on Docker, API :3000, Vite :5174, DATA_DIR=/var/lib/scoot
+- [Claude Code runs ON prod dreamlab, not WSL](infra_claude_runs_on_dreamlab.md) — when in /home/brandon/scoot, the host IS prod; no SSH-to-deploy; edits go straight to prod; hostname renamed from steve 2026-07-27 (work-LAN name collision)
 - [Scoot identity model + SMS<->rooms framework](scoot_identity_and_sms_rooms.md) — scoots.id = canonical index (Scoot(34)=id 34, NOT serial); users global, staking per-Scoot via scoot_members; rooms backbone w/ app+SMS transports; arch/sms-rooms.md
 - [BigMo: no LLM time/date math — deterministic schedule facts](bigmo_no_llm_time_math.md) — wrong time to a 55+ senior is the cardinal sin; `schedule.ts` computes verified facts, LLM only phrases; don't shell out to `date`
 - [Twilio US SMS needs A2P 10DLC registration](twilio_a2p_10dlc_registration.md) — Fonde Brotherhood account, +13614232253 long-code; undelivered + errorCode 30034 means reg gap, not a code bug
 - [Git remote: use SSH not HTTPS](infra_git_remote_ssh.md) — `git@github.com:scuzzydude/scoot.git`; SSH keys uploaded on all 3 machines; switch remote without asking if it's HTTPS
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
-- [Memory Vault MCP on steve](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
+- [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`

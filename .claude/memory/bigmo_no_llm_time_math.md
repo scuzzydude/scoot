@@ -17,4 +17,4 @@ BigMo (the Fonde Brotherhood SMS bot) must NEVER let the LLM compute or restate 
 - Personality file `ri/personalities/bigmo/cotb.md` forbids computing dates/times and says to use the verified block verbatim or say "don't have that in front of me."
 - Do NOT switch to shelling out to `date` — `new Date()`/`Intl` reads the same NTP clock; the injection mechanism was never the problem.
 
-Meta-lesson for me: I have no clock in context (harness gives only the date). Run `date` for the real time — never answer time questions from my head. See [[infra_prod_server]], [[infra_claude_runs_on_steve]].
+Meta-lesson for me: I have no clock in context (harness gives only the date). Run `date` for the real time — never answer time questions from my head. See [[infra_prod_server]], [[infra_claude_runs_on_dreamlab]].

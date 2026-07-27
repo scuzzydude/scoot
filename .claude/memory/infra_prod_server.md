@@ -1,15 +1,15 @@
 ---
-name: prod-server-steve-azure-vm-fairchildlabs-org-thedreamlaboratory-org
-description: "Production Azure VM hosting Scoot. Hostname steve, public IP 13.64.77.78. Apache fronts existing fairchildlabs.org. Scoot stack runs in Docker on :3000 (API) and :5175 (Vite). DATA_DIR=/var/lib/scoot, postgres on :5433."
+name: prod-server-dreamlab-azure-vm-fairchildlabs-org-thedreamlaboratory-org
+description: "Production Azure VM hosting Scoot. Hostname dreamlab (renamed 2026-07-27, was steve), public IP 13.64.77.78. Apache fronts existing fairchildlabs.org. Scoot stack runs in Docker on :3000 (API) and :5175 (Vite). DATA_DIR=/var/lib/scoot, postgres on :5433."
 metadata: 
   node_type: memory
   type: project
   originSessionId: ddc7ab1a-729e-40b8-a8f1-8456f9a6d11d
 ---
 
-Production Scoot host. Distinct from WSL dev box (`steve` server vs WSL2 at 192.168.1.118 — see [[infra_wsl_network]]).
+Production Scoot host. Distinct from WSL dev box (this VM vs WSL2 at 192.168.1.118 — see [[infra_wsl_network]]).
 
-- **Hostname:** `steve` — Azure VM, Ubuntu 24.04 LTS, kernel 6.17 azure
+- **Hostname:** `dreamlab` — Azure VM, Ubuntu 24.04 LTS, kernel 6.17 azure. **Renamed 2026-07-27** from `steve` to stop colliding with an unrelated work-LAN machine also named `steve` (10.238.64.17) — see [[infra_claude_runs_on_dreamlab]] for the full rename record. The Azure VM *resource* itself is still named "steve" in Azure's own portal/CLI/metadata (permanent short of recreating the VM) — only the OS-level hostname changed. `preserve_hostname: true` set in cloud-init (`/etc/cloud/cloud.cfg.d/99-preserve-hostname.cfg`) so it survives reboots.
 - **Public IP:** 13.64.77.78
 - **Internal IP:** 10.0.0.4 (eth0)
 - **HW:** 2 CPU, 3.8 GB RAM, 30 GB root disk, 8 GB ephemeral `/mnt` (Azure resource disk — DO NOT use for data; gets wiped on dealloc)
