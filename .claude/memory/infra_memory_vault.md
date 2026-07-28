@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e0188e1f-d820-46a3-a539-4550075074c5
+  modified: 2026-07-28T11:14:41.195Z
 ---
 
 **What:** Memory Vault (`github.com/mihaibuilds/memory-vault`, MIT) — a Postgres 16 + pgvector hybrid-search memory MCP server. Set up on **this prod box** (hostname `dreamlab`, renamed 2026-07-27 from `steve`) 2026-06-26 as a **semantic-recall layer that runs ALONGSIDE** the git-file memory in `.claude/memory/`. The git files stay the durable, versioned, redaction-safe **source of truth** (see CLAUDE.md); Memory Vault adds fuzzy/semantic recall on top. Exposes 4 MCP tools: `remember`, `recall`, `forget`, `memory_status` (+ knowledge graph).
@@ -33,3 +34,5 @@ BigMo (the SMS bot) uses Memory Vault as long-term semantic memory **via the RES
 - Ties into [[scoot_identity_and_sms_rooms]] / [[bigmo_no_llm_time_math]].
 
 **Status / gotchas:** evaluation/early use — git memory is still primary; if MV proves out, cross-machine (one shared vault via tunnel/bearer-token) is the deferred next step (MV is single-instance by design). Each CLI invocation cold-loads the embedding model (~10s) — batch seeds run in background. DB creds are the local defaults `memory_vault/memory_vault` (loopback-only, low risk). Relates to [[infra_prod_server]], [[infra_claude_runs_on_dreamlab]].
+
+**Restart policy (fixed 2026-07-28):** the `docker-compose.yml` originally had no `restart` field, so after the 2026-07-27 host reboot (steve→dreamlab rename) both containers stayed exited for ~13h until manually noticed and brought back up — BigMo's `recall`/`remember` silently no-op when the vault is down (by design, so it doesn't break SMS), so this kind of gap is easy to miss. Added `restart: unless-stopped` to both `db` and `app` services so it now survives reboots like the main scoot stack does. Local edit only, not committed upstream.
