@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 23cf48e3-58b9-4e04-9be6-778c29961de4
+  modified: 2026-07-28T16:43:07.649Z
 ---
 
 Operational facts for migrating/deploying the Scoot stack on **dreamlab** (prod, formerly named steve — renamed 2026-07-27). See [[infra_prod_server]] and [[infra_claude_runs_on_dreamlab]].
@@ -27,3 +28,5 @@ sudo docker compose -f ri/physical/docker-compose.yml exec -T postgres \
 **Code is live without rebuild.** The `app` service (`Dockerfile.dev`) bind-mounts the whole repo (`../..:/app`) and runs `npm run dev` (tsx watch + Vite). Editing files on the host = editing `/app` in the container; tsx watch restarts the server automatically (visible in `docker logs scoot-app-1`). `scoot-chat` is mounted at `/scoot-chat`. So a normal "deploy" of code changes needs no `docker compose build` — only schema changes (manual ALTER) and dependency changes (rebuild for the `node_modules` named volume) need extra steps.
 
 **Why:** Established 2026-05-29 while integrating the new scoot-chat room data contract (added `chat_rooms.room_type` + `pinned_model`). db:push tried to drop `session`; applied the two columns via ALTER TABLE IF NOT EXISTS + backfilled `room_type='dm' WHERE is_dm` instead.
+
+**Data hygiene note (found 2026-07-28, not yet cleaned):** prod `scoots` table has two extra rows — `id 78`/`80`, slug `selfstake-<timestamp>-2`, name `T2` — that look like test fixtures leaked from a self-stake integration test run rather than real Scoots. Flagged to Brandon, left untouched pending his call on whether to delete them.

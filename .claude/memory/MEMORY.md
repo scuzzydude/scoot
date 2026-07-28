@@ -2,8 +2,10 @@
 
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
-- [SMS build resume — pick up at §8.6](project_sms_build_resume.md) — §8.1–8.5 + user-id reservation + storage tooling done; NEXT = §8.6 GYMBOSS schedule-by-SMS
-- [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat polish first; staking ritual is core identity primitive; token after; scootchain last
+- [SMS build resume — §8 complete + Phase 4 staking complete](project_sms_build_resume.md) — full SMS⇄Rooms + staking ritual/trust graph/revocation/self-stake history; superseded by [[scoot_currency_ledger]] for what's next
+- [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat + staking done; Phase 5a token ledger now in progress, see [[scoot_currency_ledger]]; scootchain (5b) last
+- [Scoot(34) currency ledger — trustee-mint, bilateral send](scoot_currency_ledger.md) — Phase 5a DB-first rules: trustee-only mint, sends need recipient acceptance, distribute=send-from-trustee, no C bridge yet
+- [BigMo multi-Scoot open questions — pick up here](bigmo_multiscoot_open_questions.md) — bot mention mechanism already multi-bot capable; scootId scoping on bots/rooms is the real gap; actual new-rules trigger never discussed
 - [Staking ritual — QR + code + selfie pledge](social_graph_staking.md) — In-person ceremony A→B: QR scan, one-time code, second scan, selfie saved as pledge proof. Chains form trust graph
 - [Chat bots — multi-bot, @mention triggered](chat_bots_design.md) — Bots are users w/ is_bot=true, personality in `bots` table, `@name` triggers, provider abstraction (Anthropic v1), typing indicators on
 - [Keep SETUP.md current with install procedure](feedback_setup_procedure.md) — update SETUP.md in the same commit whenever env vars or first-run steps change
