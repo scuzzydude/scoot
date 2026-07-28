@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scoot — Project Status</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --bg:#000; --fg:#fff; --muted:rgba(255,255,255,.65); --line:rgba(255,255,255,.14);
+          --chip:#141414; --ok:#3ddc84; --wip:#e8c547; --todo:rgba(255,255,255,.4); }
+  * { box-sizing:border-box; }
+  html,body { background:var(--bg); color:var(--fg); margin:0; padding:0;
+              font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  body { max-width:920px; margin:0 auto; padding:2.5rem 1.25rem 5rem; line-height:1.55; }
+  a { color:#fff; text-decoration:underline; text-decoration-color:rgba(255,255,255,.35); }
+  a:hover { text-decoration-color:#fff; }
+  h1 { font-size:1.6rem; margin:0 0 .25rem; letter-spacing:-.01em; }
+  .sub { color:var(--muted); font-size:.92rem; margin:0 0 2.25rem; }
+  .sub code { background:var(--chip); border:1px solid var(--line); border-radius:.35rem; padding:.1rem .4rem; }
+  h2 { font-size:1.05rem; margin:2.5rem 0 .9rem; padding-bottom:.5rem; border-bottom:1px solid var(--line);
+       text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; }
+  h2:first-of-type { margin-top:0; }
+  table { width:100%; border-collapse:collapse; font-size:.9rem; }
+  th,td { text-align:left; padding:.55rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
+  td.mono, th.mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.85rem; }
+  .badge { display:inline-block; border-radius:999px; padding:.15rem .6rem; font-size:.72rem; font-weight:600;
+           text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  .b-done { background:rgba(61,220,132,.12); color:var(--ok); border:1px solid rgba(61,220,132,.35); }
+  .b-current { background:rgba(232,197,71,.12); color:var(--wip); border:1px solid rgba(232,197,71,.35); }
+  .b-todo { background:rgba(255,255,255,.05); color:var(--todo); border:1px solid var(--line); }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.75rem; margin:1rem 0; }
+  .card { background:var(--chip); border:1px solid var(--line); border-radius:.6rem; padding:.9rem 1rem; }
+  .card .n { font-size:1.5rem; font-weight:700; }
+  .card .l { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; margin-top:.15rem; }
+  .repo { border:1px solid var(--line); border-radius:.6rem; padding:1rem 1.1rem; margin-bottom:.9rem; background:#0a0a0a; }
+  .repo h3 { margin:0 0 .3rem; font-size:1rem; display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+  .repo .path { color:var(--muted); font-family:ui-monospace,monospace; font-size:.82rem; font-weight:400; }
+  .repo p { margin:.4rem 0 0; color:var(--muted); font-size:.88rem; }
+  .repo .meta { margin-top:.55rem; font-size:.82rem; color:var(--muted); }
+  .repo .meta span { margin-right:1.1rem; }
+  ul.tight { margin:.4rem 0 0; padding-left:1.2rem; }
+  ul.tight li { margin:.15rem 0; color:var(--muted); font-size:.88rem; }
+  ul.tight li b { color:#fff; font-weight:600; }
+  footer { margin-top:3.5rem; padding-top:1.2rem; border-top:1px solid var(--line); color:var(--muted); font-size:.8rem; }
+  .note { background:var(--chip); border:1px solid var(--line); border-left:3px solid var(--wip);
+          border-radius:.4rem; padding:.75rem 1rem; font-size:.87rem; color:var(--muted); margin:1rem 0; }
+</style>
+</head>
+<body>
+
+<h1>Scoot — Project Status</h1>
+<p class="sub">Snapshot of the codebase, active phase, and open threads. Updated at major checkpoints — not real-time. Host: <code>dreamlab</code>.</p>
+
+<h2>Where things stand</h2>
+<div class="cards">
+  <div class="card"><div class="n">4</div><div class="l">Phases complete</div></div>
+  <div class="card"><div class="n">136</div><div class="l">Server tests passing</div></div>
+  <div class="card"><div class="n">21</div><div class="l">DB tables</div></div>
+  <div class="card"><div class="n">~9k</div><div class="l">Lines, client+server</div></div>
+</div>
+
+<h2>Build phases</h2>
+<table>
+  <tr><th>Phase</th><th>What</th><th>Status</th></tr>
+  <tr><td class="mono">1</td><td>Web foundation — auth, Scoot pages, stub endpoints</td><td><span class="badge b-done">Done</span></td></tr>
+  <tr><td class="mono">2</td><td>Native chat — rooms, messages, WebSocket, media, @bot mentions (Postgres-only, shared <code>scoot-chat</code> package, BigMo bot)</td><td><span class="badge b-done">Done</span></td></tr>
+  <tr><td class="mono">3</td><td>Bot token usage tracking, SMS⇄rooms bridge (§8.1–§8.9), remote server bringup</td><td><span class="badge b-done">Done</span></td></tr>
+  <tr><td class="mono">4</td><td>Staking ritual — pledge ceremony over SMS/app, trust graph, revocation, self-stake bootstrap, Brotherhood catalog</td><td><span class="badge b-done">Done</span></td></tr>
+  <tr><td class="mono">5</td><td>C core + wallet — <code>scootd</code> daemon, blockchain, Scoot currency send/receive</td><td><span class="badge b-current">Scoping</span></td></tr>
+  <tr><td class="mono">6</td><td>Native mobile — iOS/Android via React Native (Expo), reusing <code>scoot-chat</code></td><td><span class="badge b-todo">Not started</span></td></tr>
+</table>
+
+<h2>Repositories</h2>
+
+<div class="repo">
+  <h3>scoot <span class="path">/home/brandon/scoot</span></h3>
+  <p>The main platform: React client, Node/Express API, Postgres schema, and the (not-yet-started) C core. Thin client, heavy server — the client renders and calls the API, all business logic lives server-side.</p>
+  <div class="meta">
+    <span>Client: React 18 + TS + Vite + Tailwind/shadcn</span>
+    <span>Server: Node/Express + TS + Drizzle</span>
+    <span>19 migrations</span>
+    <span>8 route modules</span>
+    <span>11 pages</span>
+  </div>
+</div>
+
+<div class="repo">
+  <h3>scoot-chat <span class="path">/home/brandon/scoot-chat</span></h3>
+  <p>Standalone shared chat-UI package — room list, message thread, input, media, WebSocket hook. Bind-mounted straight into the <code>scoot</code> app container (no publish/install step; edits are live via Vite/tsx watch). Also consumed by the separate Steve project as an installed dependency.</p>
+  <div class="meta">
+    <span>React components + <code>useChatSocket</code> hook</span>
+    <span>Native (<code>.native.tsx</code>) variants for the future mobile app</span>
+  </div>
+</div>
+
+<div class="repo">
+  <h3>scootchain (prototype) <span class="path">/home/brandon/scootchain</span></h3>
+  <p>Early standalone C proof-of-concept, predating Phase 5 scoping: key generation using a post-quantum signature scheme (<b>ML-DSA-87</b> via <code>liboqs</code>, the Open Quantum Safe library) rather than classical ECC. Not yet integrated into <code>scootd</code> — the live input to Phase 5's wallet/crypto design, not a running service.</p>
+</div>
+
+<div class="repo">
+  <h3>memory-vault (third-party) <span class="path">/home/brandon/memory-vault</span></h3>
+  <p>Postgres + pgvector semantic-memory server (MIT-licensed, upstream <code>mihaibuilds/memory-vault</code>). Runs two ways: as an MCP server for Claude Code's own project memory, and as a REST backend BigMo (the SMS bot) calls for long-term recall — a vault outage degrades to a no-op rather than ever blocking an SMS reply.</p>
+</div>
+
+<h2>scoot-chat sync check</h2>
+<div class="note">
+  The <code>dreamlab</code> checkout of <code>scoot-chat</code> is on <code>main</code>, clean, and matches <code>origin/main</code> exactly as of the last check — nothing ahead or behind. If work done elsewhere hasn't been <code>git push</code>ed yet, this checkout won't have it until it is; the bind mount means once it's pushed and pulled here, the running app picks it up immediately with no rebuild.
+</div>
+
+<h2>Infrastructure</h2>
+<table>
+  <tr><th>Service</th><th>Detail</th></tr>
+  <tr><td>Host</td><td class="mono">dreamlab</td> </tr>
+  <tr><td>Public domains</td><td><code>fairchildlabs.org</code>, <code>thedreamlaboratory.org</code> (Scoot app, proxied)</td></tr>
+  <tr><td>App stack</td><td>Docker Compose — <code>scoot-app</code> (Node+Vite), <code>scoot-postgres</code></td></tr>
+  <tr><td>Memory Vault stack</td><td>Docker Compose — <code>memory-vault-app</code>, <code>memory-vault-db</code>, both auto-restart on reboot</td></tr>
+  <tr><td>Current Scoot instance</td><td>Scoot(34) — The Dream Laboratory / Fonde Brotherhood, the first and only live Scoot so far</td></tr>
+</table>
+
+<h2>Active / open threads</h2>
+<ul class="tight">
+  <li><b>Phase 5 scoping</b> — proposing <code>scootd</code> as a single-authoritative-node ledger for scoot(34) (responsibility-domain rules: only registered pledges/trustee can transact, no open P2P/GPU mining needed for v1); genesis block sourced from the existing append-only pledge ledger.</li>
+  <li><b>Deferred by design, not gaps</b> — revoked-stakee downstream pledge cascade, per-Scoot pledge scoping, live QR staking handshake. All explicitly waiting on wallet/multi-Scoot features to justify the work.</li>
+  <li><b>Storage</b> — immediate reclaim done (docker build cache, journal cap, log rotation caps). Structural fix (media → Azure Blob hot tier) still proposed, not started.</li>
+</ul>
+
+<footer>
+  Scoot is public/copyleft. This page is generated by hand at major checkpoints, not live-rendered — treat it as a snapshot, not a dashboard.
+</footer>
+
+</body>
+</html>
