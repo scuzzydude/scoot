@@ -7,6 +7,7 @@ import { userIsLeader, userHasScootFlag, getLeaderMessageFeed } from "../sms/ove
 import { getUserSmsLog, getAllSmsLog } from "../sms/log.js";
 import { getTrustCatalog } from "../trust/graph.js";
 import { canSelfStake, selfStake } from "../trust/self-stake.js";
+import { mintScoot, proposeSend, respondToSend, getBalance, listTransactions, type ScootTxDecision } from "../scoot/ledger.js";
 
 const router = Router();
 router.use(requireAuth);
@@ -41,6 +42,91 @@ router.post("/:id/self-stake", async (req, res) => {
   const result = await selfStake(userId, scootId, selfieUrl);
   if (!result.ok) return res.status(400).json({ ok: false, error: result.reason });
   res.json({ ok: true });
+});
+
+// Scoot currency ledger (Phase 5a, DB-first — see scoot/ledger.ts). All
+// endpoints require Scoot membership; mint additionally requires being the
+// Scoot's trustee (enforced in ledger.ts, not just here).
+
+router.get("/:id/scoot/balance", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const balance = await getBalance(scootId, userId);
+  res.json({ ok: true, data: { balance } });
+});
+
+router.get("/:id/scoot/transactions", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const data = await listTransactions(scootId, userId);
+  res.json({ ok: true, data });
+});
+
+// Trustee-only. Mints directly into the trustee's own balance — see
+// scoot/ledger.ts header for why "mint then distribute" is mint + send.
+router.post("/:id/scoot/mint", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const { amount, note } = req.body as { amount?: number; note?: string };
+  if (typeof amount !== "number") return res.status(400).json({ ok: false, error: "amount required" });
+
+  const result = await mintScoot(scootId, userId, amount, note ?? null);
+  if (!result.ok) return res.status(403).json({ ok: false, error: result.reason });
+  res.json({ ok: true, data: result.transaction });
+});
+
+// Propose a transfer. Balance doesn't move until the recipient responds —
+// see POST /:id/scoot/transactions/:txId/respond.
+router.post("/:id/scoot/send", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  if (isNaN(scootId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const member = await db.query.scootMembers.findFirst({
+    where: and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)),
+  });
+  if (!member) return res.status(404).json({ ok: false, error: "not found" });
+
+  const { toUserId, amount, note } = req.body as { toUserId?: number; amount?: number; note?: string };
+  if (typeof toUserId !== "number" || typeof amount !== "number") {
+    return res.status(400).json({ ok: false, error: "toUserId and amount required" });
+  }
+
+  const result = await proposeSend(scootId, userId, toUserId, amount, note ?? null);
+  if (!result.ok) return res.status(400).json({ ok: false, error: result.reason });
+  res.json({ ok: true, data: result.transaction });
+});
+
+router.post("/:id/scoot/transactions/:txId/respond", async (req, res) => {
+  const userId = (req.user as { id: number }).id;
+  const scootId = parseInt(req.params.id);
+  const txId = parseInt(req.params.txId);
+  if (isNaN(scootId) || isNaN(txId)) return res.status(400).json({ ok: false, error: "invalid id" });
+
+  const { decision } = req.body as { decision?: ScootTxDecision };
+  if (decision !== "accepted" && decision !== "rejected" && decision !== "cancelled") {
+    return res.status(400).json({ ok: false, error: "invalid decision" });
+  }
+
+  const result = await respondToSend(scootId, txId, userId, decision);
+  if (!result.ok) return res.status(400).json({ ok: false, error: result.reason });
+  res.json({ ok: true, data: result.response });
 });
 
 // §8.7 LEADER oversight — all messages across all rooms, bypassing accessMask.

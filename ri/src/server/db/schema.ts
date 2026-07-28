@@ -125,6 +125,11 @@ export const scoots = pgTable("scoots", {
   labelMap: jsonb("label_map").notNull().default({}),
   featureFlags: jsonb("feature_flags").notNull().default({}),
   navItems: jsonb("nav_items").notNull().default([]),
+  // Scoot Trustee (asimov_v2.13 Scoot Primer) — the sole mint authority for
+  // this Scoot's token. Single FK for now (one person), not a table: the book
+  // describes a trustee as "a person," and every Scoot we actually run today
+  // has exactly one. Revisit if a Scoot ever needs a multi-trustee body.
+  trusteeId: integer("trustee_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -216,6 +221,63 @@ export const pledgeRevocations = pgTable("pledge_revocations", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Scoot currency ledger (Phase 5a, DB-first — see asimov_v2.13 Scoot Primer).
+// APPEND-ONLY, same contract as `pledges`: a transaction row's core fields are
+// never UPDATEd or DELETEd once inserted, so this stays a clean, ordered log
+// scootd can later replay as real chain history (Phase 5b).
+//
+// Two transaction types only:
+//   'mint' — trustee-only, unilateral, effective immediately (no response
+//            row). Creates new supply directly in the trustee's balance.
+//   'send' — bilateral (the book's "responsibility domain": both parties
+//            validate). Proposing a send does NOT move balance; only an
+//            'accepted' row in scoot_transaction_responses does. Also how
+//            trustee -> member "distribution" works — it's just a send.
+// Always go through scoot/ledger.ts (mintScoot / proposeSend / respondToSend),
+// never a raw db.insert(scootTransactions) — same discipline as trust/ledger.ts.
+export const scootTransactions = pgTable("scoot_transactions", {
+  id: serial("id").primaryKey(),
+  scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+  type: text("type").notNull(), // 'mint' | 'send'
+  fromUserId: integer("from_user_id").references(() => users.id), // null for mint
+  toUserId: integer("to_user_id").references(() => users.id).notNull(),
+  amount: integer("amount").notNull(),
+  note: text("note"), // e.g. "Tuesday pickup buy-in"
+  initiatedBy: integer("initiated_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  // sha256 fingerprint of the immutable fields above, computed at insert time
+  // with the exact createdAt used — see scoot/ledger.ts.
+  contentHash: text("content_hash").notNull(),
+});
+
+// The response to a 'send' transaction — a separate row, never a mutation of
+// the transaction it answers, so the ledger above stays purely append-only.
+// At most one response per transaction (unique). 'mint' rows never get one.
+export const scootTransactionResponses = pgTable("scoot_transaction_responses", {
+  id: serial("id").primaryKey(),
+  transactionId: integer("transaction_id").notNull().references(() => scootTransactions.id).unique(),
+  decision: text("decision").notNull(), // 'accepted' | 'rejected' | 'cancelled'
+  respondedBy: integer("responded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Materialized balance cache — derived from scoot_transactions +
+// scoot_transaction_responses, kept in sync transactionally by scoot/ledger.ts.
+// The ledger above is the source of truth; this table exists purely so
+// GET /balance doesn't have to replay history on every read.
+export const scootBalances = pgTable(
+  "scoot_balances",
+  {
+    scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    balance: integer("balance").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.scootId, t.userId] }),
+  })
+);
+
 // Authoritative schedule — GYMBOSS-only structured data. BigMo answers from the
 // next non-cancelled session (no runtime day-of-week math). See arch/sms-rooms.md.
 // Named scoot_sessions to avoid the connect-pg-simple `session` table.
@@ -305,3 +367,6 @@ export type SmsState = typeof smsState.$inferSelect;
 export type SmsDelivery = typeof smsDeliveries.$inferSelect;
 export type Pledge = typeof pledges.$inferSelect;
 export type PledgeRevocation = typeof pledgeRevocations.$inferSelect;
+export type ScootTransaction = typeof scootTransactions.$inferSelect;
+export type ScootTransactionResponse = typeof scootTransactionResponses.$inferSelect;
+export type ScootBalance = typeof scootBalances.$inferSelect;
