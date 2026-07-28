@@ -303,10 +303,10 @@ Work through phases in order. Do not start the next phase until the current one 
 - **Phase 4** ✅ — Staking ritual (simplified vs. original QR-ceremony design — see `arch/staking.md`)
   - SMS-based: code + selfie + age-tier attestation (no live QR handshake — deferred)
   - Trust graph (append-only pledge ledger), revocation (admin-only), self-stake bootstrap (app + SMS), client Brotherhood catalog UI
-- **Phase 5** ← CURRENT — C core + wallet
-  - scootd daemon, C bridge, Scoot currency send/receive
-  - Blockchain: block structure, CPU threads, CUDA/HIP
-  - Chain genesis seeds from the existing `pledges` ledger (each row already carries a sha256 `contentHash` for this)
+- **Phase 5** ← CURRENT — Scoot token, DB-first
+  - **5a (current step):** Scoot currency as a plain Postgres ledger via Drizzle — balances, a logged transactions table, send/receive. No C bridge, no scootd wired in yet. Get the schema and transaction semantics right against real usage first.
+  - **5b (later):** Once 5a's transaction rules are proven, build the scootd command set against that same schema — `scootd` daemon skeleton, C bridge, and thread pool already exist (`ri/src/core/`, unwired) — then block structure, CPU threads, CUDA/HIP.
+  - Chain genesis (5b) seeds from the existing `pledges` ledger (each row already carries a sha256 `contentHash` for this)
 - **Phase 6** — Native mobile (React Native / Expo)
   - Scoot app on iOS + Android (reuses `scoot-chat` via .native.tsx variants)
   - Push notifications
