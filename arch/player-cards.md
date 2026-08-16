@@ -1,31 +1,66 @@
 # Scoot(34) Player Card — Template Spec
 
-Version 1.0 · 2026 edition
+Version 1.1 · 2026 edition
 
 Source of truth for the physical trading-card pipeline BigMo will eventually
-drive. Captured here as reference while the source art (silhouettes pulled
-from Brotherhood testimonial video, see the Nick get-well video harvesting
-work) and the `build_cards.py` tooling are still being built out.
+drive. Captured here as reference while the source art and the ComfyUI
+generation pipeline are still being built out. `build_cards.py` (the sheet
+assembly script) already exists and works — not covered here.
 
-## 1. What BigMo needs to hand back
+> **v1.1 supersedes v1.0's art direction (2026-08-16).** v1.0 called for flat
+> solid-black silhouettes (`#1A1A18`, no interior linework). That's wrong —
+> the real target is cel-shaded color comic/manga illustration. Section 1
+> below is the corrected spec. Sections 2–7 (geometry, tier ladder, roster
+> CSV, glyph, printing) are unchanged from v1.0 and still apply.
 
-Two transparent PNGs per member, named by Scoot serial.
+## 1. What BigMo needs to hand back (v1.1)
 
-| File | Purpose | Pixels (300 dpi) | Pixels (600 dpi, preferred) | Aspect |
-|---|---|---|---|---|
-| `{serial}_front.png` | Main silhouette | 700 × 1000 | 1400 × 2000 | 0.700 |
-| `{serial}_back.png` | Side-pose silhouette | 217 × 258 | 434 × 516 | 0.840 |
+**Not silhouettes.** Final art is a cel-shaded color comic/manga illustration
+of each player — two or three flat tones per material, hard-edged shadows,
+bold contour lines. No gradients, no airbrush, no soft shading.
 
-Example: `34-00007_front.png`, `34-00007_back.png`
+**One illustration per player, not two.** The same pose, shading, and
+likeness serve both card faces. The jersey is rendered on its own mask so it
+can be recolored per face (dark fill for the front, light fill for the
+back) — a reversible-jersey trick. Two independently-generated front/back
+images would drift and show as a different person when the card is flipped.
 
-### Rules for the art
+**Deliverables per player, named by Scoot serial:**
 
-- **Transparent background.** Alpha channel, not white. The template supplies the tier colour underneath.
-- **Solid black silhouette, no interior linework.** Fill `#1A1A18`. No gradients, no outlines, no shading, no halftone. This is the scoot token's visual language — a filled shape, nothing else.
-- **Fill the frame and let it crop.** The figure should run off the bottom edge and may run off the sides. A silhouette that floats inside the frame looks like a sticker; one the frame can't contain looks like a card.
-- **Leave the bottom 34 pt clear of anything essential.** The nameplate bar covers the bottom ~14% of the front art slot. Torso can run under it — faces and hands cannot.
-- **Front = the signature move. Back = the resting pose.** Turnaround, set shot, pull-up on the front; hands on knees, arms folded, walking the ball up on the back. The contrast between the two is where personality lives.
-- **No anti-aliased grey fringe if avoidable.** Hard alpha edges reproduce better in toner. If the pipeline outputs soft edges, threshold the alpha.
+| File | Purpose | Pixels | Notes |
+|---|---|---|---|
+| `{serial}_figure.png` | The illustration | 1400 × 2000 RGBA | Transparent background. Figure fills the frame and crops at the bottom edge. Keep faces and hands out of the bottom 15% (nameplate covers it). **Do not crop or scale to card geometry** — `build_cards.py` owns placement, geometry isn't locked yet. |
+| `{serial}_jersey_mask.png` | Recolor mask | same dimensions as figure | White = jersey pixels, black = everything else |
+
+**Transparent background, no generated scenery.** Prompt explicitly for
+plain/no background/no court. The card template draws the manga background
+(speed lines, screentone, impact burst) procedurally, in black on white —
+that is not part of what gets generated per player.
+
+**Alpha channel — watch this closely.** Save true RGBA. A prior batch of
+logo files arrived as RGB with alpha silently flattened (one came out
+white-on-white). Verify mode is RGBA and spot-check a transparent pixel
+before considering any output done.
+
+## 1b. Generation pipeline (ComfyUI)
+
+1. **Preprocess with `rembg`** — cut the player out of the source gym photo
+   (see the Nick get-well video frame-harvesting work for source material).
+   This cutout is preprocessing input only, never the deliverable.
+2. **Condition with ControlNet** (lineart + openpose) on the cutout, so pose
+   and silhouette carry through to the illustration.
+3. **Generate with SDXL or Flux** on an anime/comic-style checkpoint.
+4. **Hold consistency with IP-Adapter** — one fixed style reference image,
+   fixed seed, fixed ControlNet weights, one prompt skeleton. Only the
+   per-player conditioning (the rembg cutout + pose) changes between players.
+   34 cards need to read as one set, not 34 separate art projects.
+5. **Jersey mask** — a separate segmentation pass (clothing/human-parsing
+   model) over the generated figure to isolate jersey pixels into
+   `{serial}_jersey_mask.png`.
+
+Geometry (crop/scale to the card's actual art slot) is explicitly NOT part
+of this pipeline — `build_cards.py` handles placement downstream, and the
+geometry itself isn't locked yet.
 
 ## 2. Card geometry
 
@@ -135,14 +170,16 @@ silhouette, so you can proof the layout and the copy before BigMo finishes.
 - **Rating block** — dropped for the first edition. Add once there's something to rate.
 - **Rookie card inset** — has no meaning in year one. Founding members may want a charter mark in that corner instead.
 - **Season table growth** — fits four season rows plus career before it's full. Decide now between showing every season forever (eventually forces a sideways back) or a rolling three-season window.
+- **`build_cards.py` input naming** — the existing working script expects `art/{serial}_front.png` + `art/{serial}_back.png` (section 5). The v1.1 pipeline produces `{serial}_figure.png` + `{serial}_jersey_mask.png` instead (one illustration + a recolor mask, not two separate images). Not reconciled yet — either `build_cards.py` needs updating to composite front/back from figure+mask itself, or a separate compositing step produces `_front.png`/`_back.png` from them before `build_cards.py` runs.
 
 ## Relationship to the Nick video frame-harvesting work
 
-The silhouette art (`{serial}_front.png` / `_back.png`) is downstream of the
-candidate frames being pulled from Brotherhood testimonial video (see
-`ip/` session notes / memory `scoot_currency_ledger`-adjacent work — the Nick
-get-well video project). Candidate photo → curated best-expression shot →
-silhouette extraction → this template. The `serial` numbering scheme
-(`34-00007`) does not yet map to anything in `scoot_members` — that link is
+The generated illustrations are downstream of the candidate frames being
+pulled from Brotherhood testimonial video (see the Nick get-well video
+frame-harvesting work — `~/Nick/work/roster.md` and the review site at
+`/nick-review/`). Candidate photo → curated best-expression shot → rembg
+cutout → ControlNet-conditioned generation → this template. The `serial`
+numbering scheme (`34-00007`) does not yet map to anything in
+`scoot_members` — that link is
 still an open integration question, not yet needed while art direction and
 tooling are being proven out manually.
