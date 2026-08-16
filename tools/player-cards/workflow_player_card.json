@@ -1,0 +1,166 @@
+{
+  "_meta_pipeline_notes": {
+    "purpose": "Scoot(34) player card figure generation — see arch/player-cards.md v1.1 in this repo",
+    "how_to_run": "Not runnable as-is: node 2 (checkpoint), node 7 (controlnet union model), node 12+13 (ipadapter model + style reference image) all need real files present in ComfyUI/models/*. See README.md in this folder for exact files to download onto the GPU box.",
+    "per_player_inputs": "Swap node 1's 'image' (the rembg cutout, see prep_cutout.py) and both SaveImage filename_prefix values (nodes 19, 21) per player. Everything else — checkpoint, controlnet weights, ipadapter, style reference, seed, prompt skeleton — stays FIXED across all players. That fixedness is the whole point: 34 cards need to read as one set.",
+    "post_processing": "ComfyUI's SaveImage output is NOT the final deliverable. Run finalize_card.py on it afterward — that script re-mattes the alpha with rembg (same technique validated against the Nick video frames), hard-thresholds it, verifies true RGBA, and writes the actual {serial}_figure.png / {serial}_jersey_mask.png named per spec. See the alpha-channel warning in arch/player-cards.md — a prior batch shipped RGB-flattened files with a silently destroyed alpha channel.",
+    "seed": "Change SEED_PLACEHOLDER in node 16 to a real fixed integer before the first real run, then never touch it again for this edition.",
+    "geometry_note": "1400x2000 output size matches the figure.png spec, NOT card geometry — card placement is build_cards.py's job and geometry isn't locked yet."
+  },
+  "1": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "PLAYER_CUTOUT_PLACEHOLDER.png" },
+    "_note": "rembg cutout of the player, see prep_cutout.py. Swap per player."
+  },
+  "2": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": { "ckpt_name": "ANIME_SDXL_CHECKPOINT_PLACEHOLDER.safetensors" },
+    "_note": "See README.md for recommended checkpoint. Fixed across all players."
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["2", 1],
+      "text": "PROMPT_SKELETON_PLACEHOLDER — see README.md for the draft prompt. Fixed skeleton, do not vary per player."
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "clip": ["2", 1],
+      "text": "NEGATIVE_PROMPT_PLACEHOLDER — see README.md"
+    }
+  },
+  "5": {
+    "class_type": "LineArtPreprocessor",
+    "inputs": { "image": ["1", 0], "coarse": "disable", "resolution": 1024 }
+  },
+  "6": {
+    "class_type": "OpenposePreprocessor",
+    "inputs": {
+      "image": ["1", 0],
+      "detect_hand": "enable",
+      "detect_body": "enable",
+      "detect_face": "enable",
+      "resolution": 1024,
+      "scale_stick_for_xinsr_cn": "disable"
+    }
+  },
+  "7": {
+    "class_type": "ControlNetLoader",
+    "inputs": { "control_net_name": "CONTROLNET_UNION_SDXL_PLACEHOLDER.safetensors" },
+    "_note": "Single Union ControlNet handles both lineart and openpose — see README.md. If it underperforms, swap nodes 7-9 for two separate dedicated ControlNetLoaders (one lineart, one openpose) instead."
+  },
+  "8": {
+    "class_type": "SetUnionControlNetType",
+    "inputs": { "control_net": ["7", 0], "type": "canny/lineart/anime_lineart/mlsd" }
+  },
+  "9": {
+    "class_type": "SetUnionControlNetType",
+    "inputs": { "control_net": ["7", 0], "type": "openpose" }
+  },
+  "10": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "control_net": ["8", 0],
+      "image": ["5", 0],
+      "strength": 0.8,
+      "start_percent": 0.0,
+      "end_percent": 1.0
+    },
+    "_note": "Lineart conditioning pass. Fixed weight across all players — do not tune per player, that's what breaks set consistency."
+  },
+  "11": {
+    "class_type": "ControlNetApplyAdvanced",
+    "inputs": {
+      "positive": ["10", 0],
+      "negative": ["10", 1],
+      "control_net": ["9", 0],
+      "image": ["6", 0],
+      "strength": 0.6,
+      "start_percent": 0.0,
+      "end_percent": 1.0
+    },
+    "_note": "Openpose conditioning pass, chained after lineart. Fixed weight."
+  },
+  "12": {
+    "class_type": "IPAdapterUnifiedLoader",
+    "inputs": { "model": ["2", 0], "preset": "PLUS (high strength)" }
+  },
+  "13": {
+    "class_type": "LoadImage",
+    "inputs": { "image": "STYLE_REFERENCE_PLACEHOLDER.png" },
+    "_note": "ONE fixed style reference image, reused for every player. This is the single most important consistency lever in the whole graph — do not swap this per player."
+  },
+  "14": {
+    "class_type": "IPAdapterAdvanced",
+    "inputs": {
+      "model": ["12", 0],
+      "ipadapter": ["12", 1],
+      "image": ["13", 0],
+      "weight": 1.0,
+      "weight_type": "style transfer",
+      "combine_embeds": "average",
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "embeds_scaling": "V only"
+    }
+  },
+  "15": {
+    "class_type": "EmptyLatentImage",
+    "inputs": { "width": 1024, "height": 1462, "batch_size": 1 },
+    "_note": "SDXL-native resolution close to the 0.700 front aspect. Upscaled to the real 1400x2000 deliverable size in node 18."
+  },
+  "16": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": ["14", 0],
+      "positive": ["11", 0],
+      "negative": ["11", 1],
+      "latent_image": ["15", 0],
+      "seed": "SEED_PLACEHOLDER",
+      "steps": 30,
+      "cfg": 6.5,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "denoise": 1.0
+    },
+    "_note": "seed is FIXED for the whole edition — this is what makes 34 generations read as one set instead of 34 separate rolls. Only nodes 1 (cutout) and 5/6 (their derived conditioning) vary per player."
+  },
+  "17": {
+    "class_type": "VAEDecode",
+    "inputs": { "samples": ["16", 0], "vae": ["2", 2] }
+  },
+  "18": {
+    "class_type": "ImageScale",
+    "inputs": {
+      "image": ["17", 0],
+      "upscale_method": "lanczos",
+      "width": 1400,
+      "height": 2000,
+      "crop": "disable"
+    }
+  },
+  "19": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["18", 0], "filename_prefix": "raw/PLAYER_SERIAL_PLACEHOLDER_figure" },
+    "_note": "Raw generation output. NOT the deliverable — run finalize_card.py on this afterward for the real alpha-clean {serial}_figure.png."
+  },
+  "20": {
+    "class_type": "segformer_b2_clothes",
+    "inputs": {
+      "image": ["18", 0],
+      "Face": false, "Hat": false, "Hair": false,
+      "Upper_clothes": true,
+      "Skirt": false, "Pants": false, "Dress": false, "Belt": false,
+      "shoe": false, "leg": false, "arm": false, "Bag": false, "Scarf": false
+    },
+    "_note": "Isolates jersey pixels only. If a player's signature pose has the jersey mostly hidden (e.g. back turned), check this mask by hand — segformer was trained on real photos, not comic illustrations, so accuracy on generated art needs spot-checking."
+  },
+  "21": {
+    "class_type": "SaveImage",
+    "inputs": { "images": ["20", 0], "filename_prefix": "raw/PLAYER_SERIAL_PLACEHOLDER_jersey_mask" }
+  }
+}
