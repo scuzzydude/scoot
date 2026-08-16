@@ -18,4 +18,6 @@ metadata:
 
 **Still unanswered — ask again next session:** what was the actual trigger for wanting new BigMo rules right now? (Something it did wrong, a gap noticed, or just getting ahead of the ledger work?) Brandon selected all four categories (behavioral/tone, capability, per-audience, "let's just talk it through") — this is a genuinely open-ended design conversation, not a specific bug report.
 
+**2026-08-16 addition — templates/cards via BigMo, eventually:** Brandon is building manga/superhero-style basketball cards for players (extracted video frames → card art, see the "Nick get-well video" media-pipeline work, separate memory to follow). Card/template creation happens through Claude Code for now. Stated intent: **eventually BigMo's SMS text interface should let Brotherhood members work with these templates too** — not just an app/Claude-Code-only workflow. No design done yet (what "work with a template over SMS" even means — request a card? approve a draft? pick a style? — is undefined). Fold into the capability-rules discussion above when it resumes; this is another concrete data point for "what should BigMo be able to do."
+
 Related: [[scoot_currency_ledger]], [[chat_bots_design]], [[project_plan]], [[scoot_concept_model]].
