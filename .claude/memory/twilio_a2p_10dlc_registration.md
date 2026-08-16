@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: ddc7ab1a-729e-40b8-a8f1-8456f9a6d11d
+  modified: 2026-08-16T18:25:56.233Z
 ---
 
 The Scoot Twilio account is "**The Fonde Brotherhood**" (account type: Full, active, SID prefix `ACc44d...`). The provisioned long-code is `+13614232253` (Phone Number SID `PN64d2511...`).
@@ -16,6 +17,10 @@ The Scoot Twilio account is "**The Fonde Brotherhood**" (account type: Full, act
 **Why:** Established 2026-05-27 during outbound smoke test from prod (hostname `dreamlab`, renamed 2026-07-27 from `steve`). Spent two cycles confirming creds load, the `twilio` package installs in the container, env vars reach the SDK, and the routes mount with auth/signature gating — all passed. The carrier-level block was the only remaining cause. See [[infra_claude_runs_on_dreamlab]] for the prod-host context this test ran against.
 
 **Status as of 2026-05-31:** Brand `BN3a14060b678891aaae81425d52c498aa` = **APPROVED / VETTED_VERIFIED**. Campaign `QE2c6890da8086d771620e9b13fadeba0b` (Messaging Service `MG845da3c50d78ebb95ba456d2dae6c1c7`, use case **2FA**) was **REJECTED**, then **RESUBMITTED** after Brandon updated the website (the logged-out landing page now states the SMS purpose + "Text 361-423-2253 for latest updates", plus the existing /privacy + /terms pages). Awaiting re-review; outbound still 30034 until approved.
+
+**RESOLVED as of 2026-08-16** (confirmed via live Twilio API query during the BigMo discovery-QA pass, `~/BIGMO_DISCOVERY_QA.md` §5.2): brand still `APPROVED`, campaign now `CBCWY0U` (a new campaign SID, presumably from the resubmission above) with status **VERIFIED**. Outbound 30034 should no longer occur. Throughput: AT&T 40 msg/sec, T-Mobile brand tier LOW.
+
+**New open concern, not the old one:** the verified campaign's registered use case is still **2FA only** — description and all message samples on file are literally "your verification code is 123456." BigMo actually sends plenty of non-2FA conversational traffic in production today (staking Q&A, schedule confirmations, oversight, GYMBOSS flows) under this narrow registration, and the MMS player-card feature (see [[scoot_currency_ledger]]-adjacent `arch/player-cards.md` work) would add yet another distinct use case on top. This is a real carrier-filtering/compliance exposure worth a look independent of any specific feature — not a blocker for anything, but don't assume "A2P is registered" means "current usage matches what's registered."
 
 **Inbound SMS is testable NOW, independent of 10DLC** (carrier filtering only blocks *outbound* to US mobiles). Next session: point the Twilio number / Messaging Service inbound webhook at `https://thedreamlaboratory.org/api/v1/sms/inbound` (already proxied via Apache's `/api` rule → Express :3000). Either set `SMS_INBOUND_URL` to that exact URL in `.env` for signature validation, or `TWILIO_SKIP_SIGNATURE=true` for a first pass. Then text the number and read `GET /api/v1/sms/inbox` (auth) or app logs. `SMS_AUTOREPLY=true` is set, so it'll echo back.
 
