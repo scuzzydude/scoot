@@ -13,6 +13,14 @@ this reproduces in 2029 as faithfully as it runs today. Nothing here tracks
 | Commit | `b963f4ad210a42841ab23dfc28a84143a0cce227` |
 | Date | 2026-08-16 |
 
+## PyTorch (Modal container only — not needed for prep_cutout.py/finalize_card.py/build_cards.py, those stay torch-free per HANDOFF §5)
+
+| Package | Version | Index | Note |
+|---|---|---|---|
+| torch | `2.13.0` | `download.pytorch.org/whl/cu129` | First pin was `2.5.1`/cu124 — wrong, ComfyUI v0.33.1 bundles `comfy-kitchen==0.2.31`, whose compiled ops use a `torch.library.custom_op` schema 2.5.1 can't parse. Found by an actual failed deploy (container crashed on import), not caught by any structural check. |
+| torchvision | `0.28.0` | same | Version pip actually resolved as compatible with torch 2.13.0/cu129 in the run that fixed the above — hard-pinned from that observed-good combination, not guessed independently. |
+| torchaudio | `2.11.0` | same | Same as torchvision. |
+
 ## Custom nodes
 
 | Node pack | Repo | Commit | Date |

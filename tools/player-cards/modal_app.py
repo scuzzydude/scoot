@@ -132,9 +132,16 @@ image = (
     .run_commands("git lfs install")
     # Torch pinned explicitly and BEFORE ComfyUI's own requirements.txt, so
     # nothing downstream silently pulls a CPU-only build over this CUDA one.
+    # 2.5.1/cu124 was the first pin and it was wrong -- ComfyUI v0.33.1 pulls
+    # in comfy-kitchen 0.2.31, whose custom ops use a torch.library.custom_op
+    # schema (list[int] args) that 2.5.1 can't parse. Confirmed by an actual
+    # failed run, not guessed. torchvision/torchaudio versions below are the
+    # exact ones pip resolved as compatible with torch==2.13.0 on cu129 in
+    # that same run (2026-08-17) -- hard-pinned now that they're known-good,
+    # not left open-ended.
     .pip_install(
-        "torch==2.5.1", "torchvision==0.20.1",
-        extra_options="--index-url https://download.pytorch.org/whl/cu124",
+        "torch==2.13.0", "torchvision==0.28.0", "torchaudio==2.11.0",
+        extra_options="--index-url https://download.pytorch.org/whl/cu129",
     )
     .run_commands(
         _clone_and_pin(
@@ -378,6 +385,6 @@ def spawn_example(payload: dict) -> str:
     """Returns a call_id immediately. Caller polls modal.FunctionCall
     .from_id(call_id).get(timeout=0) later — never blocks waiting on GPU
     generation, which is the whole reason this isn't a synchronous endpoint."""
-    fn = modal.Function.from_name("scoot34-player-cards", "CardGenerator.generate")
-    call = fn.spawn(payload)
+    cls = modal.Cls.from_name("scoot34-player-cards", "CardGenerator")
+    call = cls().generate.spawn(payload)
     return call.object_id
