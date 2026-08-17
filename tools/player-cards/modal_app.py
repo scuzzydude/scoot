@@ -111,6 +111,45 @@ SEGFORMER_B3_REVISION = "e2474a9e7643d349ac6c525549b736b736e7e216"
 # the image build loudly, which is the safe failure mode, but worth checking
 # ahead of time rather than discovering it mid-deploy.
 
+# workflow_player_card.json ships with literal *_PLACEHOLDER strings for
+# everything README.md describes as "fixed once for the edition" (checkpoint,
+# controlnet, prompts in nodes 3/4) -- distinct from the PER-CALL fields
+# generate() already substitutes (cutout image, style ref, seed, serial in
+# filename_prefix). Nothing fills these edition-wide placeholders in until
+# now: ComfyUI's /prompt validation caught ckpt_name/control_net_name
+# (checked against an enum of files actually on disk) but silently accepted
+# the placeholder prompt TEXT in nodes 3/4 (free-form strings, nothing to
+# validate against) -- that would have run real GPU generation on garbage
+# prompt text without erroring, a more dangerous failure than the loud 400s
+# that caught the model filenames. Confirmed via an actual failed generate()
+# call showing the exact placeholder strings in the validation error.
+#
+# The README's own DRAFT prompt (English prose, "cel-shaded comic
+# illustration, flat color...") is the same style that produced a wrong,
+# non-anime, non-cel-shaded image when tried on the style-reference bootstrap
+# (2026-08-17) -- Animagine XL 4.0 is Danbooru-tag-trained, not prose-trained.
+# Translated to tag format here, same intent, empirically confirmed to work
+# via the successful style-reference regeneration. Pose/likeness come from
+# the ControlNet (lineart + openpose, driven by the player's own cutout) and
+# IP-Adapter (style transfer, driven by the style reference) inputs, not the
+# text prompt -- so unlike the style reference's own bootstrap prompt, this
+# one omits pose-specific tags ("jumping", "mid-air dunk") that would fight
+# the per-player ControlNet pose instead of describing rendering style.
+PROMPT_POSITIVE = (
+    "masterpiece, best quality, very aesthetic, absurdres, 1boy, solo, "
+    "full body, athletic build, simple background, white background, "
+    "cel shading, flat colors, bold lineart, hard shadows, no gradient, "
+    "sports jersey"
+)
+PROMPT_NEGATIVE = (
+    "lowres, bad anatomy, bad hands, text, error, missing fingers, extra "
+    "digit, fewer digits, cropped, worst quality, low quality, normal "
+    "quality, jpeg artifacts, signature, watermark, username, blurry, "
+    "photo, photorealistic, 3d, realistic, soft shading, airbrush, "
+    "gradient, scenery, background, court, crowd, multiple people, extra "
+    "limbs"
+)
+
 COMFY_PORT = 8188
 GPU_TYPE = "L4"  # HANDOFF §2: L4 or A10G to start, only move up if it OOMs
 SCALEDOWN_WINDOW_SECONDS = 180  # within HANDOFF's suggested 120-300s range
@@ -316,7 +355,20 @@ class CardGenerator:
         )
         _wait_for_port(COMFY_PORT, timeout=300)
         with open("/root/workflow_player_card.json") as f:
-            self.workflow_template = json.load(f)
+            template = json.load(f)
+
+        # Fill the edition-fixed placeholders (see PROMPT_POSITIVE/NEGATIVE
+        # comment above) -- real filenames come from MODEL_DOWNLOADS itself,
+        # not re-typed, so this can't drift from what _download_pinned_models
+        # actually staged on disk.
+        by_subdir = {subdir: Path(filename).name for _, filename, _, subdir in MODEL_DOWNLOADS}
+        template["2"]["inputs"]["ckpt_name"] = by_subdir["checkpoints"]
+        template["7"]["inputs"]["control_net_name"] = by_subdir["controlnet"]
+        template["3"]["inputs"]["text"] = PROMPT_POSITIVE
+        template["4"]["inputs"]["text"] = PROMPT_NEGATIVE
+        template["18"]["inputs"]["crop"] = "disabled"  # graph JSON has a typo: "disable"
+
+        self.workflow_template = template
 
     @modal.exit()
     def stop_comfyui(self):
