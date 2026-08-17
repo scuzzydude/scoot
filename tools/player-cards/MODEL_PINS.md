@@ -46,6 +46,7 @@ Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
 | IP-Adapter SDXL Plus | `h94/IP-Adapter` | `sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | `018e402774aeeddd60609b4ecdb7e298259dc729` |
 | Matching CLIP vision encoder | `h94/IP-Adapter` | `sdxl_models/image_encoder/model.safetensors` (NOT `models/image_encoder/` — that's the SD1.5 encoder, a real bug this repo shipped with briefly on 2026-08-17 until checked against the live file tree) | `018e402774aeeddd60609b4ecdb7e298259dc729` |
 | Jersey-mask segmentation | `mattmdjaga/segformer_b2_clothes` | (loaded by the segformer node directly) | `584abc1e1d260e23c0fc627c5217a09b2b461046` |
+| Jersey-mask segmentation, sibling model | `sayeed99/segformer-b3-fashion` | (loaded by the segformer node directly) | `e2474a9e7643d349ac6c525549b736b736e7e216` |
 
 **Checkpoint choice — Animagine XL 4.0, not Illustrious-XL.** Both are real,
 pinnable options (`OnomaAIResearch/Illustrious-xl-early-release-v0`,

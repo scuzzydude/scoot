@@ -87,6 +87,22 @@ MODEL_DOWNLOADS = [
 # actual failed generate() call, not guessed.
 SEGFORMER_REPO = "mattmdjaga/segformer_b2_clothes"
 SEGFORMER_REVISION = "584abc1e1d260e23c0fc627c5217a09b2b461046"
+
+# The custom node package's __init__.py imports BOTH segformer_b2_clothes.py
+# AND its sibling segformer_b3_fashion.py -- the latter has the identical
+# module-level from_pretrained() pattern, pointed at models_dir/
+# "segformer_b3_fashion", a DIFFERENT model this package also bundles. Since
+# Python must fully import the package for either node class to register,
+# fixing only segformer_b2_clothes's snapshot still left the whole package
+# import failing on the b3_fashion half (confirmed via modal shell reading
+# segformer_b3_fashion.py, and a second real failed generate() call after
+# the first segformer fix deployed). sayeed99/segformer-b3-fashion is the
+# real HF repo this node's directory-name convention maps to (verified via
+# the HF search API, not guessed) -- 31 likes, 5k downloads, matches the
+# "segformer_b3_fashion" -> "segformer-b3-fashion" naming pattern the b2
+# model already established.
+SEGFORMER_B3_REPO = "sayeed99/segformer-b3-fashion"
+SEGFORMER_B3_REVISION = "e2474a9e7643d349ac6c525549b736b736e7e216"
 # Filenames verified 2026-08-17 against the live repo file trees via the HF
 # API (not guessed) — this caught a real bug: clip_vision originally pointed
 # at models/image_encoder/ (the SD1.5 encoder), not sdxl_models/image_encoder/
@@ -155,6 +171,18 @@ def _download_pinned_models():
     )
     assert (segformer_dir / "config.json").exists(), "segformer snapshot missing config.json"
     print(f"pinned {SEGFORMER_REPO}@{SEGFORMER_REVISION} -> {segformer_dir}")
+
+    # The package's __init__.py imports this sibling model unconditionally
+    # too (see SEGFORMER_B3_REPO comment above) -- without it here, the
+    # whole custom node package fails to import and segformer_b2_clothes
+    # (the one the graph actually uses) never registers either.
+    segformer_b3_dir = models_root / "segformer_b3_fashion"
+    snapshot_download(
+        repo_id=SEGFORMER_B3_REPO, revision=SEGFORMER_B3_REVISION,
+        local_dir=str(segformer_b3_dir),
+    )
+    assert (segformer_b3_dir / "config.json").exists(), "segformer_b3_fashion snapshot missing config.json"
+    print(f"pinned {SEGFORMER_B3_REPO}@{SEGFORMER_B3_REVISION} -> {segformer_b3_dir}")
 
 
 image = (
