@@ -213,6 +213,22 @@ def _wait_for_port(port: int, timeout: int = 300):
     raise TimeoutError(f"ComfyUI never became ready on port {port}")
 
 
+def _image_path(out_dir: Path, image_info: dict) -> Path:
+    """ComfyUI's /history response splits each output image into separate
+    `filename` and `subfolder` keys -- SaveImage nodes here use
+    filename_prefix="raw/..." so the real file lands in output/raw/, but
+    `subfolder` is reported apart from `filename` rather than folded into
+    it. Joining out_dir directly to filename (the original code) silently
+    missed the raw/ component and raised FileNotFoundError. subfolder is
+    "" (not absent) when a node has no prefix, so this also has to work
+    when there's nothing to join.
+    """
+    subfolder = image_info.get("subfolder", "")
+    if subfolder:
+        return out_dir / subfolder / image_info["filename"]
+    return out_dir / image_info["filename"]
+
+
 @app.cls(
     gpu=GPU_TYPE,
     scaledown_window=SCALEDOWN_WINDOW_SECONDS,
@@ -301,9 +317,9 @@ class CardGenerator:
         result = self._submit_and_wait(prompt)
 
         outputs = result.get("outputs", {})
-        figure_file = outputs["19"]["images"][0]["filename"]
-        mask_file = outputs["21"]["images"][0]["filename"]
         out_dir = Path("/root/comfy/ComfyUI/output")
+        figure_path = _image_path(out_dir, outputs["19"]["images"][0])
+        mask_path = _image_path(out_dir, outputs["21"]["images"][0])
 
         # Alpha creation: SDXL/ComfyUI's own output is plain RGB, not RGBA —
         # diffusion models don't emit an alpha channel on their own no matter
@@ -313,7 +329,7 @@ class CardGenerator:
         # dreamlab's copy of that script is a genuine defense-in-depth
         # re-check, not a second independent implementation to keep in sync.
         session = new_session("isnet-anime")
-        raw_bytes = (out_dir / figure_file).read_bytes()
+        raw_bytes = figure_path.read_bytes()
         matted = remove(raw_bytes, session=session)
         img = Image.open(__import__("io").BytesIO(matted)).convert("RGBA")
         arr = np.array(img)
@@ -328,7 +344,7 @@ class CardGenerator:
         arr[:, :, 3] = hard_alpha
         final_figure = Image.fromarray(arr, mode="RGBA")
 
-        mask_img = Image.open(out_dir / mask_file).convert("L")
+        mask_img = Image.open(mask_path).convert("L")
         mask_arr = np.array(mask_img)
         mask_hard = np.where(mask_arr > 127, 255, 0).astype(np.uint8)
         final_mask = Image.fromarray(mask_hard, mode="L")
@@ -386,8 +402,8 @@ class CardGenerator:
         from azure.storage.blob import BlobServiceClient
 
         result = self._submit_and_wait(prompt)
-        filename = result["outputs"]["7"]["images"][0]["filename"]
         out_dir = Path("/root/comfy/ComfyUI/output")
+        image_path = _image_path(out_dir, result["outputs"]["7"]["images"][0])
 
         blob_service = BlobServiceClient(
             account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
@@ -395,7 +411,7 @@ class CardGenerator:
         )
         container = blob_service.get_container_client(AZURE_CONTAINER)
         blob_path = f"{AZURE_OUTPUT_PREFIX}/style_reference.png"
-        container.upload_blob(blob_path, (out_dir / filename).read_bytes(), overwrite=True)
+        container.upload_blob(blob_path, image_path.read_bytes(), overwrite=True)
         return {"blob_path": f"{AZURE_CONTAINER}/{blob_path}", "seed": seed}
 
 
