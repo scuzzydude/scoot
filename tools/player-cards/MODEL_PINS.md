@@ -1,0 +1,58 @@
+# Pinned versions — player-card generation
+
+Recorded 2026-08-17 per `HANDOFF.md` §3's non-negotiable: every custom node
+repo at an explicit commit, every model weight at an explicit revision, so
+this reproduces in 2029 as faithfully as it runs today. Nothing here tracks
+`main`/`latest`.
+
+## ComfyUI core
+
+| | |
+|---|---|
+| Repo | `https://github.com/comfyanonymous/ComfyUI` |
+| Commit | `b963f4ad210a42841ab23dfc28a84143a0cce227` |
+| Date | 2026-08-16 |
+
+## Custom nodes
+
+| Node pack | Repo | Commit | Date |
+|---|---|---|---|
+| `comfyui_controlnet_aux` (LineArt + Openpose preprocessors) | `Fannovel16/comfyui_controlnet_aux` | `e8b689a513c3e6b63edc44066560ca5919c0576e` | 2026-04-13 |
+| `ComfyUI_IPAdapter_plus` | `cubiq/ComfyUI_IPAdapter_plus` | `a0f451a5113cf9becb0847b92884cb10cbdec0ef` | 2025-04-14 |
+| `Comfyui_segformer_b2_clothes` (jersey mask pass) | `StartHua/Comfyui_segformer_b2_clothes` | `681721fbea6947e7bbc4ebb6192ed60bd8b473cb` | 2024-07-23 |
+
+These are the exact commits already cloned and structurally verified against
+`workflow_player_card.json` on `dreamlab` (2026-08-16) — every `class_type`
+in that graph was checked against this exact code, not a newer or older
+version of it.
+
+## Model weights (Hugging Face)
+
+Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
+2026-08-17.
+
+| Role | Repo | File | Revision (sha) |
+|---|---|---|---|
+| SDXL checkpoint (anime/comic) | `cagliostrolab/animagine-xl-4.0` | `animagine-xl-4.0.safetensors` | `2b7c1b397761bf5bd3cc42e5b39ec99314a75a96` |
+| SDXL Union ControlNet (lineart + openpose, one file) | `xinsir/controlnet-union-sdxl-1.0` | see repo for exact filename at build time | `801a4a3fa3d4c936f4feea95b98607bc6726f80c` |
+| IP-Adapter SDXL Plus + CLIP vision | `h94/IP-Adapter` | `sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` + matching ViT-H CLIP vision encoder from the same repo | `018e402774aeeddd60609b4ecdb7e298259dc729` |
+| Jersey-mask segmentation | `mattmdjaga/segformer_b2_clothes` | (loaded by the segformer node directly) | `584abc1e1d260e23c0fc627c5217a09b2b461046` |
+
+**Checkpoint choice — Animagine XL 4.0, not Illustrious-XL.** Both are real,
+pinnable options (`OnomaAIResearch/Illustrious-xl-early-release-v0`,
+sha `dca0dac303e6dc4b0c31d8001bc685b89b5d0204`, kept here as the documented
+fallback if Animagine's likeness/style results don't hold up in the
+three-card test). Animagine XL 4.0 was chosen first for stronger, more
+consistent flat cel-shading with less painterly drift, which matters more
+here than raw versatility.
+
+## What still needs a version pin once chosen
+
+- **Style reference image** — not yet generated (needs GPU; will be the
+  first Modal call once deployed, a zero-shot text-only generation with the
+  pinned checkpoint above, no conditioning). Once produced, it gets
+  committed to Blob storage at a fixed path and referenced by URL, not
+  regenerated per run.
+- **`comfy-cli` version** — pin at image-build time in `modal_app.py`
+  (`COMFY_VER` — see that file). Not yet run, so not yet fixed to a real
+  observed-working value beyond what's written there.

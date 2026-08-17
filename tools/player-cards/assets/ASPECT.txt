@@ -1,0 +1,2 @@
+scoot_glyph 0.5337
+scoot_glyph_34 0.5337

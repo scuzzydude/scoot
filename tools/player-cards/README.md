@@ -38,26 +38,52 @@ git. To actually run this:
 - `workflow_player_card.json` — the ComfyUI graph itself, 21 nodes,
   every `class_type` verified against the actual installed node source
   (not guessed). Structurally sound.
+- `modal_app.py` — the Modal deployment (2026-08-17). Every custom-node
+  commit and model revision pinned (`MODEL_PINS.md`), API usage verified
+  against Modal's *current* docs (not memory — the idle-timeout parameter
+  really has been renamed, it's `scaledown_window` now) and against the
+  actually-installed `modal==1.5.4` package (`python3 -c "import
+  modal_app"` loads clean). **Not deployed, not run** — no Modal account is
+  configured on `dreamlab` at all yet. See "Deploying" below.
 
-**Not done — needs the GPU box:**
-- No model weights are downloaded here (deliberately — they're multi-GB
-  each and dreamlab's disk habit is "don't fill the SSD," see the Nick
-  video storage work). See below for exactly what to fetch.
-- No actual generation has been test-run. The graph loads correctly but
-  every placeholder (`*_PLACEHOLDER*`) in `workflow_player_card.json`
-  needs a real value before it'll run.
-- Prompt skeleton below is a first draft — needs your eye on real output
-  before it's trustworthy.
+## Deploying
 
-## Models to download onto the GPU box
+Three things only Brandon can do first (HANDOFF.md §0 — deliberately not
+automatable, this project has no budget-alert-only close calls):
 
-Place under `ComfyUI/models/<subfolder>/`, matching ComfyUI's normal layout.
+1. Modal account + a **hard** usage limit set in the dashboard (not an
+   alert — see HANDOFF.md §8's warning about at least one image platform
+   charging past a prepaid balance).
+2. `pip install modal && modal token set --token-id <id> --token-secret <secret>`
+   on `dreamlab` (non-interactive — `modal setup`'s browser OAuth flow
+   hangs headlessly, this is the CLI's documented alternative).
+3. `modal secret create azure-blob-creds AZURE_STORAGE_ACCOUNT=stevearchive10723 AZURE_STORAGE_KEY=<key>`
+   — reuses the same storage account already in
+   `~/.config/rclone/rclone.conf`, so generated art lands in the same
+   `media` Blob container as everything else from this project.
 
-| Node | Subfolder | What | Suggestion |
-|---|---|---|---|
-| 2 (checkpoint) | `checkpoints/` | Anime/comic-style SDXL checkpoint | Start with an Illustrious-XL or Animagine-XL family finetune — both have strong bold-linework, cel-shaded output that matches "hard-edged shadows, bold contour lines, no gradients." Whatever you pick, it needs to actually produce flat cel-shading, not painterly anime — check example galleries before committing. |
-| 7 (controlnet) | `controlnet/` | SDXL Union ControlNet | `xinsir/controlnet-union-sdxl-1.0` — one file drives both the lineart pass (node 8) and openpose pass (node 9), instead of downloading two separate SDXL ControlNets. If it underperforms on either, fall back to two dedicated models and two separate `ControlNetLoader` nodes. |
-| 12 (ipadapter) | `ipadapter/` + `clip_vision/` | SDXL IP-Adapter Plus + its CLIP vision encoder | `ip-adapter-plus_sdxl_vit-h.safetensors` + the matching ViT-H CLIP vision model. `IPAdapterUnifiedLoader`'s "PLUS (high strength)" preset expects these specifically — check `ComfyUI_IPAdapter_plus`'s README for the exact expected filenames, it's picky about this. |
+Then:
+```bash
+modal deploy tools/player-cards/modal_app.py
+```
+
+First real call should be generating the **style reference image** (see
+below) — nothing else can run without it. After that, the three-card
+likeness test per `HANDOFF.md` §2, using `modal_app.py`'s `spawn_example()`
+pattern (never a blocking call — see MODAL_BUILD_SPEC.md §3, this matters
+because of the synchronous-webhook finding in the discovery doc).
+
+## Models — pinned, see MODEL_PINS.md
+
+| Node | Subfolder | What |
+|---|---|---|
+| 2 (checkpoint) | `checkpoints/` | `cagliostrolab/animagine-xl-4.0` — chosen over Illustrious-XL for flatter, more consistent cel-shading (Illustrious kept as documented fallback if the likeness test says otherwise) |
+| 7 (controlnet) | `controlnet/` | `xinsir/controlnet-union-sdxl-1.0` — one file drives both the lineart pass (node 8) and openpose pass (node 9) via `SetUnionControlNetType`, instead of two separate downloads |
+| 12 (ipadapter) | `ipadapter/` + `clip_vision/` | `h94/IP-Adapter`'s SDXL Plus model + matching ViT-H CLIP vision encoder |
+
+Exact revisions/commit SHAs for all of the above, plus every custom node,
+are in `MODEL_PINS.md` — not repeated here so there's exactly one place to
+keep them current.
 
 ## The style reference image (node 13)
 
@@ -67,6 +93,14 @@ look — flat 2-3 tone cel shading, bold contour lines, the comic/manga style
 you want every card to share. Doesn't need to be a Scoot player; needs to
 be a strong, unambiguous example of the target rendering style. Whatever
 you pick, treat it like the seed — decide once, don't swap it mid-edition.
+
+**Not generated yet — no GPU access until Modal is live.** Plan: a
+zero-shot text-only call against the pinned checkpoint (no IP-Adapter, no
+ControlNet, just the prompt skeleton below), reviewed once, then locked to
+a fixed Blob path and never regenerated. Sourcing it from an existing image
+found online was deliberately ruled out — provenance/licensing on a
+self-generated reference is unambiguous, borrowed art isn't, and this
+project already has a "don't guess, verify" habit worth keeping here too.
 
 ## Prompt skeleton (node 3) — DRAFT, needs your eye on real output
 

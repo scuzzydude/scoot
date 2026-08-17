@@ -19,7 +19,10 @@ Crop marks sit outside the block. Six cards per letter sheet.
 
 import argparse
 import csv
+import hashlib
+import math
 import os
+import random
 import sys
 
 from reportlab.lib.pagesizes import letter
@@ -203,11 +206,12 @@ def player_art(serial, art_dir, side, legacy_suffix):
 
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 GLYPH_PNG = os.path.join(ASSETS, "scoot_glyph_black_transparent.png")
+GLYPH_WHITE_PNG = os.path.join(ASSETS, "scoot_glyph_white_transparent.png")
 GHOST_PNG = os.path.join(ASSETS, "scoot_glyph_ghost.png")
 GLYPH_ASPECT = 0.5337                 # w/h of the official mark
 
 
-def draw_glyph(c, cx, cy, r, disc_color, ink_color):
+def draw_glyph(c, cx, cy, r, disc_color, ink_color, invert=False):
     """The scoot token mark, inside a disc.
 
     Uses the official mark from assets/. Falls back to a drawn stand-in if
@@ -216,10 +220,11 @@ def draw_glyph(c, cx, cy, r, disc_color, ink_color):
     c.setFillColor(disc_color)
     c.circle(cx, cy, r, stroke=0, fill=1)
 
-    if os.path.exists(GLYPH_PNG):
+    src = GLYPH_WHITE_PNG if invert else GLYPH_PNG
+    if os.path.exists(src):
         gh = r * 1.46
         gw = gh * GLYPH_ASPECT
-        c.drawImage(GLYPH_PNG, cx - gw / 2.0, cy - gh / 2.0,
+        c.drawImage(src, cx - gw / 2.0, cy - gh / 2.0,
                     width=gw, height=gh, mask="auto")
         return
 
@@ -271,25 +276,69 @@ def draw_placeholder_figure(c, x, y, w, h, ink_color):
 
 # -------------------------------------------------------------- card faces ---
 
+def _seed(serial):
+    """Deterministic RNG from the scoot serial, so a card's background is
+    unique to the member and reproduces identically on every reprint."""
+    h = hashlib.sha256(serial.encode("utf-8")).hexdigest()[:12]
+    return random.Random(int(h, 16))
+
+
+def draw_manga_bg(c, x, y, serial):
+    """Speed lines and a screentone wedge, black on white, seeded by serial.
+
+    The chrome is only ever black and white. Colour belongs to the
+    illustration and to the tier rule, never to the background.
+    """
+    rng = _seed(serial)
+    c.saveState()
+    clip = c.beginPath()
+    clip.rect(x + BAND, y + BAND, ART_W, ART_H)
+    c.clipPath(clip, stroke=0, fill=0)
+
+    # screentone wedge, anchored to a bottom corner
+    c.setFillColor(HexColor("#1A1A18"))
+    left = rng.random() < 0.5
+    wx = ART_W * rng.uniform(0.68, 0.92)
+    wy = ART_H * rng.uniform(0.34, 0.48)
+    step, rad = 6.0, 1.5
+    x0, y0 = x + BAND, y + BAND
+    n_cols = int(ART_W / step) + 1
+    n_rows = int(ART_H / step) + 1
+    for i in range(n_cols):
+        for j in range(n_rows):
+            px, py = x0 + i * step, y0 + j * step
+            u = (px - x0) / ART_W if left else 1.0 - (px - x0) / ART_W
+            if u > wx / ART_W:
+                continue
+            if (py - y0) > wy * (1.0 - u / (wx / ART_W)):
+                continue
+            c.circle(px, py, rad, stroke=0, fill=1)
+
+    # radiating speed lines from behind the figure
+    cx = x + TRIM_W * rng.uniform(0.44, 0.56)
+    cy = y + TRIM_H * rng.uniform(0.56, 0.70)
+    n = rng.choice([15, 17, 19])
+    a0 = rng.uniform(0.0, 360.0)
+    r0, r1 = TRIM_H * 0.21, TRIM_H * 1.5
+    c.setStrokeColor(HexColor("#1A1A18"))
+    for i in range(n):
+        ang = math.radians(a0 + i * 360.0 / n + rng.uniform(-3.5, 3.5))
+        c.setLineWidth(rng.choice([0.7, 1.4, 2.2, 3.2]))
+        ca, sa = math.cos(ang), math.sin(ang)
+        c.line(cx + r0 * ca, cy + r0 * sa, cx + r1 * ca, cy + r1 * sa)
+    c.restoreState()
+
+
 def draw_front(c, x, y, row, art_dir):
     field, on_field = tier_colors(row.get("tier"))
     serial = row.get("serial", "").strip()
 
     draw_band(c, x, y, INK, PAPER)
 
-    # field
-    c.setFillColor(field)
+    # white field, then the drawn manga background
+    c.setFillColor(PAPER)
     c.rect(x + BAND, y + BAND, ART_W, ART_H, stroke=0, fill=1)
-
-    # ghosted 34 behind the figure
-    c.saveState()
-    clip = c.beginPath()
-    clip.rect(x + BAND, y + BAND, ART_W, ART_H)
-    c.clipPath(clip, stroke=0, fill=0)
-    c.setFillColor(tint(field, 0.055))
-    c.setFont("CondBold", 132)
-    c.drawCentredString(x + TRIM_W * 0.72, y + TRIM_H * 0.30, "34")
-    c.restoreState()
+    draw_manga_bg(c, x, y, serial)
 
     # silhouette
     art = player_art(serial, art_dir, "dark", "front")
@@ -311,15 +360,17 @@ def draw_front(c, x, y, row, art_dir):
     c.setFont("CondBold", 19)
     c.drawString(x + BAND + 8, y + BAND + 14, row.get("handle", "").strip())
 
+    c.setFillColor(field)
+    c.setFont("Cond", 7.5)
+    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 19,
+                      row.get("tier", "").strip())
     c.setFillColor(MUTED)
     c.setFont("Mono", 6)
     c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 8, serial)
-    c.setFont("Cond", 7)
-    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 19,
-                      row.get("edition", "").strip())
 
     # token mark
-    draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22, 14, PAPER, INK)
+    draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22, 14, INK, PAPER,
+               invert=True)
 
 
 def draw_back(c, x, y, row, art_dir):
