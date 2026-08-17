@@ -192,6 +192,15 @@ image = (
         # rembg for the in-container alpha-matting step (see generate() below)
         "rembg[cpu]",
         "azure-storage-blob", "httpx", "pillow", "numpy",
+        # The --no-deps custom-node requirements pass above (needed to protect
+        # the pinned torch build) also stripped THEIR transitive deps. Two of
+        # those turned out to be load-bearing for nodes the main generate()
+        # graph needs: pyparsing (matplotlib -> dwpose, for OpenposePreprocessor)
+        # and joblib (scikit-learn -> transformers.generation.GenerationMixin's
+        # lazy import chain -> AutoModelForSemanticSegmentation, for segformer's
+        # jersey-mask node). Confirmed via modal shell: both failed with plain
+        # ModuleNotFoundError, not a version mismatch -- genuinely absent.
+        "pyparsing", "joblib",
     )
     .run_function(_download_pinned_models)
     .add_local_file(
