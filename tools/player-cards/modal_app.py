@@ -152,13 +152,33 @@ image = (
         "torch==2.13.0", "torchvision==0.28.0", "torchaudio==2.11.0",
         extra_options="--index-url https://download.pytorch.org/whl/cu129",
     )
+    # A pip constraints file (not a requirements file -- it only restricts
+    # versions pip is ALLOWED to pick, never installs anything on its own)
+    # pinning exactly the torch build above. This replaces --no-deps as the
+    # guard against custom nodes' requirements.txt clobbering torch: with
+    # --no-deps, EVERY transitive dependency of every custom node was
+    # silently dropped, not just the torch-adjacent ones. That surfaced as a
+    # chain of real, one-at-a-time missing-module failures once the actual
+    # generate() graph exercised the affected nodes (pyparsing and joblib
+    # fixed two; scikit-learn's narwhals/threadpoolctl and matplotlib's
+    # contourpy/fonttools/kiwisolver were still missing after that -- a
+    # genuine whack-a-mole, confirmed via modal shell each time, not
+    # guessed). Installing with -c constraints.txt instead lets pip resolve
+    # each node's FULL dependency tree normally; pip refuses to violate the
+    # constraint rather than silently downgrading torch.
+    .run_commands(
+        "printf 'torch==2.13.0\\ntorchvision==0.28.0\\ntorchaudio==2.11.0\\n' "
+        "> /root/constraints.txt"
+    )
     .run_commands(
         _clone_and_pin(
             "https://github.com/comfyanonymous/ComfyUI.git",
             COMFYUI_COMMIT, "/root/comfy/ComfyUI",
         )
     )
-    .run_commands("cd /root/comfy/ComfyUI && pip install -r requirements.txt")
+    .run_commands(
+        "cd /root/comfy/ComfyUI && pip install -c /root/constraints.txt -r requirements.txt"
+    )
     .run_commands(
         *[
             _clone_and_pin(
@@ -168,39 +188,28 @@ image = (
             for n in CUSTOM_NODES
         ]
     )
-    # Each custom node's own requirements, --no-deps so none of them can
-    # clobber the pinned torch build above.
     .run_commands(
         "for d in /root/comfy/ComfyUI/custom_nodes/*/; do "
         '  if [ -f "$d/requirements.txt" ]; then '
-        '    pip install --no-deps -r "$d/requirements.txt"; '
+        '    pip install -c /root/constraints.txt -r "$d/requirements.txt"; '
         "  fi; "
         "done"
     )
     # Comfyui_segformer_b2_clothes/requirements.txt pins transformers==4.33.2
-    # directly (--no-deps above only stops IT from pulling deps, it doesn't
-    # stop the explicit pin from installing and silently downgrading the
-    # transformers ComfyUI's own requirements.txt already resolved). That
-    # left a mismatched tokenizers on disk and crashed the container at
-    # import time — confirmed by an actual failed run, not guessed.
-    # Re-asserting ComfyUI's own requirements last makes it authoritative
-    # over anything upstream regressed.
-    .run_commands("cd /root/comfy/ComfyUI && pip install -r requirements.txt")
+    # directly, which (now installed WITH its deps) would leave that older
+    # transformers on disk after the loop above. Re-asserting ComfyUI's own
+    # requirements last makes it authoritative over anything upstream
+    # regressed -- this was true under --no-deps too (Bug 3) and stays true
+    # here; the constraints file only protects torch, nothing else.
+    .run_commands(
+        "cd /root/comfy/ComfyUI && pip install -c /root/constraints.txt -r requirements.txt"
+    )
     .pip_install(
         "huggingface_hub", "opencv-python-headless", "onnxruntime",
         "insightface", "segment-anything",
         # rembg for the in-container alpha-matting step (see generate() below)
         "rembg[cpu]",
         "azure-storage-blob", "httpx", "pillow", "numpy",
-        # The --no-deps custom-node requirements pass above (needed to protect
-        # the pinned torch build) also stripped THEIR transitive deps. Two of
-        # those turned out to be load-bearing for nodes the main generate()
-        # graph needs: pyparsing (matplotlib -> dwpose, for OpenposePreprocessor)
-        # and joblib (scikit-learn -> transformers.generation.GenerationMixin's
-        # lazy import chain -> AutoModelForSemanticSegmentation, for segformer's
-        # jersey-mask node). Confirmed via modal shell: both failed with plain
-        # ModuleNotFoundError, not a version mismatch -- genuinely absent.
-        "pyparsing", "joblib",
     )
     .run_function(_download_pinned_models)
     .add_local_file(
