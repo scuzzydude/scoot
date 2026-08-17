@@ -383,6 +383,8 @@ class CardGenerator:
             "7": {"class_type": "SaveImage",
                   "inputs": {"images": ["6", 0], "filename_prefix": "raw/style_reference"}},
         }
+        from azure.storage.blob import BlobServiceClient
+
         result = self._submit_and_wait(prompt)
         filename = result["outputs"]["7"]["images"][0]["filename"]
         out_dir = Path("/root/comfy/ComfyUI/output")
