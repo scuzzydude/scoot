@@ -236,7 +236,11 @@ class CardGenerator:
 
         base = f"http://127.0.0.1:{COMFY_PORT}"
         resp = httpx.post(f"{base}/prompt", json={"prompt": prompt}, timeout=30)
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            # ComfyUI's validation errors are in the body, not the status
+            # line -- surface them, a bare raise_for_status() hides exactly
+            # the detail needed to fix a bad graph.
+            raise RuntimeError(f"ComfyUI /prompt rejected the graph ({resp.status_code}): {resp.text}")
         prompt_id = resp.json()["prompt_id"]
 
         deadline = time.time() + timeout
