@@ -75,6 +75,18 @@ MODEL_DOWNLOADS = [
     ("h94/IP-Adapter", "sdxl_models/image_encoder/model.safetensors",
      "018e402774aeeddd60609b4ecdb7e298259dc729", "clip_vision"),
 ]
+
+# segformer_b2_clothes.py loads its model with a MODULE-LEVEL (not lazy)
+# SegformerImageProcessor.from_pretrained(models_dir/"segformer_b2_clothes")
+# call -- it expects a full local HF snapshot already sitting at that path,
+# not a single weights file. Without it the custom node fails to import at
+# all ("Repo id must be in the form 'repo_name' or 'namespace/repo_name'",
+# since it tries to resolve the bare local path as a hub repo id instead),
+# so generate() rejects the whole graph with "Node 'segformer_b2_clothes'
+# not found." Confirmed via modal shell (reading the node's source) and an
+# actual failed generate() call, not guessed.
+SEGFORMER_REPO = "mattmdjaga/segformer_b2_clothes"
+SEGFORMER_REVISION = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 # Filenames verified 2026-08-17 against the live repo file trees via the HF
 # API (not guessed) — this caught a real bug: clip_vision originally pointed
 # at models/image_encoder/ (the SD1.5 encoder), not sdxl_models/image_encoder/
@@ -121,7 +133,7 @@ def _download_pinned_models():
     nothing for the snapshot mechanism to miss.
     """
     import shutil
-    from huggingface_hub import hf_hub_download
+    from huggingface_hub import hf_hub_download, snapshot_download
 
     models_root = Path("/root/comfy/ComfyUI/models")
     for repo_id, filename, revision, subdir in MODEL_DOWNLOADS:
@@ -133,6 +145,16 @@ def _download_pinned_models():
         shutil.copy(path, dest)
         assert dest.exists() and dest.stat().st_size > 0, f"copy failed for {dest}"
         print(f"pinned {repo_id}/{filename}@{revision} -> {dest}")
+
+    # Full snapshot, not a single file -- segformer's from_pretrained() needs
+    # config.json + preprocessor_config.json + weights all present together.
+    segformer_dir = models_root / "segformer_b2_clothes"
+    snapshot_download(
+        repo_id=SEGFORMER_REPO, revision=SEGFORMER_REVISION,
+        local_dir=str(segformer_dir),
+    )
+    assert (segformer_dir / "config.json").exists(), "segformer snapshot missing config.json"
+    print(f"pinned {SEGFORMER_REPO}@{SEGFORMER_REVISION} -> {segformer_dir}")
 
 
 image = (
