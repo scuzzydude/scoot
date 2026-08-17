@@ -168,6 +168,15 @@ image = (
         "  fi; "
         "done"
     )
+    # Comfyui_segformer_b2_clothes/requirements.txt pins transformers==4.33.2
+    # directly (--no-deps above only stops IT from pulling deps, it doesn't
+    # stop the explicit pin from installing and silently downgrading the
+    # transformers ComfyUI's own requirements.txt already resolved). That
+    # left a mismatched tokenizers on disk and crashed the container at
+    # import time — confirmed by an actual failed run, not guessed.
+    # Re-asserting ComfyUI's own requirements last makes it authoritative
+    # over anything upstream regressed.
+    .run_commands("cd /root/comfy/ComfyUI && pip install -r requirements.txt")
     .pip_install(
         "huggingface_hub", "opencv-python-headless", "onnxruntime",
         "insightface", "segment-anything",
