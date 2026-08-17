@@ -34,8 +34,9 @@ Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
 | Role | Repo | File | Revision (sha) |
 |---|---|---|---|
 | SDXL checkpoint (anime/comic) | `cagliostrolab/animagine-xl-4.0` | `animagine-xl-4.0.safetensors` | `2b7c1b397761bf5bd3cc42e5b39ec99314a75a96` |
-| SDXL Union ControlNet (lineart + openpose, one file) | `xinsir/controlnet-union-sdxl-1.0` | see repo for exact filename at build time | `801a4a3fa3d4c936f4feea95b98607bc6726f80c` |
-| IP-Adapter SDXL Plus + CLIP vision | `h94/IP-Adapter` | `sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` + matching ViT-H CLIP vision encoder from the same repo | `018e402774aeeddd60609b4ecdb7e298259dc729` |
+| SDXL Union ControlNet (lineart + openpose, one file) | `xinsir/controlnet-union-sdxl-1.0` | `diffusion_pytorch_model.safetensors` | `801a4a3fa3d4c936f4feea95b98607bc6726f80c` |
+| IP-Adapter SDXL Plus | `h94/IP-Adapter` | `sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | `018e402774aeeddd60609b4ecdb7e298259dc729` |
+| Matching CLIP vision encoder | `h94/IP-Adapter` | `sdxl_models/image_encoder/model.safetensors` (NOT `models/image_encoder/` — that's the SD1.5 encoder, a real bug this repo shipped with briefly on 2026-08-17 until checked against the live file tree) | `018e402774aeeddd60609b4ecdb7e298259dc729` |
 | Jersey-mask segmentation | `mattmdjaga/segformer_b2_clothes` | (loaded by the segformer node directly) | `584abc1e1d260e23c0fc627c5217a09b2b461046` |
 
 **Checkpoint choice — Animagine XL 4.0, not Illustrious-XL.** Both are real,

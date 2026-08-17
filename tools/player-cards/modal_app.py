@@ -72,12 +72,13 @@ MODEL_DOWNLOADS = [
      "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet"),
     ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
      "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter"),
-    ("h94/IP-Adapter", "models/image_encoder/model.safetensors",
+    ("h94/IP-Adapter", "sdxl_models/image_encoder/model.safetensors",
      "018e402774aeeddd60609b4ecdb7e298259dc729", "clip_vision"),
 ]
-# NOTE: exact filenames inside xinsir/controlnet-union-sdxl-1.0 and the
-# h94/IP-Adapter repo layout were not re-verified against the live repo file
-# tree at write time (only the repo-level revision sha was). Confirm the
+# Filenames verified 2026-08-17 against the live repo file trees via the HF
+# API (not guessed) — this caught a real bug: clip_vision originally pointed
+# at models/image_encoder/ (the SD1.5 encoder), not sdxl_models/image_encoder/
+# (the SDXL one IPAdapterUnifiedLoader's "PLUS" preset actually needs).
 # literal filenames resolve before the first real build — a 404 here fails
 # the image build loudly, which is the safe failure mode, but worth checking
 # ahead of time rather than discovering it mid-deploy.
