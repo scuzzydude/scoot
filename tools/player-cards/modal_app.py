@@ -64,16 +64,33 @@ CUSTOM_NODES = [
     },
 ]
 
-# (repo_id, filename, revision, target dir under ComfyUI/models/)
+# (repo_id, filename, revision, target dir under ComfyUI/models/, local filename override)
+# local filename override is None unless IPAdapterUnifiedLoader's regex-based
+# auto-detection (utils.py get_clipvision_file/get_ipadapter_file) needs a
+# specific name to match on -- HF's own filenames are generic ("model.safetensors")
+# and never match those patterns as-is.
 MODEL_DOWNLOADS = [
     ("cagliostrolab/animagine-xl-4.0", "animagine-xl-4.0.safetensors",
-     "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96", "checkpoints"),
+     "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96", "checkpoints", None),
     ("xinsir/controlnet-union-sdxl-1.0", "diffusion_pytorch_model.safetensors",
-     "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet"),
+     "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet", None),
     ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
-     "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter"),
-    ("h94/IP-Adapter", "sdxl_models/image_encoder/model.safetensors",
-     "018e402774aeeddd60609b4ecdb7e298259dc729", "clip_vision"),
+     "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter", None),
+    # NOT sdxl_models/image_encoder/ (ViT-bigG-14, hidden_size 1664) despite
+    # this being an SDXL checkpoint -- get_clipvision_file()'s regex for any
+    # preset other than "vit-g"/"kolors" (this graph's node 12 uses "PLUS
+    # (high strength)") only matches ViT-H-14-*-s32B-b79K, which is the
+    # PLAIN models/image_encoder/ path (hidden_size 1280). Confirmed by
+    # reading ComfyUI_IPAdapter_plus/utils.py's actual regex via modal shell
+    # AND cross-checking both encoders' config.json hidden_size/layers via
+    # the HF API -- the ip-adapter-plus_sdxl_vit-h.safetensors filename
+    # itself says "vit-h", not "vit-bigg". The earlier "clip_vision fix"
+    # recorded in MODEL_PINS.md (switching TO sdxl_models/) was itself
+    # wrong, caught here by an actual failed generate() call
+    # ("ClipVision model not found") rather than by re-reasoning alone.
+    ("h94/IP-Adapter", "models/image_encoder/model.safetensors",
+     "018e402774aeeddd60609b4ecdb7e298259dc729", "clip_vision",
+     "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"),
 ]
 
 # segformer_b2_clothes.py loads its model with a MODULE-LEVEL (not lazy)
@@ -191,11 +208,11 @@ def _download_pinned_models():
     from huggingface_hub import hf_hub_download, snapshot_download
 
     models_root = Path("/root/comfy/ComfyUI/models")
-    for repo_id, filename, revision, subdir in MODEL_DOWNLOADS:
+    for repo_id, filename, revision, subdir, local_name_override in MODEL_DOWNLOADS:
         target_dir = models_root / subdir
         target_dir.mkdir(parents=True, exist_ok=True)
         path = hf_hub_download(repo_id=repo_id, filename=filename, revision=revision)
-        local_name = Path(filename).name
+        local_name = local_name_override or Path(filename).name
         dest = target_dir / local_name
         shutil.copy(path, dest)
         assert dest.exists() and dest.stat().st_size > 0, f"copy failed for {dest}"
@@ -361,7 +378,10 @@ class CardGenerator:
         # comment above) -- real filenames come from MODEL_DOWNLOADS itself,
         # not re-typed, so this can't drift from what _download_pinned_models
         # actually staged on disk.
-        by_subdir = {subdir: Path(filename).name for _, filename, _, subdir in MODEL_DOWNLOADS}
+        by_subdir = {
+            subdir: local_name_override or Path(filename).name
+            for _, filename, _, subdir, local_name_override in MODEL_DOWNLOADS
+        }
         template["2"]["inputs"]["ckpt_name"] = by_subdir["checkpoints"]
         template["7"]["inputs"]["control_net_name"] = by_subdir["controlnet"]
         template["3"]["inputs"]["text"] = PROMPT_POSITIVE
