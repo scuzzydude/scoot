@@ -107,22 +107,31 @@ def _clone_and_pin(url: str, commit: str, dest: str) -> str:
 
 def _download_pinned_models():
     """Image-build step: bake model weights into a cached layer instead of
-    fetching them at cold start (HANDOFF §2)."""
+    fetching them at cold start (HANDOFF §2).
+
+    First version symlinked into a custom /cache dir via hf_hub_download's
+    cache_dir param. That printed success at build time but the files
+    weren't actually in the deployed image -- confirmed by shelling into
+    the built image directly (`modal shell ...`), checkpoints/ was empty
+    and /cache didn't exist at all. run_function's layer capture apparently
+    doesn't reliably snapshot that combination (custom cache_dir + symlink
+    into it, both outside the paths it seems to actually track). Fixed by
+    using hf_hub_download's own default cache and copying (not symlinking)
+    the real file straight to its destination -- no custom paths, no links,
+    nothing for the snapshot mechanism to miss.
+    """
+    import shutil
     from huggingface_hub import hf_hub_download
 
     models_root = Path("/root/comfy/ComfyUI/models")
     for repo_id, filename, revision, subdir in MODEL_DOWNLOADS:
         target_dir = models_root / subdir
         target_dir.mkdir(parents=True, exist_ok=True)
-        path = hf_hub_download(
-            repo_id=repo_id, filename=filename, revision=revision,
-            cache_dir="/cache",
-        )
+        path = hf_hub_download(repo_id=repo_id, filename=filename, revision=revision)
         local_name = Path(filename).name
         dest = target_dir / local_name
-        if dest.exists() or dest.is_symlink():
-            dest.unlink()
-        os.symlink(path, dest)
+        shutil.copy(path, dest)
+        assert dest.exists() and dest.stat().st_size > 0, f"copy failed for {dest}"
         print(f"pinned {repo_id}/{filename}@{revision} -> {dest}")
 
 
