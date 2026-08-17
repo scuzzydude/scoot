@@ -1,19 +1,29 @@
 # Scoot(34) player card art pipeline
 
-See `arch/player-cards.md` (v1.1) for the full spec this implements. Built
-on **dreamlab** (no GPU) — structurally validated here, but actual
-generation needs to run on the GPU box.
+See `arch/player-cards.md` (v1.2) for the full spec this implements. The
+generation side (this README, `workflow_player_card.json`,
+`prep_cutout.py`, `finalize_card.py`) was built on **dreamlab** (no GPU) —
+structurally validated here, actual generation runs on Modal (see the v1.2
+spec's update note in §1b). `build_cards.py` + `assets/` (sheet assembly +
+the real scoot glyph mark) arrived 2026-08-17 from the other side of this
+project and are canonical, not placeholders.
 
-This folder holds only what we authored: the workflow graph and two
-pre/post-processing scripts. It does NOT include a ComfyUI checkout or any
-model weights — those are reproducible from public sources (see below) and
-don't belong in git. To actually run this:
+This folder holds what we authored plus what was handed off — the workflow
+graph, two pre/post-processing scripts, the card-assembly script, and the
+glyph assets. It does NOT include a ComfyUI checkout or any model weights —
+those are reproducible from public sources (see below) and don't belong in
+git. To actually run this:
 - `workflow_player_card.json` is portable — drop it into any ComfyUI
   install's root (or its `user/default/workflows/` folder) and load it from
   the UI, or POST it to that install's `/prompt` API endpoint.
 - `prep_cutout.py` and `finalize_card.py` only need `pip install
   "rembg[cpu]" pillow numpy` — no ComfyUI/torch dependency for either one,
   they're plain pre/post-processing.
+- `build_cards.py` needs `reportlab` + `pillow` + `numpy`, a `roster.csv`
+  (per-edition, not checked in), and `art/` populated with
+  `{serial}_figure.png` + `{serial}_jersey_mask.png` per player.
+  `assets/` must stay a sibling directory — the glyph path resolves
+  relative to the script's own location, not the CWD.
 
 ## What's built, what isn't
 
