@@ -388,6 +388,34 @@ class CardGenerator:
         template["4"]["inputs"]["text"] = PROMPT_NEGATIVE
         template["18"]["inputs"]["crop"] = "disabled"  # graph JSON has a typo: "disable"
 
+        # Tuning pass 1 (2026-08-17), after the first real end-to-end output
+        # (Brandon, seed 340034): the result was a washed-out, semi-
+        # photographic blur, not the intended cel-shaded illustration --
+        # the checkpoint's anime style was losing a fight against very
+        # strong, fixed conditioning. Two suspects, both addressed:
+        #  - Node 5 LineArtPreprocessor's "coarse" was off, so it extracted
+        #    literal photographic edges (every shading gradient, not just
+        #    silhouette/garment lines) from the player's real photo cutout
+        #    -- turning coarse ON simplifies that to bolder, illustration-
+        #    like lines closer to what an actual line-art source would give.
+        #  - Node 10's lineart ControlNet strength (0.8) and node 14's
+        #    IPAdapter (weight 1.0, active the ENTIRE denoise range 0.0-1.0)
+        #    were both pinning the output too hard, fighting the
+        #    checkpoint's own trained style through to the final steps.
+        #    Lowered lineart strength and shortened IPAdapter's active
+        #    range so the last portion of denoising is governed more by the
+        #    checkpoint itself. Pose ControlNet (node 11, strength 0.6) left
+        #    unchanged -- skeleton/keypoint conditioning doesn't carry
+        #    photographic texture the way raw line-art edges do, so it
+        #    wasn't a suspect for the blur, and lowering it would cost
+        #    likeness/pose accuracy for no benefit.
+        # Not yet re-verified against real output -- next generate() call
+        # is the check.
+        template["5"]["inputs"]["coarse"] = "enable"
+        template["10"]["inputs"]["strength"] = 0.4
+        template["14"]["inputs"]["weight"] = 0.7
+        template["14"]["inputs"]["end_at"] = 0.85
+
         self.workflow_template = template
 
     @modal.exit()
