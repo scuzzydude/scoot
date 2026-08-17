@@ -327,6 +327,46 @@ class CardGenerator:
             "jersey_mask_path": f"{AZURE_CONTAINER}/{mask_blob}",
         }
 
+    @modal.method()
+    def generate_style_reference(self, seed: int, prompt_text: str, negative_text: str) -> dict:
+        """Bootstrap-only: the main graph (generate(), above) REQUIRES a style
+        reference as IP-Adapter input, so it can't produce one itself —
+        chicken-and-egg. This is a plain checkpoint + prompt + KSampler
+        subgraph with no ControlNet, no IP-Adapter, run exactly once to
+        create the one fixed reference image the whole edition then locks to.
+        Uploads to a fixed Blob path and returns it; does not overwrite an
+        existing reference unless explicitly asked (see main() below)."""
+        prompt = {
+            "1": {"class_type": "CheckpointLoaderSimple",
+                  "inputs": {"ckpt_name": "animagine-xl-4.0.safetensors"}},
+            "2": {"class_type": "CLIPTextEncode",
+                  "inputs": {"clip": ["1", 1], "text": prompt_text}},
+            "3": {"class_type": "CLIPTextEncode",
+                  "inputs": {"clip": ["1", 1], "text": negative_text}},
+            "4": {"class_type": "EmptyLatentImage",
+                  "inputs": {"width": 1024, "height": 1462, "batch_size": 1}},
+            "5": {"class_type": "KSampler",
+                  "inputs": {"model": ["1", 0], "positive": ["2", 0], "negative": ["3", 0],
+                             "latent_image": ["4", 0], "seed": seed, "steps": 30,
+                             "cfg": 6.5, "sampler_name": "dpmpp_2m", "scheduler": "karras",
+                             "denoise": 1.0}},
+            "6": {"class_type": "VAEDecode", "inputs": {"samples": ["5", 0], "vae": ["1", 2]}},
+            "7": {"class_type": "SaveImage",
+                  "inputs": {"images": ["6", 0], "filename_prefix": "raw/style_reference"}},
+        }
+        result = self._submit_and_wait(prompt)
+        filename = result["outputs"]["7"]["images"][0]["filename"]
+        out_dir = Path("/root/comfy/ComfyUI/output")
+
+        blob_service = BlobServiceClient(
+            account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
+            credential=os.environ["AZURE_STORAGE_KEY"],
+        )
+        container = blob_service.get_container_client(AZURE_CONTAINER)
+        blob_path = f"{AZURE_OUTPUT_PREFIX}/style_reference.png"
+        container.upload_blob(blob_path, (out_dir / filename).read_bytes(), overwrite=True)
+        return {"blob_path": f"{AZURE_CONTAINER}/{blob_path}", "seed": seed}
+
 
 # ---------------------------------------------------------------------------
 # How dreamlab (or anything else) calls this — spawn/poll, never blocking.
