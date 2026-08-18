@@ -47,6 +47,27 @@ Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
 | Matching CLIP vision encoder | `h94/IP-Adapter` | `models/image_encoder/model.safetensors`, saved locally as `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` (**NOT** `sdxl_models/image_encoder/` — despite the SDXL checkpoint, `ip-adapter-plus_sdxl_vit-h.safetensors` needs the ViT-H encoder its own filename names, hidden_size 1280/32 layers; `sdxl_models/image_encoder/` is ViT-bigG, hidden_size 1664/48 layers, only for the "VIT-G" preset. This repo briefly had it backwards in the other direction on 2026-08-17 — see git history — caught by an actual failed `generate()` call raising "ClipVision model not found", not by re-reasoning. IPAdapterUnifiedLoader's `get_clipvision_file()` also matches by filename **regex** against the preset, not content — the raw HF filename `model.safetensors` never matches, hence the rename) | `018e402774aeeddd60609b4ecdb7e298259dc729` |
 | Jersey-mask segmentation | `mattmdjaga/segformer_b2_clothes` | (loaded by the segformer node directly) | `584abc1e1d260e23c0fc627c5217a09b2b461046` |
 | Jersey-mask segmentation, sibling model | `sayeed99/segformer-b3-fashion` | (loaded by the segformer node directly) | `e2474a9e7643d349ac6c525549b736b736e7e216` |
+| Facial identity — IP-Adapter FaceID Plus V2 | `h94/IP-Adapter-FaceID` | `ip-adapter-faceid-plusv2_sdxl.bin` | `43907e6f44d079bf1a9102d9a6e56aef7a219bae` |
+| Facial identity — matching LoRA | `h94/IP-Adapter-FaceID` | `ip-adapter-faceid-plusv2_sdxl_lora.safetensors` (saved to `models/loras/`, not `models/ipadapter/`) | `43907e6f44d079bf1a9102d9a6e56aef7a219bae` |
+| Facial identity — face analysis | InsightFace `buffalo_l` model pack | fetched via `insightface.app.FaceAnalysis`, not HF — baked into the image build the same way, `models/insightface/` | pinned by named release (`buffalo_l`), not a HF sha |
+
+**Second IPAdapter branch, added 2026-08-18.** The three-card likeness test
+(Brandon usable, Nick/Rufus lost all facial structure) traced to an
+architectural gap, not a tunable parameter: the graph's only IPAdapter pass
+(node 12/14) is fed the fixed style-reference image for style transfer — it
+never saw a subject's own photo, so nothing in the pipeline was responsible
+for preserving identity. First attempt swapped node 12 to the "PLUS FACE
+(portraits)" preset (cheapest possible test, no new weights) — that made it
+*worse* (a subject's face came out completely blank), because it just made
+the same style-transfer pass reinterpret the non-face style reference image
+as if it were a face crop. The working fix adds nodes 22/23
+(`IPAdapterUnifiedLoaderFaceID` + `IPAdapterFaceID`) as a second, independent
+branch conditioned on each subject's own cutout (node 1), chained after the
+style branch and feeding KSampler. Researched via web search against
+InstantID/PuLID before choosing FaceID Plus V2 as the first thing to try:
+cheapest integration (same node pack already installed, `insightface`
+already pip-installed), escalate to PuLID (highest reported identity
+fidelity, ~88-93% face similarity in comparisons) if this isn't enough.
 
 **Checkpoint choice — Animagine XL 4.0, not Illustrious-XL.** Both are real,
 pinnable options (`OnomaAIResearch/Illustrious-xl-early-release-v0`,

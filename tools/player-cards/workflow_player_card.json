@@ -116,7 +116,7 @@
   "16": {
     "class_type": "KSampler",
     "inputs": {
-      "model": ["14", 0],
+      "model": ["23", 0],
       "positive": ["11", 0],
       "negative": ["11", 1],
       "latent_image": ["15", 0],
@@ -128,6 +128,27 @@
       "denoise": 1.0
     },
     "_note": "seed is FIXED for the whole edition — this is what makes 34 generations read as one set instead of 34 separate rolls. Only nodes 1 (cutout) and 5/6 (their derived conditioning) vary per player."
+  },
+  "22": {
+    "class_type": "IPAdapterUnifiedLoaderFaceID",
+    "inputs": { "model": ["14", 0], "preset": "FACEID PLUS V2", "lora_strength": 0.6, "provider": "CPU" },
+    "_note": "Second, independent IPAdapter branch for facial identity -- added 2026-08-18 after the likeness test showed node 12/14 (style transfer from the fixed style reference) never sees the subject's own photo, so it had no mechanism to preserve identity. Chained after the style branch's model output, not the raw checkpoint."
+  },
+  "23": {
+    "class_type": "IPAdapterFaceID",
+    "inputs": {
+      "model": ["22", 0],
+      "ipadapter": ["22", 1],
+      "image": ["1", 0],
+      "weight": 1.0,
+      "weight_faceidv2": 1.0,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
+      "start_at": 0.0,
+      "end_at": 1.0,
+      "embeds_scaling": "V only"
+    },
+    "_note": "Conditioned on node 1 -- the subject's own rembg cutout, same image ControlNet uses for pose/lineart. This is the actual identity signal; feeds KSampler (node 16) instead of node 14's raw output."
   },
   "17": {
     "class_type": "VAEDecode",

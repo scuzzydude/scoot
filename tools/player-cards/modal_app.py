@@ -76,18 +76,25 @@ MODEL_DOWNLOADS = [
      "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet", None),
     ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
      "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter", None),
-    # Face-cropped/portrait-trained IPAdapter weights for the "PLUS FACE
-    # (portraits)" preset -- likeness test showed the generic "PLUS (high
-    # strength)" preset (generic whole-image style/content transfer, no
-    # face-specific training) losing facial structure entirely on 2 of 3
-    # subjects. Regex-verified via ComfyUI_IPAdapter_plus/utils.py's
-    # get_ipadapter_file(): "plus face" (SDXL) matches
-    # r'plus.face.sdxl.vit.h\.(safetensors|bin)$', which this filename
-    # satisfies. Kept alongside the plain "plus" file above (not replacing
-    # it) so the preset can be switched back for comparison without a
-    # redeploy.
-    ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus-face_sdxl_vit-h.safetensors",
-     "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter", None),
+    # IP-Adapter FaceID Plus V2 (SDXL) -- a SECOND, independent IPAdapter
+    # branch conditioned on each subject's own cutout, not the style
+    # reference. The likeness test's real failure was architectural: the
+    # graph's only IPAdapter pass (node 12/14) is fed the fixed style
+    # reference image for STYLE transfer -- it never saw the subject's own
+    # photo at all, so no mechanism existed to preserve facial identity.
+    # Tried swapping node 12 to the "PLUS FACE (portraits)" preset first
+    # (cheapest possible test) -- that made it worse (blank face), because
+    # it just made the SAME pass re-interpret the non-face style reference
+    # image as if it were a face crop. The actual fix needs a second apply
+    # node fed the subject's own image; FaceID Plus V2 pairs an InsightFace
+    # identity embedding with a small LoRA for stronger identity lock than
+    # plain FaceID. Repo/revision from HF API (h94/IP-Adapter-FaceID),
+    # filenames regex-verified against get_ipadapter_file()'s
+    # faceid.plusv2.sdxl patterns via modal shell before pinning.
+    ("h94/IP-Adapter-FaceID", "ip-adapter-faceid-plusv2_sdxl.bin",
+     "43907e6f44d079bf1a9102d9a6e56aef7a219bae", "ipadapter", None),
+    ("h94/IP-Adapter-FaceID", "ip-adapter-faceid-plusv2_sdxl_lora.safetensors",
+     "43907e6f44d079bf1a9102d9a6e56aef7a219bae", "loras", None),
     # NOT sdxl_models/image_encoder/ (ViT-bigG-14, hidden_size 1664) despite
     # this being an SDXL checkpoint -- get_clipvision_file()'s regex for any
     # preset other than "vit-g"/"kolors" (this graph's node 12 uses "PLUS
@@ -251,6 +258,25 @@ def _download_pinned_models():
     )
     assert (segformer_b3_dir / "config.json").exists(), "segformer_b3_fashion snapshot missing config.json"
     print(f"pinned {SEGFORMER_B3_REPO}@{SEGFORMER_B3_REVISION} -> {segformer_b3_dir}")
+
+    # InsightFace's "buffalo_l" face-analysis model, needed by the FaceID
+    # branch's identity embedding (get_ipadapter_file's is_insightface=True
+    # for the "faceid plus v2" preset). insightface_loader() in
+    # ComfyUI_IPAdapter_plus/utils.py fetches this from InsightFace's own
+    # model zoo (not HF) the first time FaceAnalysis() is constructed --
+    # calling it here during the image build forces that fetch into this
+    # baked layer instead of happening at cold start (same rationale as
+    # every other model in this function). ctx_id=-1 forces CPU-only
+    # (no GPU is attached during this build-time run_function step);
+    # generate() constructs its own FaceAnalysis with the real provider at
+    # call time, this just needs the on-disk files to exist so that
+    # construction doesn't hit the network.
+    from insightface.app import FaceAnalysis
+    insightface_dir = models_root / "insightface"
+    fa = FaceAnalysis(name="buffalo_l", root=str(insightface_dir), providers=["CPUExecutionProvider"])
+    fa.prepare(ctx_id=-1, det_size=(640, 640))
+    assert (insightface_dir / "models" / "buffalo_l").exists(), "insightface buffalo_l model missing"
+    print(f"pinned insightface/buffalo_l -> {insightface_dir}")
 
 
 image = (
@@ -429,21 +455,25 @@ class CardGenerator:
         template["14"]["inputs"]["weight"] = 0.7
         template["14"]["inputs"]["end_at"] = 0.85
 
-        # Tuning pass 2 (2026-08-18): style now correct, but the three-card
-        # likeness test showed facial identity failing on 2 of 3 subjects
-        # (Nick, Rufus) -- faces collapsed into abstract color masses or
-        # blob-like shapes with no eyes/nose/mouth. Root cause: "PLUS (high
-        # strength)" is IPAdapter's generic whole-image style/content
-        # transfer preset, with no face-specific training -- it has no
-        # notion that the face region matters more than the jacket. "PLUS
-        # FACE (portraits)" uses IPAdapter weights trained specifically on
-        # face crops, which should hold facial structure together under the
-        # same style-transfer strength. Not yet re-verified against real
-        # output -- next generate() call is the check. If this isn't enough,
-        # the next step up is true IP-Adapter FaceID (InsightFace embedding-
-        # based, already pip-installed) or PuLID (highest identity fidelity
-        # in comparisons, but needs a new custom node).
-        template["12"]["inputs"]["preset"] = "PLUS FACE (portraits)"
+        # Tuning pass 2 (2026-08-18), attempt 1 -- REVERTED: tried swapping
+        # node 12's preset to "PLUS FACE (portraits)". That made results
+        # worse (Brandon's face came out completely blank) because it
+        # misdiagnosed the failure -- node 12/14 is fed the fixed STYLE
+        # REFERENCE image, never the subject's own photo, so no preset
+        # swap on that pass could ever preserve a subject's likeness. It
+        # was re-interpreting a non-face illustration as a face crop.
+        # Node 12 stays on its original "PLUS (high strength)" -- correct
+        # for its actual job (style transfer from the style reference).
+
+        # Tuning pass 2, attempt 2 -- a SECOND, independent IPAdapter
+        # branch (nodes 22/23, added directly to workflow_player_card.json
+        # since this changes graph topology, not just field values) fed
+        # each subject's own cutout (node 1) via IP-Adapter FaceID Plus V2.
+        # Runs after the style branch (node 14) in the model-patching
+        # chain, feeding KSampler (node 16) instead of node 14's raw
+        # output. Node 22's preset ("FACEID PLUS V2") drives its own
+        # filename auto-detection the same way node 12 already does --
+        # nothing to fill in here. Not yet verified against real output.
 
         self.workflow_template = template
 

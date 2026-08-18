@@ -35,3 +35,10 @@ Thumbs.db
 
 # WSL
 *.swp
+
+# Python
+__pycache__/
+*.pyc
+
+# player-cards generated art/test output -- code only, no data (per Brandon)
+tools/player-cards/art/
