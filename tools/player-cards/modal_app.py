@@ -595,7 +595,6 @@ class CardGenerator:
             time.sleep(1.0)
         raise TimeoutError(f"ComfyUI prompt {prompt_id} did not finish within {timeout}s")
 
-    @modal.method()
     def _face_touchup(self, figure_path: Path, face_crop_name: str, serial: str, seed: int) -> Path:
         """Detect the face in the just-generated illustration, crop it,
         and run a short img2img pass with PuLID identity conditioning
@@ -699,6 +698,7 @@ class CardGenerator:
         print(f"{serial}: face touchup applied, crop box={box}")
         return composite_path
 
+    @modal.method()
     def generate(self, payload: dict) -> dict:
         """payload: {serial, photo_url, pose, seed, style_ref, face_photo_url}
         per MODAL_BUILD_SPEC.md §4 (face_photo_url added 2026-08-18, optional
