@@ -76,6 +76,18 @@ MODEL_DOWNLOADS = [
      "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet", None),
     ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
      "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter", None),
+    # Face-cropped/portrait-trained IPAdapter weights for the "PLUS FACE
+    # (portraits)" preset -- likeness test showed the generic "PLUS (high
+    # strength)" preset (generic whole-image style/content transfer, no
+    # face-specific training) losing facial structure entirely on 2 of 3
+    # subjects. Regex-verified via ComfyUI_IPAdapter_plus/utils.py's
+    # get_ipadapter_file(): "plus face" (SDXL) matches
+    # r'plus.face.sdxl.vit.h\.(safetensors|bin)$', which this filename
+    # satisfies. Kept alongside the plain "plus" file above (not replacing
+    # it) so the preset can be switched back for comparison without a
+    # redeploy.
+    ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus-face_sdxl_vit-h.safetensors",
+     "018e402774aeeddd60609b4ecdb7e298259dc729", "ipadapter", None),
     # NOT sdxl_models/image_encoder/ (ViT-bigG-14, hidden_size 1664) despite
     # this being an SDXL checkpoint -- get_clipvision_file()'s regex for any
     # preset other than "vit-g"/"kolors" (this graph's node 12 uses "PLUS
@@ -409,12 +421,29 @@ class CardGenerator:
         #    photographic texture the way raw line-art edges do, so it
         #    wasn't a suspect for the blur, and lowering it would cost
         #    likeness/pose accuracy for no benefit.
-        # Not yet re-verified against real output -- next generate() call
-        # is the check.
+        # Verified: re-ran Brandon (seed 340034) after this pass and got a
+        # real cel-shaded illustration -- bold lineart, flat color, hard
+        # shadows, matching the style reference. Style problem solved.
         template["5"]["inputs"]["coarse"] = "enable"
         template["10"]["inputs"]["strength"] = 0.4
         template["14"]["inputs"]["weight"] = 0.7
         template["14"]["inputs"]["end_at"] = 0.85
+
+        # Tuning pass 2 (2026-08-18): style now correct, but the three-card
+        # likeness test showed facial identity failing on 2 of 3 subjects
+        # (Nick, Rufus) -- faces collapsed into abstract color masses or
+        # blob-like shapes with no eyes/nose/mouth. Root cause: "PLUS (high
+        # strength)" is IPAdapter's generic whole-image style/content
+        # transfer preset, with no face-specific training -- it has no
+        # notion that the face region matters more than the jacket. "PLUS
+        # FACE (portraits)" uses IPAdapter weights trained specifically on
+        # face crops, which should hold facial structure together under the
+        # same style-transfer strength. Not yet re-verified against real
+        # output -- next generate() call is the check. If this isn't enough,
+        # the next step up is true IP-Adapter FaceID (InsightFace embedding-
+        # based, already pip-installed) or PuLID (highest identity fidelity
+        # in comparisons, but needs a new custom node).
+        template["12"]["inputs"]["preset"] = "PLUS FACE (portraits)"
 
         self.workflow_template = template
 
