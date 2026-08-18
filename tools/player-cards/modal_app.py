@@ -596,6 +596,109 @@ class CardGenerator:
         raise TimeoutError(f"ComfyUI prompt {prompt_id} did not finish within {timeout}s")
 
     @modal.method()
+    def _face_touchup(self, figure_path: Path, face_crop_name: str, serial: str, seed: int) -> Path:
+        """Detect the face in the just-generated illustration, crop it,
+        and run a short img2img pass with PuLID identity conditioning
+        where the face fills the whole working frame instead of a small
+        fraction of a full-body composition. See the call site's comment
+        for why this exists. Returns figure_path unchanged if no face is
+        detected in the generated image (rare but possible -- the
+        composition sometimes crops the head, e.g. a low camera angle).
+        """
+        import numpy as np
+        from PIL import Image, ImageDraw, ImageFilter
+
+        if not hasattr(self, "_face_analysis") or self._face_analysis is None:
+            from insightface.app import FaceAnalysis
+            insightface_dir = "/root/comfy/ComfyUI/models/insightface"
+            self._face_analysis = FaceAnalysis(
+                name="antelopev2", root=insightface_dir, providers=["CPUExecutionProvider"],
+            )
+            self._face_analysis.prepare(ctx_id=-1, det_size=(640, 640))
+
+        img = Image.open(figure_path).convert("RGB")
+        arr_bgr = np.array(img)[:, :, ::-1].copy()  # PIL is RGB, insightface expects BGR
+        faces = self._face_analysis.get(arr_bgr)
+        if not faces:
+            print(f"{serial}: no face detected in generated figure, skipping touchup")
+            return figure_path
+
+        face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+        x1, y1, x2, y2 = face.bbox
+        w, h = x2 - x1, y2 - y1
+        pad_x, pad_y = w * 0.6, h * 0.6
+        cx1, cy1 = max(0, x1 - pad_x), max(0, y1 - pad_y)
+        cx2, cy2 = min(img.width, x2 + pad_x), min(img.height, y2 + pad_y)
+        # square it up around center so the working crop isn't badly
+        # distorted by KSampler's square-latent assumptions downstream
+        side = max(cx2 - cx1, cy2 - cy1)
+        ccx, ccy = (cx1 + cx2) / 2, (cy1 + cy2) / 2
+        cx1, cy1 = max(0, ccx - side / 2), max(0, ccy - side / 2)
+        cx2, cy2 = min(img.width, cx1 + side), min(img.height, cy1 + side)
+        box = (int(cx1), int(cy1), int(cx2), int(cy2))
+
+        crop = img.crop(box)
+        work_size = 768
+        crop_up = crop.resize((work_size, work_size), Image.LANCZOS)
+
+        comfy_input = Path("/root/comfy/ComfyUI/input")
+        crop_input_name = f"{serial}_face_touchup_input.png"
+        crop_up.save(comfy_input / crop_input_name)
+
+        by_subdir = {
+            subdir: local_name_override or Path(filename).name
+            for _, filename, _, subdir, local_name_override in MODEL_DOWNLOADS
+        }
+        touchup_prompt = {
+            "1": {"class_type": "LoadImage", "inputs": {"image": crop_input_name}},
+            "2": {"class_type": "CheckpointLoaderSimple",
+                  "inputs": {"ckpt_name": by_subdir["checkpoints"]}},
+            "3": {"class_type": "CLIPTextEncode",
+                  "inputs": {"clip": ["2", 1], "text": PROMPT_POSITIVE}},
+            "4": {"class_type": "CLIPTextEncode",
+                  "inputs": {"clip": ["2", 1], "text": PROMPT_NEGATIVE}},
+            "5": {"class_type": "VAEEncode", "inputs": {"pixels": ["1", 0], "vae": ["2", 2]}},
+            "6": {"class_type": "PulidModelLoader", "inputs": {"pulid_file": by_subdir["pulid"]}},
+            "7": {"class_type": "PulidInsightFaceLoader", "inputs": {"provider": "CPU"}},
+            "8": {"class_type": "PulidEvaClipLoader", "inputs": {}},
+            "9": {"class_type": "LoadImage", "inputs": {"image": face_crop_name}},
+            "10": {"class_type": "ApplyPulid",
+                   "inputs": {
+                       "model": ["2", 0], "pulid": ["6", 0], "eva_clip": ["8", 0],
+                       "face_analysis": ["7", 0], "image": ["9", 0],
+                       "method": "fidelity", "weight": 1.0,
+                       "start_at": 0.0, "end_at": 1.0,
+                   }},
+            "11": {"class_type": "KSampler",
+                   "inputs": {
+                       "model": ["10", 0], "positive": ["3", 0], "negative": ["4", 0],
+                       "latent_image": ["5", 0], "seed": seed, "steps": 25, "cfg": 6.5,
+                       "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 0.6,
+                   }},
+            "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["2", 2]}},
+            "13": {"class_type": "SaveImage",
+                   "inputs": {"images": ["12", 0], "filename_prefix": f"raw/{serial}_face_touchup"}},
+        }
+        touchup_result = self._submit_and_wait(touchup_prompt)
+        out_dir = Path("/root/comfy/ComfyUI/output")
+        touchup_path = _image_path(out_dir, touchup_result["outputs"]["13"]["images"][0])
+        refined = Image.open(touchup_path).convert("RGB").resize(crop.size, Image.LANCZOS)
+
+        # Feathered paste so the touched-up region doesn't leave a hard
+        # rectangular seam against the surrounding cel-shaded lineart.
+        mask = Image.new("L", crop.size, 0)
+        draw = ImageDraw.Draw(mask)
+        inset = int(min(crop.size) * 0.08)
+        draw.ellipse([inset, inset, crop.size[0] - inset, crop.size[1] - inset], fill=255)
+        mask = mask.filter(ImageFilter.GaussianBlur(radius=max(crop.size) * 0.06))
+
+        composite = img.copy()
+        composite.paste(refined, box[:2], mask)
+        composite_path = figure_path.parent / f"{serial}_figure_touched_up.png"
+        composite.save(composite_path)
+        print(f"{serial}: face touchup applied, crop box={box}")
+        return composite_path
+
     def generate(self, payload: dict) -> dict:
         """payload: {serial, photo_url, pose, seed, style_ref, face_photo_url}
         per MODAL_BUILD_SPEC.md §4 (face_photo_url added 2026-08-18, optional
@@ -648,6 +751,21 @@ class CardGenerator:
         out_dir = Path("/root/comfy/ComfyUI/output")
         figure_path = _image_path(out_dir, outputs["19"]["images"][0])
         mask_path = _image_path(out_dir, outputs["21"]["images"][0])
+
+        # Face touchup (2026-08-18): 9 PuLID/FaceID weight-and-method
+        # combinations all plateaued at "some facial features, not a
+        # decernable likeness" -- the face is a small fraction of this
+        # full-body/bust composition, so identity conditioning is diluted
+        # no matter how it's tuned. This detects the face IN THE GENERATED
+        # ILLUSTRATION (not the source photo), crops it out, and runs a
+        # short img2img refinement pass where the face fills the entire
+        # working frame -- the same fix real ComfyUI "face detailer"
+        # workflows use, just hand-built here from nodes already proven
+        # working (no new custom node or model pin needed: PuLID's own
+        # loaders, KSampler, VAEEncode/Decode). Falls back to the
+        # untouched figure if no face is detected rather than failing the
+        # whole call.
+        figure_path = self._face_touchup(figure_path, face_crop_name, serial, seed)
 
         # Alpha creation: SDXL/ComfyUI's own output is plain RGB, not RGBA —
         # diffusion models don't emit an alpha channel on their own no matter
