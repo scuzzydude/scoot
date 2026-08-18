@@ -170,8 +170,8 @@
       "eva_clip": ["26", 0],
       "face_analysis": ["25", 0],
       "image": ["28", 0],
-      "method": "neutral",
-      "weight": 0.7,
+      "method": "fidelity",
+      "weight": 1.0,
       "start_at": 0.0,
       "end_at": 1.0
     },
