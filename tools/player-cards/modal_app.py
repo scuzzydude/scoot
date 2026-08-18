@@ -473,7 +473,27 @@ class CardGenerator:
         # chain, feeding KSampler (node 16) instead of node 14's raw
         # output. Node 22's preset ("FACEID PLUS V2") drives its own
         # filename auto-detection the same way node 12 already does --
-        # nothing to fill in here. Not yet verified against real output.
+        # nothing to fill in here.
+        #
+        # Verified against real output (Brandon, seed 340034): the branch
+        # genuinely runs -- logs confirm the FaceID model, LoRA, and
+        # InsightFace all loaded, and a real face embedding was computed
+        # (ComfyUI_IPAdapter_plus hard-raises "InsightFace: No face
+        # detected" on failure; we got a normal result instead). But the
+        # visual identity signal was weak, arguably weaker than tuning pass
+        # 1's non-identity-aware result. Best working theory: the face is
+        # a small fraction of this full-body/bust composition, and FaceID
+        # embedding conditioning is usually demonstrated on close-up
+        # portraits where the face dominates the frame -- the signal may
+        # simply be diluted at this scale.
+        #
+        # Tuning pass 3: push weight and weight_faceidv2 up from the
+        # defaults (1.0/1.0, INPUT_TYPES max is 3.0/5.0) toward the
+        # stronger end of what the community reports as usable before
+        # identity conditioning starts visibly warping the image. Not yet
+        # re-verified -- next generate() call is the check.
+        template["23"]["inputs"]["weight"] = 1.8
+        template["23"]["inputs"]["weight_faceidv2"] = 1.8
 
         self.workflow_template = template
 
