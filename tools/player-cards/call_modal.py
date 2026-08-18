@@ -35,6 +35,8 @@ def generate(args):
     }
     if args.face_photo_url:
         payload["face_photo_url"] = args.face_photo_url
+    if args.face_touchup:
+        payload["face_touchup"] = True
     result = cls().generate.remote(payload)
     print(result)
 
@@ -58,6 +60,10 @@ def main():
     p2.add_argument("--face-photo-url", default=None,
                      help="Tight face-only crop for PuLID identity conditioning. "
                           "Falls back to --photo-url (the full-body cutout) if omitted.")
+    p2.add_argument("--face-touchup", action="store_true",
+                     help="Opt-in face-detailer pass (crop generated face, refine, paste back). "
+                          "OFF by default -- tested worse than the baseline on 2026-08-18, "
+                          "kept available for further tuning. See modal_app.py's comment.")
     p2.set_defaults(func=generate)
 
     args = ap.parse_args()

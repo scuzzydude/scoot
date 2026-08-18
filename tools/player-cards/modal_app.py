@@ -761,20 +761,28 @@ class CardGenerator:
         figure_path = _image_path(out_dir, outputs["19"]["images"][0])
         mask_path = _image_path(out_dir, outputs["21"]["images"][0])
 
-        # Face touchup (2026-08-18): 9 PuLID/FaceID weight-and-method
-        # combinations all plateaued at "some facial features, not a
-        # decernable likeness" -- the face is a small fraction of this
-        # full-body/bust composition, so identity conditioning is diluted
-        # no matter how it's tuned. This detects the face IN THE GENERATED
-        # ILLUSTRATION (not the source photo), crops it out, and runs a
-        # short img2img refinement pass where the face fills the entire
-        # working frame -- the same fix real ComfyUI "face detailer"
-        # workflows use, just hand-built here from nodes already proven
-        # working (no new custom node or model pin needed: PuLID's own
-        # loaders, KSampler, VAEEncode/Decode). Falls back to the
-        # untouched figure if no face is detected rather than failing the
-        # whole call.
-        figure_path = self._face_touchup(figure_path, face_crop_name, serial, seed)
+        # Face touchup (2026-08-18) -- OFF BY DEFAULT. Built to fix the
+        # 9 PuLID/FaceID weight/method combinations that all plateaued at
+        # "some facial features, not a decernable likeness": detects the
+        # face IN THE GENERATED ILLUSTRATION, crops it, and runs a short
+        # img2img refinement pass where the face fills the whole working
+        # frame instead of a small fraction of the full-body composition
+        # -- the same fix real ComfyUI "face detailer" workflows use.
+        # Tested against Brandon (seed 340034): it ran correctly end to
+        # end (detection threshold needed lowering to 0.05 first -- see
+        # _face_touchup's comment -- fixed and confirmed working) but the
+        # result was WORSE than the untouched baseline, not better --
+        # erased the eyebrow structure the base generation already had
+        # and introduced a garbled artifact near the mouth. That's 10 real
+        # combinations now (9 identity-branch tunings + this) all
+        # equal-or-worse than the simple single-pass baseline
+        # (fidelity/weight=1.0, full-body frame, no touchup). Gated behind
+        # an explicit payload flag rather than deleted -- the technique
+        # may still be salvageable with different denoise/crop-padding
+        # values, just not proven yet, and shouldn't cost every real
+        # generation an extra GPU pass while unproven.
+        if payload.get("face_touchup"):
+            figure_path = self._face_touchup(figure_path, face_crop_name, serial, seed)
 
         # Alpha creation: SDXL/ComfyUI's own output is plain RGB, not RGBA —
         # diffusion models don't emit an alpha channel on their own no matter
