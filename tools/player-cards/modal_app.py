@@ -613,7 +613,13 @@ class CardGenerator:
             self._face_analysis = FaceAnalysis(
                 name="antelopev2", root=insightface_dir, providers=["CPUExecutionProvider"],
             )
-            self._face_analysis.prepare(ctx_id=-1, det_size=(640, 640))
+            # default det_thresh=0.5 finds nothing on this cel-shaded
+            # illustration style -- scrfd is trained on real photos, not
+            # flat-color anime art. Confirmed via modal shell against an
+            # actual generated figure: 0.05 finds the real face (plus two
+            # tiny false positives elsewhere in the jersey graphic, which
+            # the max-by-area selection below already filters out).
+            self._face_analysis.prepare(ctx_id=-1, det_thresh=0.05, det_size=(640, 640))
 
         img = Image.open(figure_path).convert("RGB")
         arr_bgr = np.array(img)[:, :, ::-1].copy()  # PIL is RGB, insightface expects BGR
@@ -625,6 +631,9 @@ class CardGenerator:
         face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
         x1, y1, x2, y2 = face.bbox
         w, h = x2 - x1, y2 - y1
+        if (w * h) < 0.01 * img.width * img.height:
+            print(f"{serial}: largest detection too small ({w:.0f}x{h:.0f}), likely noise -- skipping touchup")
+            return figure_path
         pad_x, pad_y = w * 0.6, h * 0.6
         cx1, cy1 = max(0, x1 - pad_x), max(0, y1 - pad_y)
         cx2, cy2 = min(img.width, x2 + pad_x), min(img.height, y2 + pad_y)
