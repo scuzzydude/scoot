@@ -171,7 +171,7 @@
       "face_analysis": ["25", 0],
       "image": ["1", 0],
       "method": "fidelity",
-      "weight": 1.2,
+      "weight": 1.0,
       "start_at": 0.0,
       "end_at": 1.0
     },
