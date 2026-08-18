@@ -33,6 +33,8 @@ def generate(args):
         "seed": args.seed,
         "style_ref": args.style_ref_url,
     }
+    if args.face_photo_url:
+        payload["face_photo_url"] = args.face_photo_url
     result = cls().generate.remote(payload)
     print(result)
 
@@ -53,6 +55,9 @@ def main():
     p2.add_argument("--style-ref-url", required=True)
     p2.add_argument("--seed", type=int, required=True)
     p2.add_argument("--pose", default="")
+    p2.add_argument("--face-photo-url", default=None,
+                     help="Tight face-only crop for PuLID identity conditioning. "
+                          "Falls back to --photo-url (the full-body cutout) if omitted.")
     p2.set_defaults(func=generate)
 
     args = ap.parse_args()

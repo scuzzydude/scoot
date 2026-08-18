@@ -597,9 +597,13 @@ class CardGenerator:
 
     @modal.method()
     def generate(self, payload: dict) -> dict:
-        """payload: {serial, photo_url, pose, seed, style_ref} per
-        MODAL_BUILD_SPEC.md §4. Returns {figure_path, jersey_mask_path} —
-        Azure Blob paths, matching the interface contract.
+        """payload: {serial, photo_url, pose, seed, style_ref, face_photo_url}
+        per MODAL_BUILD_SPEC.md §4 (face_photo_url added 2026-08-18, optional
+        -- see node 28's comment in workflow_player_card.json for why PuLID
+        needs a separate, tighter face-only crop rather than reading the
+        same full-body cutout ControlNet uses). Returns {figure_path,
+        jersey_mask_path} -- Azure Blob paths, matching the interface
+        contract.
         """
         import httpx
         import numpy as np
@@ -614,8 +618,12 @@ class CardGenerator:
         comfy_input.mkdir(parents=True, exist_ok=True)
         cutout_name = f"{serial}_cutout.png"
         style_name = "style_reference.png"
+        face_crop_name = f"{serial}_face_crop.png"
 
-        for url, name in [(payload["photo_url"], cutout_name), (payload["style_ref"], style_name)]:
+        fetches = [(payload["photo_url"], cutout_name), (payload["style_ref"], style_name)]
+        face_photo_url = payload.get("face_photo_url") or payload["photo_url"]
+        fetches.append((face_photo_url, face_crop_name))
+        for url, name in fetches:
             r = httpx.get(url, timeout=60)
             r.raise_for_status()
             (comfy_input / name).write_bytes(r.content)
@@ -624,6 +632,7 @@ class CardGenerator:
         prompt = {k: v for k, v in prompt.items() if not k.startswith("_")}
         prompt["1"]["inputs"]["image"] = cutout_name
         prompt["13"]["inputs"]["image"] = style_name
+        prompt["28"]["inputs"]["image"] = face_crop_name
         prompt["16"]["inputs"]["seed"] = seed
         prompt["19"]["inputs"]["filename_prefix"] = f"raw/{serial}_figure"
         prompt["21"]["inputs"]["filename_prefix"] = f"raw/{serial}_jersey_mask"
