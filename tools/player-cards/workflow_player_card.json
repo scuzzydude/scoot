@@ -116,7 +116,7 @@
   "16": {
     "class_type": "KSampler",
     "inputs": {
-      "model": ["23", 0],
+      "model": ["27", 0],
       "positive": ["11", 0],
       "negative": ["11", 1],
       "latent_image": ["15", 0],
@@ -132,7 +132,7 @@
   "22": {
     "class_type": "IPAdapterUnifiedLoaderFaceID",
     "inputs": { "model": ["14", 0], "preset": "FACEID PLUS V2", "lora_strength": 0.6, "provider": "CPU" },
-    "_note": "Second, independent IPAdapter branch for facial identity -- added 2026-08-18 after the likeness test showed node 12/14 (style transfer from the fixed style reference) never sees the subject's own photo, so it had no mechanism to preserve identity. Chained after the style branch's model output, not the raw checkpoint."
+    "_note": "IPAdapter FaceID branch -- 3 attempts (preset swap, weight 1.0, weight 1.8) never produced a decernable likeness; higher weight degraded overall image quality instead of helping. Left in place but UNREFERENCED (node 16 now sources from node 27/PuLID instead) for comparison -- ComfyUI skips nodes not in the output dependency chain, so this costs nothing at runtime."
   },
   "23": {
     "class_type": "IPAdapterFaceID",
@@ -148,7 +148,34 @@
       "end_at": 1.0,
       "embeds_scaling": "V only"
     },
-    "_note": "Conditioned on node 1 -- the subject's own rembg cutout, same image ControlNet uses for pose/lineart. This is the actual identity signal; feeds KSampler (node 16) instead of node 14's raw output."
+    "_note": "Unreferenced, same as node 22 -- see that note."
+  },
+  "24": {
+    "class_type": "PulidModelLoader",
+    "inputs": { "pulid_file": "ip-adapter_pulid_sdxl_fp16.safetensors" }
+  },
+  "25": {
+    "class_type": "PulidInsightFaceLoader",
+    "inputs": { "provider": "CPU" }
+  },
+  "26": {
+    "class_type": "PulidEvaClipLoader",
+    "inputs": {}
+  },
+  "27": {
+    "class_type": "ApplyPulid",
+    "inputs": {
+      "model": ["14", 0],
+      "pulid": ["24", 0],
+      "eva_clip": ["26", 0],
+      "face_analysis": ["25", 0],
+      "image": ["1", 0],
+      "method": "fidelity",
+      "weight": 1.0,
+      "start_at": 0.0,
+      "end_at": 1.0
+    },
+    "_note": "PuLID identity branch, added 2026-08-18 after FaceID (nodes 22/23, now unreferenced) failed to produce a decernable likeness in 3 attempts. Conditioned on node 1 (subject's own cutout), chained after the style branch (node 14), feeds KSampler directly. method=\"fidelity\" prioritizes identity resemblance over letting the checkpoint's style dominate -- the primary goal right now is a recognizable face; style can be re-balanced once likeness is achieved."
   },
   "17": {
     "class_type": "VAEDecode",

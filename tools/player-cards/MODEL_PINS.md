@@ -28,6 +28,7 @@ this reproduces in 2029 as faithfully as it runs today. Nothing here tracks
 | `comfyui_controlnet_aux` (LineArt + Openpose preprocessors) | `Fannovel16/comfyui_controlnet_aux` | `e8b689a513c3e6b63edc44066560ca5919c0576e` | 2026-04-13 |
 | `ComfyUI_IPAdapter_plus` | `cubiq/ComfyUI_IPAdapter_plus` | `a0f451a5113cf9becb0847b92884cb10cbdec0ef` | 2025-04-14 |
 | `Comfyui_segformer_b2_clothes` (jersey mask pass) | `StartHua/Comfyui_segformer_b2_clothes` | `681721fbea6947e7bbc4ebb6192ed60bd8b473cb` | 2024-07-23 |
+| `PuLID_ComfyUI` (facial identity branch, added 2026-08-18) | `cubiq/PuLID_ComfyUI` | `93e0c4c226b87b23c0009d671978bad0e77289ff` | repo's actual HEAD -- author put it in "maintenance mode" 2025-04-14, no commits since (confirmed via `git log` on a local clone, not assumed from the README note) |
 
 These are the exact commits already cloned and structurally verified against
 `workflow_player_card.json` on `dreamlab` (2026-08-16) — every `class_type`
@@ -68,6 +69,27 @@ InstantID/PuLID before choosing FaceID Plus V2 as the first thing to try:
 cheapest integration (same node pack already installed, `insightface`
 already pip-installed), escalate to PuLID (highest reported identity
 fidelity, ~88-93% face similarity in comparisons) if this isn't enough.
+
+**FaceID escalation to PuLID, 2026-08-18.** FaceID genuinely worked (real
+face embedding computed, confirmed via logs — no silent no-op) but 3
+attempts (preset swap, weight 1.0, weight 1.8) never produced a decernable
+likeness, and pushing weight past 1.0 degraded overall image coherence
+instead of improving identity — not converging. Added PuLID
+(`cubiq/PuLID_ComfyUI`) as a replacement identity branch: decouples
+identity from style via contrastive alignment rather than pure embedding
+conditioning, reports much higher identity fidelity in community
+comparisons. New pins beyond the node repo itself:
+
+| Role | Repo | File | Revision |
+|---|---|---|---|
+| PuLID SDXL weights (IPAdapter-format conversion) | `huchenlei/ipadapter_pulid` | `ip-adapter_pulid_sdxl_fp16.safetensors` | `810eab2a6746efb73ed7f2502bf46b1c453d5cf1` |
+| EVA CLIP vision encoder | `QuanSun/EVA-CLIP` | `EVA02_CLIP_L_336_psz14_s6B.pt` (default HF cache, not copied — eva_clip's own runtime code re-resolves the identical repo/filename/revision, so a baked cache hit is enough) | `11afd202f2ae80869d6cef18b1ec775e79bd8d12` |
+| InsightFace AntelopeV2 (distinct from FaceID's buffalo_l) | `MonsterMMORPG/tools` | `antelopev2.zip`, extracted to `models/insightface/models/antelopev2/` | `2cc250d767e22019bef3ae1aefaa1ad8a73ef64c` |
+| facexlib face detector + parser | GitHub releases (`xinntao/facexlib`), not HF — `retinaface_resnet50` + `bisenet`, triggered via `init_detection_model()`/`init_parsing_model()` during the image build so both bake in instead of fetching at cold start | pinned by facexlib package version (`0.3.0` as of this pin), not a separate sha |
+
+FaceID's nodes (22/23) are left in the graph but unreferenced — node 16
+now sources from PuLID (node 27) instead — so they cost nothing at
+runtime and stay available for A/B comparison.
 
 **Checkpoint choice — Animagine XL 4.0, not Illustrious-XL.** Both are real,
 pinnable options (`OnomaAIResearch/Illustrious-xl-early-release-v0`,

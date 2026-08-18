@@ -62,6 +62,20 @@ CUSTOM_NODES = [
         "url": "https://github.com/StartHua/Comfyui_segformer_b2_clothes.git",
         "commit": "681721fbea6947e7bbc4ebb6192ed60bd8b473cb",
     },
+    {
+        # PuLID: FaceID's 3 attempts (preset swap, weight 1.0, weight 1.8)
+        # never produced a decernable likeness -- weight increases degraded
+        # overall image quality instead of improving identity. PuLID
+        # decouples identity from style via contrastive alignment (not
+        # pure embedding conditioning like FaceID) and reports much higher
+        # identity fidelity in community comparisons. Pinned at the repo's
+        # actual HEAD, which is also its de-facto final state -- the
+        # author put it in "maintenance mode" 2025.04.14, no further
+        # commits since (confirmed via `git log` on a local clone before
+        # pinning, not assumed from the README note alone).
+        "url": "https://github.com/cubiq/PuLID_ComfyUI.git",
+        "commit": "93e0c4c226b87b23c0009d671978bad0e77289ff",
+    },
 ]
 
 # (repo_id, filename, revision, target dir under ComfyUI/models/, local filename override)
@@ -95,6 +109,12 @@ MODEL_DOWNLOADS = [
      "43907e6f44d079bf1a9102d9a6e56aef7a219bae", "ipadapter", None),
     ("h94/IP-Adapter-FaceID", "ip-adapter-faceid-plusv2_sdxl_lora.safetensors",
      "43907e6f44d079bf1a9102d9a6e56aef7a219bae", "loras", None),
+    # PuLID SDXL weights (converted to IPAdapter format by huchenlei) --
+    # see PuLID_ComfyUI's README for this exact source. Repo/revision from
+    # HF API, path matches PulidModelLoader's self-registered "pulid"
+    # folder_paths type.
+    ("huchenlei/ipadapter_pulid", "ip-adapter_pulid_sdxl_fp16.safetensors",
+     "810eab2a6746efb73ed7f2502bf46b1c453d5cf1", "pulid", None),
     # NOT sdxl_models/image_encoder/ (ViT-bigG-14, hidden_size 1664) despite
     # this being an SDXL checkpoint -- get_clipvision_file()'s regex for any
     # preset other than "vit-g"/"kolors" (this graph's node 12 uses "PLUS
@@ -139,6 +159,18 @@ SEGFORMER_REVISION = "584abc1e1d260e23c0fc627c5217a09b2b461046"
 # model already established.
 SEGFORMER_B3_REPO = "sayeed99/segformer-b3-fashion"
 SEGFORMER_B3_REVISION = "e2474a9e7643d349ac6c525549b736b736e7e216"
+
+# PuLID's own dependencies beyond its single IPAdapter-format weight file
+# (already in MODEL_DOWNLOADS above): an EVA CLIP vision encoder fetched
+# via eva_clip's own hf_hub_download call (repo/filename read directly out
+# of PuLID_ComfyUI/eva_clip/pretrained.py's config table, not guessed),
+# and InsightFace's AntelopeV2 pack (distinct from FaceID's buffalo_l --
+# PuLID's loader hardcodes name="antelopev2"). Revisions from the HF API.
+EVA_CLIP_REPO = "QuanSun/EVA-CLIP"
+EVA_CLIP_FILENAME = "EVA02_CLIP_L_336_psz14_s6B.pt"
+EVA_CLIP_REVISION = "11afd202f2ae80869d6cef18b1ec775e79bd8d12"
+ANTELOPEV2_REPO = "MonsterMMORPG/tools"
+ANTELOPEV2_REVISION = "2cc250d767e22019bef3ae1aefaa1ad8a73ef64c"
 # Filenames verified 2026-08-17 against the live repo file trees via the HF
 # API (not guessed) — this caught a real bug: clip_vision originally pointed
 # at models/image_encoder/ (the SD1.5 encoder), not sdxl_models/image_encoder/
@@ -277,6 +309,46 @@ def _download_pinned_models():
     fa.prepare(ctx_id=-1, det_size=(640, 640))
     assert (insightface_dir / "models" / "buffalo_l").exists(), "insightface buffalo_l model missing"
     print(f"pinned insightface/buffalo_l -> {insightface_dir}")
+
+    # PuLID's InsightFace pack -- separate from FaceID's buffalo_l above,
+    # PulidInsightFaceLoader hardcodes name="antelopev2". No plain onnx
+    # files on the HF repo -- it ships as a single zip with a top-level
+    # antelopev2/ folder (confirmed by inspecting the archive before
+    # writing this, not assumed), which already matches the layout
+    # FaceAnalysis expects under insightface_dir/models/.
+    import zipfile
+    antelopev2_zip = hf_hub_download(
+        repo_id=ANTELOPEV2_REPO, filename="antelopev2.zip", revision=ANTELOPEV2_REVISION,
+    )
+    with zipfile.ZipFile(antelopev2_zip) as zf:
+        zf.extractall(insightface_dir / "models")
+    assert (insightface_dir / "models" / "antelopev2" / "scrfd_10g_bnkps.onnx").exists(), \
+        "antelopev2 extraction incomplete"
+    print(f"pinned {ANTELOPEV2_REPO}/antelopev2.zip@{ANTELOPEV2_REVISION} -> {insightface_dir}/models/antelopev2")
+
+    # EVA CLIP -- PuLID_ComfyUI's PulidEvaClipLoader calls eva_clip's own
+    # create_model_and_transforms(), which internally does its own
+    # hf_hub_download() with the DEFAULT cache (repo_id/filename read
+    # directly from eva_clip/pretrained.py's config table). Triggering the
+    # identical call here (same repo, filename, revision, default cache --
+    # no custom cache_dir, learned from Bug 5 earlier in this file) means
+    # the runtime call is a cache hit against this baked layer instead of
+    # a cold-start network fetch.
+    hf_hub_download(repo_id=EVA_CLIP_REPO, filename=EVA_CLIP_FILENAME, revision=EVA_CLIP_REVISION)
+    print(f"pinned {EVA_CLIP_REPO}/{EVA_CLIP_FILENAME}@{EVA_CLIP_REVISION} -> (default HF cache)")
+
+    # facexlib's two models (retinaface_resnet50 detector + bisenet parser)
+    # -- PuLID's ApplyPulid node constructs these directly via facexlib's
+    # own init_detection_model()/init_parsing_model(), which download from
+    # GitHub releases (not HF) to a path relative to facexlib's own
+    # site-packages install location the first time they're called.
+    # Triggering both here bakes them into the image the same way as
+    # every other model in this function.
+    from facexlib.detection import init_detection_model
+    from facexlib.parsing import init_parsing_model
+    init_detection_model("retinaface_resnet50", device="cpu")
+    init_parsing_model(model_name="bisenet", device="cpu")
+    print("pinned facexlib/retinaface_resnet50 + facexlib/bisenet")
 
 
 image = (
