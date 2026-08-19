@@ -21,3 +21,4 @@
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
 - [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — PIPELINE COMPLETE for single subject: likeness+body+cartoon face+hair+jersey all working via Kontext+segformer, ~$0.02-0.03/card
 - [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
+- [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
