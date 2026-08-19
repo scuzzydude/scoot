@@ -708,6 +708,56 @@ likeness, full-body framing, cartoon art style, correct hair, and
 brand-accurate jersey compositing, all confirmed on real generated
 output, not just individually.
 
+### Jersey, take 3 -- the real Fonde crest, not just the right color
+
+Brandon provided real photos of the actual jersey (`fonde_jersey_black.jpg`,
+`fonde_jersey_white.jpg` -- reversible mesh, basketball graphic with
+"FONDE REC CENTER SENIOR BASKETBALL" text and two stars). Getting the
+jersey COLOR right (previous section) wasn't the whole spec -- the
+brand crest itself needed to be on it too.
+
+**Chose deterministic extraction over AI regeneration, same reasoning
+as the color decision but stronger:** this is real text ("FONDE", "REC
+CENTER", "SENIOR BASKETBALL") that has to stay legible and correctly
+spelled -- diffusion models are well-documented to be unreliable at
+precise text rendering, so even the reference-image technique that
+fixed hair would risk garbling words here. Extracted the actual crest
+from the jersey photos instead:
+1. Cropped tightly around the crest in `fonde_jersey_black.jpg` (best
+   contrast: white ink on near-black mesh).
+2. Isolated the white ink from the mesh fabric's woven texture --
+   Gaussian blur before thresholding (averages out the weave's
+   per-thread brightness spikes so the threshold doesn't pick up
+   fabric noise), then morphological open (strips background speckle)
+   followed by close (fills small gaps inside letter strokes from the
+   weave), producing a clean white-on-transparent PNG.
+3. Uploaded to `media/card-art/assets/fonde_crest_white.png` as a
+   reusable static asset (white ink -- works on the "dark" jersey side
+   currently deployed; a black-ink version for "light" isn't made yet).
+
+**Compositing, generalized not hand-placed:** extended
+`modal_app_jersey.py`'s `composite_jersey()` with an `add_crest` step
+(on by default). Position and scale come from the jersey segmentation
+mask's own bounding box (crest width ~54% of jersey width, top margin
+~13% of jersey height -- ratios tuned once against this image, not yet
+verified on a second subject) rather than fixed pixel coordinates, so
+it should generalize across different subjects' body sizes and framing
+instead of only working for this exact composition.
+
+**Bug hit and fixed:** first attempt fetched the crest asset via a bare
+`httpx.get` on the Blob URL and got `PIL.UnidentifiedImageError` --
+`media` is a private container, an anonymous request gets an XML
+access-denied body back, not image bytes. Fixed by using the
+already-authenticated `BlobServiceClient`/`container.download_blob()`
+(moved earlier in the function) instead.
+
+**Result: real, crisp, correctly-spelled "FONDE REC CENTER SENIOR
+BASKETBALL" wordmark with the basketball graphic and stars, positioned
+and scaled automatically from the segmentation mask.** Confirmed the
+generalized (mask-driven) version matches the manually-tuned version
+closely -- the auto-positioning logic works, not just the one
+hand-placed test.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))

@@ -45,6 +45,16 @@ AZURE_ACCOUNT = "stevearchive10723"
 AZURE_CONTAINER = "media"
 AZURE_OUTPUT_PREFIX = "card-art/jersey-test"
 
+# Real Fonde crest (basketball + "FONDE REC CENTER SENIOR BASKETBALL" +
+# stars), extracted from photos of the actual jersey Brandon provided
+# 2026-08-19 -- white ink isolated from the mesh fabric via brightness
+# threshold + morphological cleanup (blur before threshold to average
+# out the weave's per-thread brightness spikes, open to strip
+# background speckle, close to fill letter-interior gaps). White fill
+# so it reads on the "dark" jersey side; would need a black-ink version
+# for the "light" side, not yet made.
+CREST_ASSET_BLOB = "card-art/assets/fonde_crest_white.png"
+
 def _download_segformer():
     from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
 
@@ -162,14 +172,50 @@ def composite_jersey(payload: dict) -> dict:
     a[..., 0:3] = a[..., 0:3] * (1 - m) + recol * m
     out_img = Image.fromarray(a.astype(np.uint8), "RGBA")
 
-    buf = __import__("io").BytesIO()
-    out_img.save(buf, format="PNG")
-
     blob_service = BlobServiceClient(
         account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
         credential=os.environ["AZURE_STORAGE_KEY"],
     )
     container = blob_service.get_container_client(AZURE_CONTAINER)
+
+    # Crest overlay -- OFF by default (payload.get, not required) so
+    # this stays optional per-call, same gating pattern as the other
+    # apps' test flags. Position derived from the jersey mask's own
+    # bounding box (not fixed pixel coordinates) so it generalizes
+    # across different subjects' body sizes/framing, not just Brandon's.
+    # Ratios below (crest width ~54% of jersey width, top margin ~13%
+    # of jersey height) came from manually tuning placement against
+    # this exact image before generalizing -- reasonable starting
+    # point, not verified against a second subject yet.
+    if payload.get("add_crest", True) and side == "dark":
+        ys, xs = np.where(garment > 127)
+        if len(xs) > 0:
+            jx0, jx1 = int(xs.min()), int(xs.max())
+            jy0, jy1 = int(ys.min()), int(ys.max())
+            jw, jh = jx1 - jx0, jy1 - jy0
+            jcx = (jx0 + jx1) // 2
+
+            # media is a private container -- needs the authenticated SDK
+            # client, not a bare httpx GET (confirmed via an actual failed
+            # run: PIL.UnidentifiedImageError, the anonymous fetch got an
+            # XML access-denied body back instead of image bytes).
+            crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
+            crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
+
+            target_w = max(1, int(jw * 0.54))
+            scale = target_w / crest.width
+            target_h = max(1, int(crest.height * scale))
+            crest_resized = crest.resize((target_w, target_h), Image.LANCZOS)
+            alpha = crest_resized.split()[3].point(lambda p: int(p * 0.92))
+            crest_resized.putalpha(alpha)
+
+            left = jcx - target_w // 2
+            top = jy0 + int(jh * 0.13)
+            out_img.alpha_composite(crest_resized, (left, top))
+
+    buf = __import__("io").BytesIO()
+    out_img.save(buf, format="PNG")
+
     figure_blob = f"{AZURE_OUTPUT_PREFIX}/{serial}_jersey_figure.png"
     container.upload_blob(figure_blob, buf.getvalue(), overwrite=True)
 
