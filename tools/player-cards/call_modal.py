@@ -37,6 +37,9 @@ def generate(args):
         payload["face_photo_url"] = args.face_photo_url
     if args.face_touchup:
         payload["face_touchup"] = True
+    if args.lora_test:
+        payload["lora_test"] = True
+        payload["lora_strength"] = args.lora_strength
     result = cls().generate.remote(payload)
     print(result)
 
@@ -64,6 +67,13 @@ def main():
                      help="Opt-in face-detailer pass (crop generated face, refine, paste back). "
                           "OFF by default -- tested worse than the baseline on 2026-08-18, "
                           "kept available for further tuning. See modal_app.py's comment.")
+    p2.add_argument("--lora-test", action="store_true",
+                     help="Tier 2 pilot (PLAN_facial_likeness.md): swap PuLID for the subject's "
+                          "own per-subject LoRA (node 29). OFF by default -- see modal_app.py's "
+                          "generate() comment. Only Brandon's LoRA exists so far.")
+    p2.add_argument("--lora-strength", type=float, default=1.0,
+                     help="strength_model for --lora-test's LoraLoaderModelOnly. Default 1.0 "
+                          "matches train_lora.py's training scale.")
     p2.set_defaults(func=generate)
 
     args = ap.parse_args()

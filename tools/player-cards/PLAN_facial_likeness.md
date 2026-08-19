@@ -123,15 +123,38 @@ Steps, with status as of 2026-08-19:
    cropping (both from the share drive and not retained elsewhere).
    Sitting in `tools/player-cards/art/lora_training/brandon/` (gitignored,
    not committed) — see that folder's README.txt for the exact inventory.
-3. Train against Opt with the actual card style prompts baked into
-   training captions — **next unstarted step.**
-4. Generate a test card the same way as before (same ControlNet pose
-   pipeline, style reference, seed) but with the subject's own LoRA
-   active instead of any FaceID/PuLID branch.
-5. Compare against `34-TEST-BRANDON-v6` — ideally with a quantitative
-   metric (ArcFace cosine similarity between source photo and generated
-   face) since the research found no such comparison exists publicly and
-   this would be new, useful information for the project.
+3. **Done.** Trained via `train_lora.py` (2026-08-19): 500 steps, rank 16,
+   against Opt, instance_prompt `"a photo of brandon34person, a man"`, no
+   prior preservation, hyperparameters straight from diffusers' own
+   README_sdxl.md example. Ran clean — no OOM, no errors, 500/500 steps in
+   ~24.5 min, final loss 0.0306. Output uploaded to
+   `media/card-art/lora/brandon34person_lora.safetensors`.
+4. **Done, result: negative.** Wired into `modal_app.py`'s `generate()` as
+   an opt-in `lora_test` payload flag (node 29, `LoraLoaderModelOnly`,
+   sourcing from the same style branch node 27/PuLID used, so only the
+   identity mechanism changed) — see that method's comment. Ran the exact
+   `34-TEST-BRANDON-v6` conditions (same cutout, style ref, seed 340034),
+   trigger token prepended to the positive prompt, `strength_model=1.0`.
+   Container logs confirm the LoRA substantially loaded (only 7 of 1120
+   keys unmatched, all from one out-of-range transformer block index --
+   not a wiring failure). Result: **the face has no legible eyes, nose,
+   or mouth structure at all** -- blanker than v6's own baseline, no
+   Brandon-recognizable signal. This is a real negative result, not a
+   bug -- the mechanism ran as designed and still didn't produce
+   likeness.
+   **Confound worth noting:** v6's baseline face (no identity mechanism
+   active at all) is *also* weak on this exact pose -- downward-tilted
+   head, partially self-occluding the eyes. Every likeness test in this
+   project (PuLID, FaceID, this LoRA) has used the same pose/seed, so
+   there's no data yet on whether a more front-facing pose would do
+   better regardless of identity mechanism. Worth isolating before
+   concluding LoRA itself failed, not just this specific pose+LoRA
+   combination.
+5. Compare against `34-TEST-BRANDON-v6` — done (see above), ideally also
+   with a quantitative metric (ArcFace cosine similarity between source
+   photo and generated face) since the research found no such comparison
+   exists publicly and this would be new, useful information for the
+   project. Not yet built.
 
 **Operational math for the full roster:** if the pilot works, 34
 members × ~$5-9 × ~30 min ≈ **$170-300 and a few hours of Modal compute,

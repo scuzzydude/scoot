@@ -236,6 +236,15 @@ PROMPT_NEGATIVE = (
     "limbs"
 )
 
+# Tier 2 pilot (PLAN_facial_likeness.md / train_lora.py) -- Brandon's
+# per-subject DreamBooth LoRA, trained 2026-08-19 (500 steps, rank 16,
+# against this same animagine-xl-4.0 checkpoint). Blob-hosted (not HF, not
+# baked via MODEL_DOWNLOADS above) since it's a one-off pilot artifact
+# derived from personal photos, not an edition-wide pinned model.
+LORA_TEST_BLOB_PATH = "card-art/lora/brandon34person_lora.safetensors"
+LORA_TEST_LOCAL_NAME = "brandon34person_lora.safetensors"
+LORA_TEST_TRIGGER = "brandon34person"
+
 COMFY_PORT = 8188
 GPU_TYPE = "L4"  # HANDOFF §2: L4 or A10G to start, only move up if it OOMs
 SCALEDOWN_WINDOW_SECONDS = 180  # within HANDOFF's suggested 120-300s range
@@ -369,6 +378,31 @@ def _download_pinned_models():
     print("pinned facexlib/retinaface_resnet50 + facexlib/bisenet")
 
 
+def _download_lora_test_assets():
+    """Separate run_function step (not folded into _download_pinned_models
+    above) so the azure-blob-creds secret this needs is scoped to only this
+    layer, not the whole image-build function. Fetches Brandon's Tier 2
+    pilot LoRA (train_lora.py's output) from Blob into models/loras/ --
+    everything else in this file is HF-hosted and edition-wide; this one
+    file is neither, so it doesn't belong in MODEL_DOWNLOADS."""
+    from azure.storage.blob import BlobServiceClient
+
+    models_root = Path("/root/comfy/ComfyUI/models")
+    lora_dir = models_root / "loras"
+    lora_dir.mkdir(parents=True, exist_ok=True)
+
+    blob_service = BlobServiceClient(
+        account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
+        credential=os.environ["AZURE_STORAGE_KEY"],
+    )
+    container = blob_service.get_container_client(AZURE_CONTAINER)
+    dest = lora_dir / LORA_TEST_LOCAL_NAME
+    with open(dest, "wb") as f:
+        f.write(container.download_blob(LORA_TEST_BLOB_PATH).readall())
+    assert dest.exists() and dest.stat().st_size > 0, f"download failed for {dest}"
+    print(f"pinned Blob:{LORA_TEST_BLOB_PATH} -> {dest}")
+
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("git", "git-lfs", "libgl1-mesa-dev", "libglib2.0-0", "wget")
@@ -446,6 +480,10 @@ image = (
         "azure-storage-blob", "httpx", "pillow", "numpy",
     )
     .run_function(_download_pinned_models)
+    .run_function(
+        _download_lora_test_assets,
+        secrets=[modal.Secret.from_name("azure-blob-creds")],
+    )
     .add_local_file(
         str(WORKFLOW_JSON_PATH), "/root/workflow_player_card.json", copy=True
     )
@@ -766,6 +804,33 @@ class CardGenerator:
         prompt["16"]["inputs"]["seed"] = seed
         prompt["19"]["inputs"]["filename_prefix"] = f"raw/{serial}_figure"
         prompt["21"]["inputs"]["filename_prefix"] = f"raw/{serial}_jersey_mask"
+
+        # Tier 2 LoRA test (2026-08-19, PLAN_facial_likeness.md step 4) --
+        # OFF BY DEFAULT, same gating pattern as face_touchup above. Swaps
+        # the identity mechanism from PuLID (node 27) to Brandon's own
+        # per-subject LoRA (node 29, new), on the SAME style branch (node
+        # 14) and SAME ControlNet pose/lineart conditioning as every other
+        # test in this project -- isolates the identity mechanism as the
+        # only variable, same discipline as the Tier 1 checkpoint test.
+        # LoraLoaderModelOnly (not LoraLoader) since this LoRA is UNet-only
+        # (train_lora.py didn't pass --train_text_encoder) -- no CLIP
+        # weights to apply. The trigger token has to appear in the prompt
+        # text for the trained identity to activate at all, so it's
+        # prepended to a COPY of PROMPT_POSITIVE here, never mutating
+        # self.workflow_template (this must never affect the default,
+        # non-test generation path).
+        if payload.get("lora_test"):
+            prompt["29"] = {
+                "class_type": "LoraLoaderModelOnly",
+                "inputs": {
+                    "model": ["14", 0],
+                    "lora_name": LORA_TEST_LOCAL_NAME,
+                    "strength_model": payload.get("lora_strength", 1.0),
+                },
+            }
+            prompt["16"]["inputs"]["model"] = ["29", 0]
+            prompt["3"]["inputs"]["text"] = f"{LORA_TEST_TRIGGER}, {PROMPT_POSITIVE}"
+
         # pose (payload["pose"]) is not yet wired into the prompt skeleton —
         # the structured SMS pose menu -> prompt-text mapping is part of the
         # "structured edit menu" work HANDOFF explicitly defers past the
