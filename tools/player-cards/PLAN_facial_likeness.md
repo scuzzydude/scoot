@@ -308,6 +308,54 @@ evaluation; needs a real decision before this becomes the deployed
 default -- see the licensing section at the top of this doc, now with a
 second open item alongside InsightFace's.
 
+### Tuning pass: pushed for full-body + stronger style -- identity broke
+
+Two follow-up tests, same day, tuning toward a real card (full-body,
+stronger cartoon style) from the working headshot result above.
+
+**v2:** three changes at once -- `ImageScaleToMaxDimension` 512→1024
+(ComfyUI's own docs: 512 causes "the character taking up too much
+space" specifically for headshot-only subject inputs, exactly this
+case), a second chained `USOStyleReference` pass on the same style
+image (pushing style strength), and a stronger full-body/cartoon
+prompt + portrait aspect (832x1216). Result: style transformation
+worked great -- genuine full-body cartoon proportions, correct jersey/
+pose/background -- but **identity was completely gone**. Generic child
+character, wrong hair color, wrong age, wrong build.
+
+**v3, isolating:** reverted the double style-reference chain (back to
+one pass) and softened the prompt (dropped "exaggerated cartoon
+proportions"), kept the 1024 scale fix and full-body framing. **Same
+result** -- still a generic child character, no likeness at all. This
+rules out the double style-pass as the (sole) cause.
+
+**Working hypothesis, not yet confirmed:** identity signal seems tied
+to how much of the frame the face occupies, regardless of mechanism.
+The one test that worked (first pilot run, above) was a headshot-
+dominant square composition. Both follow-ups pushed toward full-body
+framing and both lost identity, even with different specific settings
+changed between them. This isn't new to USO -- the SDXL/PuLID work
+earlier in this project hit the identical theory
+(`modal_app.py`'s node 27 comment: "the face is a small fraction of
+this full-body/bust composition... identity-embedding methods are
+usually demonstrated on close-up portraits where the face dominates
+the frame -- the signal may simply be diluted at this scale"). If
+that's the real mechanism, it would mean full-body framing and strong
+identity preservation are in real tension across every approach tried
+in this whole project, not a settings problem on any one of them.
+
+**Untested variable worth trying before concluding that:** every test
+so far has fed a HEADSHOT photo as the subject reference, even when
+asking for a FULL-BODY output -- the model has never seen what
+Brandon's body looks like, only his face, so it may be inventing a
+body from the style reference / prompt alone while the compositional
+shift away from a headshot-shaped reference dilutes the facial signal
+too. A genuine full-body subject photo (matching what's being asked
+for) hasn't been tried yet and could behave very differently. Stopped
+here to report rather than keep guessing -- two negative tuning
+attempts in a row on top of the pause point that's already been the
+pattern all day.
+
 Skip DreamO despite its identity claims — its style task is documented
 as unstable and not combinable with other conditioning, which is exactly
 what a style-locked card pipeline needs.

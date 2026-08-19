@@ -243,9 +243,29 @@ class USOGenerator:
             "6": {"class_type": "CLIPVisionEncode", "inputs": {"clip_vision": ["2", 0], "image": ["5", 0], "crop": "center"}},
             "7": {"class_type": "USOStyleReference",
                   "inputs": {"model": ["4", 0], "model_patch": ["3", 0], "clip_vision_output": ["6", 0]}},
+            # Reverted the double-chained style pass tried in v2 (2026-08-19)
+            # -- it pushed the cartoon style through strongly but destroyed
+            # identity entirely (generic child character, wrong hair/age/
+            # build). v2 changed three things at once (this, the 1024 scale
+            # fix, and the full-body prompt), so the cause isn't isolated,
+            # but the double style-patch chain is the most invasive change
+            # of the three (it directly re-patches the model a second time)
+            # and the leading suspect -- same "push one conditioning input
+            # too hard, break something else" pattern this whole project
+            # keeps hitting. Single pass here; if style still needs pushing
+            # once identity is confirmed stable, prefer prompt language over
+            # a second model patch.
             "8": {"class_type": "LoadImage", "inputs": {"image": subject_name}},
+            # 1024 not the 512 the reference workflow suggests as its
+            # general default -- ComfyUI's own markdown note on that
+            # template warns 512 causes "the character taking up too much
+            # space" specifically when the input is a head-only image
+            # (exactly what the first pilot run's subject photo was, and
+            # exactly the symptom it produced: a headshot-dominant crop
+            # instead of a full-body composition). Following their
+            # documented guidance for this case, not guessing.
             "9": {"class_type": "ImageScaleToMaxDimension",
-                  "inputs": {"image": ["8", 0], "upscale_method": "area", "largest_size": 512}},
+                  "inputs": {"image": ["8", 0], "upscale_method": "area", "largest_size": 1024}},
             "10": {"class_type": "VAEEncode", "inputs": {"pixels": ["9", 0], "vae": ["1", 2]}},
             "11": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["1", 1], "text": text}},
             "12": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["11", 0]}},
