@@ -469,13 +469,50 @@ chasing all day -- identity surviving a full-body composition -- is
 solved. This is a style-tuning problem now, the same place Tier 3's
 headshot result was before pushing it too far broke it.
 
-**Not yet tried:** pushing the art style further toward flat/exaggerated
-cartoon (the same kind of push that broke USO's identity preservation
--- worth testing carefully, one variable at a time this time, given
-that exact failure mode already happened once today). Full roster
-economics not yet estimated for Kontext specifically (single A10G call,
-similar cost profile to USO -- no reason to expect it's meaningfully
-more expensive).
+**Cost, measured from a real call, not estimated.** ComfyUI's own log
+reported "Prompt executed in 77.82 seconds" for the v1 generation above
+(20-step sampler = 55s of that, confirmed via the progress bar log
+line). At Modal's published A10G rate ($0.000306/sec,
+https://modal.com/pricing), that's:
+- **~$0.02–0.03/card** (77.82s cold + ~15s ComfyUI startup overhead
+  ≈ 93s ≈ $0.028; warm calls without the startup overhead ≈ $0.024).
+- **~$0.81 for the full 34-member roster** in one batch run (1 cold
+  start + 33 warm calls ≈ 44 min total GPU time).
+- **No per-subject training at all** -- this is the real economic
+  difference from Tier 2's LoRA approach ($170-300 for the roster
+  *before* any generation). Kontext runs directly against each
+  player's existing photo.
+- One-time image-build cost (baking ~17.6GB of model weights into the
+  Modal image) is CPU-time only, not GPU-billed, and already sunk.
+
+**Tuning round 2, same day, per Brandon's direct feedback** ("more
+cartoony on the face, too much muscle... needs to be waist up, you have
+the crotch in the sample"):
+- **v2:** explicit "waist-up, cropped just above the waist, no hips/
+  legs" + "toned athletic build, not overly bulky" replacing the
+  muscular-superhero language. **Framing and muscle both fixed cleanly**
+  -- no identity regression, unlike USO's fragility under similar
+  pressure. Face still read photoreal, not cartoon, and the jersey
+  drifted into a generic caped superhero collar (lost from dropping
+  "basketball jersey" specificity when removing "shorts").
+- **v3:** pushed face-cartoon language much harder ("flat cel-shaded
+  skin, no visible pores or wrinkles, large rounded cartoon eyes,
+  simplified nose/mouth, NOT photorealistic") and reinforced "sleeveless
+  round-neckline basketball jersey style, no cape, no collar" to recover
+  what v2 lost. **Real cel-shaded cartoon face achieved** -- flat
+  simplified skin/eyes/nose/mouth, no more photoreal texture. Correct
+  jersey style back. Identity reads a bit softer than v1's more
+  photoreal face -- an expected tradeoff of pushing toward cartoon, not
+  a failure, but worth Brandon's judgment on whether v3 is the right
+  balance or needs a middle ground between v1's identity strength and
+  v3's cartoon rendering.
+- Notably: unlike every USO tuning attempt, **none of these prompt
+  changes broke identity or triggered a cascading failure** -- Kontext's
+  edit-model mechanism appears substantially more robust to style
+  pressure than USO's generate-from-noise conditioning was. Still
+  changed one thing at a time as a matter of discipline, but the
+  "over-strength conditioning breaks everything" pattern that recurred
+  constantly on the SDXL and USO stacks hasn't shown up here yet.
 
 ## Monitor, no action needed
 
