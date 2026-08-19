@@ -2,10 +2,13 @@
 
 Written 2026-08-18 after `FACIAL_LIKENESS_RESEARCH.md` came back.
 Tier 1 (negative), Tier 2 (negative), two pose tests (both negative),
-and Tier 3 (**first real breakthrough**) all executed 2026-08-19 — see
-each section below. Current status: identity-preservation mechanism
-appears to work (USO on FLUX); style strength and full-body framing are
-the open tuning items before this is card-ready.
+Tier 3/USO (worked in headshot framing, failed on every full-body
+variation tried, 5 tests), and **Tier 4/FLUX.1 Kontext (real
+breakthrough — likeness + full body + muscular build all worked in one
+shot)** all executed 2026-08-19 — see each section below. Current
+status: identity + full-body composition both work via Kontext; art
+style needs a pass toward more cartoon/less realistic-CG before this is
+card-ready.
 
 ## Licensing — two open items now, decide before production use
 
@@ -23,10 +26,16 @@ of question as InsightFace's — is Scoot(34) card generation
 "commercial" in a sense that matters here. Fine for evaluation/piloting,
 needs a real decision before USO/FLUX becomes the deployed default.
 
+**Third item, added with Tier 4:** `flux1-dev-kontext_fp8_scaled.safetensors`
+is also in the FLUX.1 [dev] Non-Commercial License family. Same open
+question as the other two — and Tier 4 is currently the strongest
+result, so this is the most load-bearing of the three to actually
+resolve before production use.
+
 Needs a decision either way: is Scoot(34) card generation "commercial"
-in a sense that matters here? If yes, both items above apply and need
-resolving (or an alternative licensed-for-commercial-use model swapped
-in) before production use.
+in a sense that matters here? If yes, all three items above apply and
+need resolving (or an alternative licensed-for-commercial-use model
+swapped in) before production use.
 
 ## Tier 1 — cheap, run first (~1 afternoon, ~$5-10 Modal spend)
 
@@ -367,13 +376,106 @@ specifically. Basketball trading cards conventionally include
 waist-up/three-quarter-body compositions, not only full figure --
 worth testing a middle ground (e.g. "from the waist up, holding a
 basketball" rather than "head to toe, standing pose") before assuming
-the card format itself needs to change. Stopped here to report after
-three consecutive negative results on the same axis -- this is a real
-decision point, not a place to keep iterating unprompted.
+the card format itself needs to change.
+
+**v5, testing that middle ground:** waist-up/chest-up framing instead
+of full head-to-toe, back to the headshot subject photo (proven not to
+matter per v4), moderate portrait aspect (1024x1280, not the more
+extreme 832x1216). **Same result again** -- still a generic child
+character, zero likeness, even in a tighter, more face-dominant crop
+than several of the full-body attempts. This falsifies the frame-share
+theory itself, not just the specific levers tried under it: five
+USO tests now (headshot success, then four framing/prompt/photo
+variations, all failed) don't cleanly separate on any variable tried
+so far. Stopped chasing USO parameters at this point.
 
 Skip DreamO despite its identity claims — its style task is documented
 as unstable and not combinable with other conditioning, which is exactly
 what a style-locked card pipeline needs.
+
+## Tier 4 — FLUX.1 Kontext (2026-08-19): real breakthrough, likeness + full body both work
+
+Prompted directly by Brandon after watching USO fail identically 5
+times: "How was Meta able to do this so quickly? Can't we use a
+HuggingFace model geared for exactly this kind of work?" — a genuinely
+better question than continuing to tune USO. The answer: Meta AI's
+cartoonifier is almost certainly an *image-editing* model, not a
+generate-from-scratch-with-conditioning model like USO. That's the real
+architectural reason identity survived instantly for Meta and had been
+a fight all day here.
+
+**Why Kontext is different, confirmed by tracing its actual graph (not
+assumed):** USO's KSampler denoises from `EmptySD3LatentImage` (pure
+noise), steered toward the subject only via `ReferenceLatent`
+conditioning. FLUX.1 Kontext's KSampler denoises from the SAME
+VAE-encoded latent as its `ReferenceLatent` conditioning input — i.e.
+it starts from the real photo's own latent representation, not noise.
+Combined with the base model itself being trained end-to-end for
+"take this photo + instruction, preserve everything else," this is a
+structurally different task than USO's bolted-on subject+style adapter
+on a generic base model. Confirmed via
+[black-forest-labs/FLUX.1-Kontext-dev](https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev),
+independently benchmarked ahead of other open edit models AND
+Gemini-Flash-Image specifically on identity preservation.
+
+**Build.** New file `modal_app_kontext.py`, separate from both
+`modal_app.py` and `modal_app_uso.py` (third distinct checkpoint, zero
+shared risk). Node graph reverse-engineered the same way as USO's:
+fetched ComfyUI's own official reference workflow
+(`Comfy-Org/workflow_templates`' `flux_kontext_dev_basic.json`)
+directly, traced its subgraph, verified every node's actual input names
+against ComfyUI source before writing the flattened API-format graph.
+Model files (all pinned by HF revision): `flux1-dev-kontext_fp8_scaled.safetensors`
+(Comfy-Org/flux1-kontext-dev_ComfyUI, ~11.9GiB), `ae.safetensors`
+(Comfy-Org/Lumina_Image_2.0_Repackaged — yes, packaged under an
+unrelated-sounding repo name, confirmed via the reference workflow's
+own note, not guessed), `clip_l.safetensors` + `t5xxl_fp8_e4m3fn_scaled.safetensors`
+(comfyanonymous/flux_text_encoders). Same ComfyUI commit as the other
+two apps -- `FluxKontextImageScale` already present, confirmed the same
+way USO's nodes were. Single input image is fully supported (confirmed
+via the reference workflow's own MarkdownNote) -- no separate style
+reference image needed the way USO required one.
+
+**Prompting follows Kontext's own documented rules** (quoted directly
+from the reference workflow's MarkdownNote): be specific, explicitly
+state what to preserve ("preserving facial features"), prefer "change X
+to Y" over "transform into Y" (their own example: "transform the person
+into a Viking" is the WRONG pattern, "change the clothes to be a viking
+warrior while preserving facial features" is correct).
+
+**Real Fonde jersey colors used, not the orange/blue placeholder every
+earlier test in this project used.** Checked `arch/player-cards.md`
+before writing the prompt rather than guessing "Fonde uniform":
+`JERSEY = {"dark": ("#2E2E2A", "#121210"), "light": ("#F4F1E8", "#BFBBAD")}`
+— dark charcoal/black or light cream, reversible, no jersey numbers
+("everybody is 34"), and the doc explicitly says not to generate the
+Fonde crest or chest rider (composited separately downstream) — so the
+prompt asks for a blank dark jersey, no logos/text/numbers.
+
+**Result, first attempt: real breakthrough.** Prompt: "Change this into
+a 3D Pixar-style cartoon superhero character. Change the clothes to a
+solid dark charcoal-black superhero costume with basketball shorts, no
+logos, no text, no numbers. Give the character a more muscular,
+athletic superhero build. Use soft rounded cartoon shading and a simple
+plain background. Preserve the same facial features, hairstyle, and
+expression." Same headshot subject photo and seed (340034) as every
+other test. **Genuine, clear likeness — dramatically more recognizable
+than anything USO produced across 5 attempts — AND full body AND the
+muscular superhero build worked, all in one shot, all at once.** Style
+leans more "realistic muscular CG render" than the exaggerated Pixar
+cartoon Brandon pointed to (Meta's Response 2), not yet fully
+cartoon-stylized, but the fundamental problem this whole plan has been
+chasing all day -- identity surviving a full-body composition -- is
+solved. This is a style-tuning problem now, the same place Tier 3's
+headshot result was before pushing it too far broke it.
+
+**Not yet tried:** pushing the art style further toward flat/exaggerated
+cartoon (the same kind of push that broke USO's identity preservation
+-- worth testing carefully, one variable at a time this time, given
+that exact failure mode already happened once today). Full roster
+economics not yet estimated for Kontext specifically (single A10G call,
+similar cost profile to USO -- no reason to expect it's meaningfully
+more expensive).
 
 ## Monitor, no action needed
 
@@ -385,17 +487,20 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 ## Suggested order for next session
 
 1. ~~Tier 1, Tier 2, pose tests~~ — all done, all negative, see above.
-2. ~~Tier 3: build + first USO/FLUX test~~ — done, breakthrough, see
+2. ~~Tier 3: build + USO/FLUX tests~~ — done. Works in headshot framing;
+   5 attempts at full-body/waist-up all failed identically, cause not
+   isolated. Deprioritized in favor of Tier 4, not abandoned.
+3. ~~Tier 4: build + first Kontext test~~ — done, real breakthrough:
+   likeness + full body + muscular build all worked in one shot. See
    above.
-3. Tune USO toward card-ready: push the art style further toward the
-   cartoon/Pixar look (currently closer to smooth CG render — try a
-   stronger/more explicit style prompt, or a second style-reference pass)
-   and get a full-body athletic-pose composition instead of a headshot
-   crop (try a subject photo that's already full-body, and/or push the
-   prompt harder on "full body, basketball jersey, athletic pose").
-4. Once card-ready, decide the two licensing questions (InsightFace,
-   FLUX.1-dev non-commercial) before this becomes the deployed default —
-   independent of how good the results look.
-5. If USO tuning stalls: Tier 2's per-subject LoRA is still a live
-   option, now provably not needed given Tier 3's result — deprioritize
-   rather than abandon.
+4. Tune Kontext toward card-ready: push the art style further toward
+   flat/exaggerated cartoon (currently a realistic muscular CG render) —
+   change ONE thing at a time this time (prompt wording OR guidance
+   value, not both at once), given USO's identity broke the one time
+   style was pushed aggressively on multiple fronts simultaneously.
+5. Once card-ready, decide the licensing question (InsightFace,
+   FLUX.1-dev/Kontext non-commercial — three items now) before this
+   becomes the deployed default — independent of how good results look.
+6. Tier 2's per-subject LoRA and Tier 3's USO path are both
+   deprioritized given Tier 4's result — not abandoned, just no longer
+   the leading approach.
