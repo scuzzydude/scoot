@@ -156,6 +156,46 @@ Steps, with status as of 2026-08-19:
    exists publicly and this would be new, useful information for the
    project. Not yet built.
 
+## Pose isolation test (2026-08-19) — result: negative, and surprising
+
+Tested the confound from Tier 2 step 4: pulled a different source frame
+from the same video (`f_0287.jpg`) where Brandon's head is level and
+facing the camera directly, eyes open -- unlike the downward-tilted
+frame every prior test used. New rembg cutout + matching tight face
+crop, uploaded to Blob. Ran PuLID at the known-best settings
+(fidelity/1.0, no LoRA, no touchup) -- same seed (340034), same style
+reference, same everything else as `34-TEST-BRANDON-v6`. Only the pose
+source photo changed.
+
+**Result: worse, not better.** The generated figure's head turned almost
+entirely away from camera, hair covering where the face should be -- no
+facial features at all. Structurally the same failure mode as Tier 1's
+Zero-checkpoint test (head turned away), but from an entirely different
+cause (checkpoint unchanged this time, only the pose input changed).
+
+**This weakens rather than confirms the pose-confound theory.** A
+cleaner, more camera-facing source photo didn't produce a cleaner,
+more camera-facing figure -- it produced a worse one. Two candidate
+explanations, neither confirmed yet:
+- OpenPose's body25 skeleton only coarsely encodes head yaw/pitch (a
+  handful of nose/eye/ear keypoints, not a real orientation signal) --
+  it may be systematically unreliable at pinning head orientation for
+  this composition, regardless of which source photo drives it. The
+  original downward-tilted photo may have "worked" (in the sense of at
+  least facing forward) somewhat by chance, not because that skeleton
+  was more reliable.
+- The pose ControlNet's fixed strength (0.6) may be too weak to
+  override the checkpoint's own strong prior toward three-quarter/
+  looking-away angles in this style of illustration, and different
+  input skeletons expose that instability differently rather than
+  fixing it.
+
+Not chasing this further without checking in first -- two real,
+GPU-costing negative results back to back on two different hypotheses
+(identity mechanism, then pose) is a natural checkpoint, not a place to
+keep unilaterally spending. See "Where this stands" below for the
+options this actually leaves open.
+
 **Operational math for the full roster:** if the pilot works, 34
 members × ~$5-9 × ~30 min ≈ **$170-300 and a few hours of Modal compute,
 one time per edition.** Very plausibly viable given the effort already
