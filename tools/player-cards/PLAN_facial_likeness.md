@@ -344,17 +344,32 @@ that's the real mechanism, it would mean full-body framing and strong
 identity preservation are in real tension across every approach tried
 in this whole project, not a settings problem on any one of them.
 
-**Untested variable worth trying before concluding that:** every test
-so far has fed a HEADSHOT photo as the subject reference, even when
-asking for a FULL-BODY output -- the model has never seen what
-Brandon's body looks like, only his face, so it may be inventing a
-body from the style reference / prompt alone while the compositional
-shift away from a headshot-shaped reference dilutes the facial signal
-too. A genuine full-body subject photo (matching what's being asked
-for) hasn't been tried yet and could behave very differently. Stopped
-here to report rather than keep guessing -- two negative tuning
-attempts in a row on top of the pause point that's already been the
-pattern all day.
+**v4, testing the untested variable:** swapped the subject reference
+from the tight studio headshot to a genuine waist-up rembg cutout (the
+same one used for the earlier SDXL pose-isolation test) -- otherwise
+identical to v3 (single style pass, 1024 scale, portrait aspect,
+full-body prompt). **Same result again** -- still a generic child
+character, no likeness. Rules out "headshot-only reference photo" as
+the cause too.
+
+**Three full-body attempts, three different levers changed, three
+identical failures.** Across v2/v3/v4 the double style-pass, the prompt
+wording, and the subject photo's own framing were each varied in turn
+-- full-body framing lost identity every single time regardless. The
+one thing every failing test shares that the one working test doesn't:
+asking for a full head-to-toe composition at all. This converges on the
+frame-share theory above being about the OUTPUT composition, not the
+input reference photo -- consistent with, and now better-evidenced
+than, the original SDXL/PuLID theory it echoes.
+
+**Practical path forward:** stop chasing full head-to-toe framing
+specifically. Basketball trading cards conventionally include
+waist-up/three-quarter-body compositions, not only full figure --
+worth testing a middle ground (e.g. "from the waist up, holding a
+basketball" rather than "head to toe, standing pose") before assuming
+the card format itself needs to change. Stopped here to report after
+three consecutive negative results on the same axis -- this is a real
+decision point, not a place to keep iterating unprompted.
 
 Skip DreamO despite its identity claims — its style task is documented
 as unstable and not combinable with other conditioning, which is exactly
