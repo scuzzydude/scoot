@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness: USO/FLUX (Tier 3) breakthrough works in headshot framing; TWO follow-up tests pushing full-body both lost identity entirely -- untested lever: full-body subject photo (every test so far fed a headshot)"
+description: "Player-card facial likeness: USO/FLUX (Tier 3) breakthrough works in headshot framing; THREE full-body attempts (varying style pass, prompt, subject photo) all lost identity identically -- next: try waist-up/3-quarter framing, not full head-to-toe"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T17:07:55.838Z
+  modified: 2026-08-19T17:12:15.919Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -144,15 +144,30 @@ easier." Source: `build_review.py` +
 the built `review.html` to `/var/www/html/likeness-review/index.html`
 (sudo chown www-data:www-data after).
 
-**Follow-up tuning, same day: two tests pushing full-body both lost
-identity entirely** (generic child character, no likeness at all),
-isolated across different specific settings changed between them.
-Working hypothesis: identity signal ties to how much of the frame the
-face occupies, not any one setting -- matches the SDXL/PuLID work's
-identical theory earlier in this project. Untested lever before
-concluding that's fundamental: every test so far fed a HEADSHOT subject
-photo even when asking for full-body output -- a genuine full-body
-subject photo hasn't been tried. Next step per the plan: try that.
+**Follow-up tuning, same day: THREE tests pushing full-body all lost
+identity identically.** v2 (doubled style pass), v3 (single pass,
+softer prompt), v4 (genuine waist-up subject photo instead of
+headshot) -- each varied a different lever, each produced the same
+generic-child-character failure with zero likeness. This rules out the
+style-pass, the prompt wording, AND the subject-photo-framing theories
+individually. What's constant across all three failures and absent
+from the one working test: asking for a full head-to-toe composition
+at all.
+
+**Working hypothesis, now well-evidenced across 3 independent probes:**
+identity signal ties to how much of the OUTPUT frame the face occupies,
+not to any specific setting or input. Matches the SDXL/PuLID work's
+identical theory earlier in this project (same "face is a small
+fraction of the composition, signal diluted" pattern), now showing up
+on a completely different mechanism too -- suggests this may be a
+general property of identity-conditioning methods on this class of
+model, not a bug specific to either pipeline.
+
+**Next step per the plan, not yet tried:** waist-up or three-quarter
+body framing instead of full head-to-toe -- basketball cards
+conventionally use this anyway, so it may not even require compromising
+the card format. Stopped after 3 consecutive same-axis failures to
+report rather than keep iterating unprompted.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
