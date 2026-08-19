@@ -1,23 +1,32 @@
 # Plan of attack — facial likeness fix
 
 Written 2026-08-18 after `FACIAL_LIKENESS_RESEARCH.md` came back.
-Tier 1 executed 2026-08-19 (negative, see below). Tier 2 pilot design
-started 2026-08-19, paused on a data-collection checkpoint — see its
-section below for exactly where to resume.
+Tier 1 (negative), Tier 2 (negative), two pose tests (both negative),
+and Tier 3 (**first real breakthrough**) all executed 2026-08-19 — see
+each section below. Current status: identity-preservation mechanism
+appears to work (USO on FLUX); style strength and full-body framing are
+the open tuning items before this is card-ready.
 
-## The one thing to decide before any of this: licensing
+## Licensing — two open items now, decide before production use
 
 The research surfaced a real blocker independent of whether tuning
 continues: **InsightFace's `buffalo_l`/`antelopev2`/`inswapper` models —
 the face encoders inside the pipeline's current PuLID and FaceID passes
 — are licensed for non-commercial research use only.** This is already
-true of the deployed pipeline today, not just future work.
+true of the deployed pipeline today, not just future work. Moot for
+Tier 3 specifically (USO needs no face encoder), but still a real
+question for the currently-deployed SDXL/PuLID default path.
 
-Needs a decision: is Scoot(34) card generation "commercial" in a sense
-that matters here? If yes, everything below still applies, but Tier 2
-(per-subject LoRA) becomes doubly attractive since it needs no face
-encoder at all — it sidesteps the licensing question entirely, not just
-the quality problem.
+**Second item, added with Tier 3:** `flux1-dev-fp8.safetensors` is
+FLUX.1 [dev], Black Forest Labs' **Non-Commercial License**. Same class
+of question as InsightFace's — is Scoot(34) card generation
+"commercial" in a sense that matters here. Fine for evaluation/piloting,
+needs a real decision before USO/FLUX becomes the deployed default.
+
+Needs a decision either way: is Scoot(34) card generation "commercial"
+in a sense that matters here? If yes, both items above apply and need
+resolving (or an alternative licensed-for-commercial-use model swapped
+in) before production use.
 
 ## Tier 1 — cheap, run first (~1 afternoon, ~$5-10 Modal spend)
 
@@ -233,14 +242,71 @@ sunk into just getting the base pipeline working — worth stating
 explicitly since "per-subject retraining" can sound more expensive than
 it actually is at this scale.
 
-## Tier 3 — only if Tier 2 turns out operationally unacceptable (~2-4 weeks)
+## Tier 3 — USO on FLUX (2026-08-19): first real breakthrough
 
-**Evaluate USO on FLUX** (Apache-2.0, ~16GB FP8, native ComfyUI support,
-purpose-built to take identity and style references in one pass — the
-closest published architecture to this exact use case). Requires
-re-locking the style reference against a FLUX backbone instead of SDXL —
-real work, but the original brief explicitly allowed a checkpoint swap
-if that's what it takes.
+Greenlit after Tier 2 (LoRA) plus two pose-related tests all came back
+negative on the SDXL/ControlNet stack -- three consecutive costly
+failures on three different hypotheses justified the bigger swap.
+
+**Build.** New, separate file: `modal_app_uso.py` (does not touch
+`modal_app.py` -- different base model, different conditioning
+mechanism, zero shared risk). Node graph reverse-engineered from
+ComfyUI's own official reference workflow
+(`Comfy-Org/workflow_templates`' `flux1_dev_uso_reference_image_gen.json`),
+not guessed -- fetched it directly, traced every class_type/link through
+its nested subgraphs, verified every node's actual input names against
+ComfyUI's source (`comfy_extras/nodes_model_patch.py`,
+`comfy_extras/nodes_flux.py`, `comfy_extras/nodes_edit_model.py`) before
+writing the flattened API-format graph. Confirmed USO's nodes
+(`USOStyleReference`, `ModelPatchLoader`, `FluxKontextMultiReferenceLatentMethod`)
+were already in the pinned ComfyUI commit (merged into core 2025-09-02,
+long before the 2026-08-16 pin) -- no ComfyUI version bump needed, and
+no third-party custom-node repos to clone at all (unlike the SDXL
+pipeline's PuLID/IPAdapter dependency set).
+
+Model files, all pinned by HF revision: `flux1-dev-fp8.safetensors`
+(Comfy-Org/flux1-dev, ~16.1GiB), `sigclip_vision_patch14_384.safetensors`
+(Comfy-Org/sigclip_vision_384), `uso-flux1-dit-lora-v1.safetensors` +
+`uso-flux1-projector-v1.safetensors` (Comfy-Org/USO_1.0_Repackaged).
+A10G GPU (24GB) -- fp8 12B-param FLUX + LoRA + projector fit with
+headroom.
+
+Two real bugs hit and fixed during the first live run (both logged the
+same way as every other bug in this project -- actual failure, not
+guessed):
+- Graph referenced the LoRA/projector by their repo-relative path
+  (`split_files/loras/...`) instead of the basename
+  `_download_pinned_models` actually saves to disk -- same class of bug
+  MODEL_PINS.md already documents for `clip_vision` in `modal_app.py`.
+- Redeployed code didn't take effect until the warm container was
+  explicitly killed (`modal container stop`) -- the same "stale warm
+  container" gotcha this project's `modal_app.py` history already
+  flagged, now confirmed on a second app too.
+
+**Style pivot, same session:** Brandon tried Meta AI's cartoonifier on
+his own photo and preferred its 3D-Pixar-style result over this
+project's locked flat 2D cel-shaded anime look. That image (cropped
+directly out of the comparison screenshot, no regeneration) became the
+style reference for this test instead of the SDXL-era
+`style_reference.png` -- a real, deliberate style change for the
+edition, not yet fully executed (see "Where this stands" below).
+
+**Result: first legible face in fifteen total attempts.** Subject =
+Brandon's studio-closeup photo (clean, well-lit, no pose extraction
+needed at all -- USO conditions via a VAE-encoded reference latent, not
+ControlNet, sidestepping the pose-reliability problem the last two SDXL
+tests ran into entirely). Real eyes, nose, mouth; structure genuinely
+reads as Brandon. Not yet card-ready: came out as a headshot crop, not
+the full-body athletic-pose card format, and the render leans more
+"smooth CG" than the exaggerated big-eyed Pixar look in the reference --
+both look like prompt/framing tuning, not a fundamental blocker, but
+neither is proven yet.
+
+**Licensing flag, same class as InsightFace's:** flux1-dev-fp8 is FLUX.1
+[dev], Black Forest Labs' Non-Commercial License. Fine for this
+evaluation; needs a real decision before this becomes the deployed
+default -- see the licensing section at the top of this doc, now with a
+second open item alongside InsightFace's.
 
 Skip DreamO despite its identity claims — its style task is documented
 as unstable and not combinable with other conditioning, which is exactly
@@ -255,12 +321,18 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 
 ## Suggested order for next session
 
-1. ~~Run Tier 1's checkpoint swap test~~ — done, negative, see above.
-2. ~~Collect Brandon's training photos~~ — done, 7 images staged in
-   `tools/player-cards/art/lora_training/brandon/`.
-3. Resume Tier 2 at step 3: write captions, build the Modal training
-   function (pattern already identified above), run the pilot.
-4. Still open, independent of the above: decide the InsightFace
-   licensing question (non-commercial-research-only — affects the
-   currently-deployed PuLID/FaceID path regardless of how Tier 2 goes;
-   LoRA itself sidesteps it since it needs no face encoder).
+1. ~~Tier 1, Tier 2, pose tests~~ — all done, all negative, see above.
+2. ~~Tier 3: build + first USO/FLUX test~~ — done, breakthrough, see
+   above.
+3. Tune USO toward card-ready: push the art style further toward the
+   cartoon/Pixar look (currently closer to smooth CG render — try a
+   stronger/more explicit style prompt, or a second style-reference pass)
+   and get a full-body athletic-pose composition instead of a headshot
+   crop (try a subject photo that's already full-body, and/or push the
+   prompt harder on "full body, basketball jersey, athletic pose").
+4. Once card-ready, decide the two licensing questions (InsightFace,
+   FLUX.1-dev non-commercial) before this becomes the deployed default —
+   independent of how good the results look.
+5. If USO tuning stalls: Tier 2's per-subject LoRA is still a live
+   option, now provably not needed given Tier 3's result — deprioritize
+   rather than abandon.
