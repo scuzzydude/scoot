@@ -260,3 +260,153 @@ class KontextGenerator:
             container.upload_blob(figure_blob, f, overwrite=True)
 
         return {"serial": serial, "figure_path": f"{AZURE_CONTAINER}/{figure_blob}"}
+
+    @modal.method()
+    def inpaint_region(self, payload: dict) -> dict:
+        """payload: {serial, image_url, mask_url, prompt, seed, denoise,
+        guidance}. Masked regeneration on an ALREADY-generated Kontext
+        image -- separate mechanism from generate() above, added
+        2026-08-19 after 3 straight prompt-only attempts failed to fix a
+        hair regression (PLAN_facial_likeness.md "Hair regression"
+        section). Standard ComfyUI inpainting (VAEEncode + mask ->
+        SetLatentNoiseMask -> KSampler), NOT Kontext's ReferenceLatent
+        edit-instruction mechanism -- this is a geometric constraint
+        (mask = where pixels are ALLOWED to change) rather than a text
+        instruction (which proved unreliable 3/3 times for this exact
+        problem). mask: white = regenerate, black = keep unchanged,
+        feathered edges for a soft blend (same idea as modal_app.py's
+        _face_touchup, different mechanism -- that one crops+pastes with
+        an external mask; this one uses ComfyUI's native noise-mask
+        inpainting so the blend happens inside the diffusion process).
+        """
+        import httpx
+        from azure.storage.blob import BlobServiceClient
+
+        serial = payload["serial"]
+        seed = payload["seed"]
+        denoise = payload.get("denoise", 0.9)
+        guidance = payload.get("guidance", 2.5)
+        text = payload["prompt"]
+
+        comfy_input = Path("/root/comfy/ComfyUI/input")
+        comfy_input.mkdir(parents=True, exist_ok=True)
+        image_name = f"{serial}_inpaint_src.png"
+        mask_name = f"{serial}_inpaint_mask.png"
+        for url, name in [(payload["image_url"], image_name), (payload["mask_url"], mask_name)]:
+            r = httpx.get(url, timeout=60)
+            r.raise_for_status()
+            (comfy_input / name).write_bytes(r.content)
+
+        prompt = {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": Path(KONTEXT_FILENAME).name, "weight_dtype": "default"}},
+            "2": {"class_type": "DualCLIPLoader",
+                  "inputs": {"clip_name1": CLIP_L_FILENAME, "clip_name2": T5XXL_FILENAME, "type": "flux"}},
+            "3": {"class_type": "VAELoader", "inputs": {"vae_name": Path(VAE_FILENAME).name}},
+            "4": {"class_type": "LoadImage", "inputs": {"image": image_name}},
+            "5": {"class_type": "LoadImageMask", "inputs": {"image": mask_name, "channel": "red"}},
+            "6": {"class_type": "VAEEncode", "inputs": {"pixels": ["4", 0], "vae": ["3", 0]}},
+            "7": {"class_type": "SetLatentNoiseMask", "inputs": {"samples": ["6", 0], "mask": ["5", 0]}},
+            "8": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": text}},
+            "9": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["8", 0]}},
+            "10": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["8", 0], "guidance": guidance}},
+            "11": {"class_type": "KSampler",
+                   "inputs": {"model": ["1", 0], "positive": ["10", 0], "negative": ["9", 0],
+                              "latent_image": ["7", 0], "seed": seed, "steps": 20, "cfg": 1.0,
+                              "sampler_name": "euler", "scheduler": "simple", "denoise": denoise}},
+            "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}},
+            "13": {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": f"raw/{serial}_inpaint"}},
+        }
+
+        result = self._submit_and_wait(prompt)
+        outputs = result.get("outputs", {})
+        out_dir = Path("/root/comfy/ComfyUI/output")
+        figure_path = _image_path(out_dir, outputs["13"]["images"][0])
+
+        blob_service = BlobServiceClient(
+            account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
+            credential=os.environ["AZURE_STORAGE_KEY"],
+        )
+        container = blob_service.get_container_client(AZURE_CONTAINER)
+        figure_blob = f"{AZURE_OUTPUT_PREFIX}/{serial}_inpaint_figure.png"
+        with open(figure_path, "rb") as f:
+            container.upload_blob(figure_blob, f, overwrite=True)
+
+        return {"serial": serial, "figure_path": f"{AZURE_CONTAINER}/{figure_blob}"}
+
+    @modal.method()
+    def inpaint_with_reference(self, payload: dict) -> dict:
+        """payload: {serial, image_url, mask_url, reference_url, prompt,
+        seed, denoise, guidance}. inpaint_region() above proved the mask
+        mechanism works (unmasked region comes back pixel-identical) but
+        text-only prompting inside the mask still produced the same wrong
+        hairstyle -- 4/4 failures now (3 full-image text prompts +
+        1 masked text prompt), confirming this is a content problem, not
+        an instruction-following problem. This adds a SECOND mechanism on
+        top of the mask: ReferenceLatent (the same node Kontext's own
+        generate() uses for its edit instruction) now conditions on a
+        REFERENCE IMAGE of the correct hair, not just text -- "match
+        this" instead of "here's a description." Composes the two
+        mechanisms independently: SetLatentNoiseMask still constrains
+        WHERE pixels can change (unaffected by this addition), while
+        ReferenceLatent's conditioning now steers WHAT gets drawn there
+        toward the reference image's actual content.
+        """
+        import httpx
+        from azure.storage.blob import BlobServiceClient
+
+        serial = payload["serial"]
+        seed = payload["seed"]
+        denoise = payload.get("denoise", 0.9)
+        guidance = payload.get("guidance", 2.5)
+        text = payload["prompt"]
+
+        comfy_input = Path("/root/comfy/ComfyUI/input")
+        comfy_input.mkdir(parents=True, exist_ok=True)
+        image_name = f"{serial}_src.png"
+        mask_name = f"{serial}_mask.png"
+        ref_name = f"{serial}_ref.png"
+        for url, name in [(payload["image_url"], image_name), (payload["mask_url"], mask_name),
+                           (payload["reference_url"], ref_name)]:
+            r = httpx.get(url, timeout=60)
+            r.raise_for_status()
+            (comfy_input / name).write_bytes(r.content)
+
+        prompt = {
+            "1": {"class_type": "UNETLoader", "inputs": {"unet_name": Path(KONTEXT_FILENAME).name, "weight_dtype": "default"}},
+            "2": {"class_type": "DualCLIPLoader",
+                  "inputs": {"clip_name1": CLIP_L_FILENAME, "clip_name2": T5XXL_FILENAME, "type": "flux"}},
+            "3": {"class_type": "VAELoader", "inputs": {"vae_name": Path(VAE_FILENAME).name}},
+            "4": {"class_type": "LoadImage", "inputs": {"image": image_name}},
+            "5": {"class_type": "LoadImageMask", "inputs": {"image": mask_name, "channel": "red"}},
+            "6": {"class_type": "VAEEncode", "inputs": {"pixels": ["4", 0], "vae": ["3", 0]}},
+            "7": {"class_type": "SetLatentNoiseMask", "inputs": {"samples": ["6", 0], "mask": ["5", 0]}},
+            "14": {"class_type": "LoadImage", "inputs": {"image": ref_name}},
+            "15": {"class_type": "FluxKontextImageScale", "inputs": {"image": ["14", 0]}},
+            "16": {"class_type": "VAEEncode", "inputs": {"pixels": ["15", 0], "vae": ["3", 0]}},
+            "8": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": text}},
+            "9": {"class_type": "ConditioningZeroOut", "inputs": {"conditioning": ["8", 0]}},
+            "17": {"class_type": "ReferenceLatent", "inputs": {"conditioning": ["8", 0], "latent": ["16", 0]}},
+            "10": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["17", 0], "guidance": guidance}},
+            "11": {"class_type": "KSampler",
+                   "inputs": {"model": ["1", 0], "positive": ["10", 0], "negative": ["9", 0],
+                              "latent_image": ["7", 0], "seed": seed, "steps": 20, "cfg": 1.0,
+                              "sampler_name": "euler", "scheduler": "simple", "denoise": denoise}},
+            "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}},
+            "13": {"class_type": "SaveImage", "inputs": {"images": ["12", 0], "filename_prefix": f"raw/{serial}_ref_inpaint"}},
+        }
+
+        result = self._submit_and_wait(prompt)
+        outputs = result.get("outputs", {})
+        out_dir = Path("/root/comfy/ComfyUI/output")
+        figure_path = _image_path(out_dir, outputs["13"]["images"][0])
+
+        blob_service = BlobServiceClient(
+            account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
+            credential=os.environ["AZURE_STORAGE_KEY"],
+        )
+        container = blob_service.get_container_client(AZURE_CONTAINER)
+        figure_blob = f"{AZURE_OUTPUT_PREFIX}/{serial}_ref_inpaint_figure.png"
+        with open(figure_path, "rb") as f:
+            container.upload_blob(figure_blob, f, overwrite=True)
+
+        return {"serial": serial, "figure_path": f"{AZURE_CONTAINER}/{figure_blob}"}

@@ -561,6 +561,66 @@ masks on the Kontext output, then composite in the correct source
 pixels/colors the same way `jersey_variant()` already does for jersey
 recoloring.
 
+### Hair fix, take 2 -- masked inpainting, then reference-image conditioning
+
+Brandon's actual spec, once asked to clarify: **cartoon-style rendering
+matching his real hair shape, constrained by a mask** -- not a literal
+pixel-paste of real-photo hair (which would mismatch the surrounding
+cartoon rendering).
+
+**Mechanism 1: `SetLatentNoiseMask` (standard ComfyUI inpainting).**
+Added `KontextGenerator.inpaint_region()` to `modal_app_kontext.py` --
+VAEEncode the existing (wrong-hair) image, apply a feathered hair-region
+mask (derived by face-detecting the image and building an ellipse above
+the eyebrows, feathered edges for a smooth blend) via
+`SetLatentNoiseMask`, regenerate with `denoise=0.9` so only the masked
+region can change. Text prompt: "short buzzed hair, cartoon-rendered,
+cel-shaded... receding at the temples."
+
+**Result: mask mechanism confirmed working perfectly** (face, jersey,
+muscle, everything outside the mask came back pixel-identical -- real
+proof `SetLatentNoiseMask` isolates changes correctly), **but the hair
+inside the mask was STILL the same wrong styled/swept look.** This is
+the 4th consecutive failure on hair (3 full-image text prompts + this
+masked one) -- conclusively rules out "the model isn't following
+instructions" as the explanation. It's a content problem: even
+geometrically constrained to redraw a small region with an explicit
+"short buzzed hair" prompt, the model's prior for "cartoon hair"
+overrides the instruction.
+
+**Mechanism 2, added on top: `ReferenceLatent` conditioned on an image,
+not text.** Built `inpaint_with_reference()` -- same mask constraint as
+above, but ALSO feeds a real photo crop of the correct hair (cropped
+from v2's already-cartoon-styled, correctly-haired output) through
+`FluxKontextImageScale` -> `VAEEncode` -> `ReferenceLatent` into the
+positive conditioning, alongside a prompt asking the model to "match the
+reference image." This is the exact same node Kontext's own
+`generate()` uses for its whole-image edit instruction -- reused here
+pointed at a visual reference instead of pure text, composed with the
+independent mask constraint (the two mechanisms don't conflict: the
+mask still governs WHERE pixels change, the reference now governs WHAT
+gets drawn there).
+
+**Result: fixed immediately, first attempt.** Correct short buzzed
+hair, rendered in matching cartoon style, receding hairline intact --
+everything else (face, jersey, muscle, waist-up framing) unchanged.
+**Confirms the real lesson: this model needs to be SHOWN the correct
+content for something this specific, not told about it** -- text
+description alone failed 4/4 times regardless of wording, specificity,
+instruction placement, or guidance value; a visual reference worked on
+the first try.
+
+**Practical implication for the jersey work, and for full-roster
+production:** the same reference-image pattern (not a hand-authored
+mask+recolor like `jersey_variant()`, though that's also on the table)
+could plausibly be used for the jersey too -- feed a real Fonde jersey
+photo/render as a `ReferenceLatent` image alongside a jersey-region
+mask. Worth trying before assuming a from-scratch compositing system is
+required. For the full 34-member roster, this also means each member's
+own hair reference crop (from their own subject photo) is the natural
+source -- no manual reference-authoring needed per person, the pattern
+generalizes directly.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
