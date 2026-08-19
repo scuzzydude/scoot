@@ -1,7 +1,9 @@
 # Plan of attack — facial likeness fix
 
-Written 2026-08-18 after `FACIAL_LIKENESS_RESEARCH.md` came back. Not yet
-executed — this is the plan to review and greenlight next session.
+Written 2026-08-18 after `FACIAL_LIKENESS_RESEARCH.md` came back.
+Tier 1 executed 2026-08-19 (negative, see below). Tier 2 pilot design
+started 2026-08-19, paused on a data-collection checkpoint — see its
+section below for exactly where to resume.
 
 ## The one thing to decide before any of this: licensing
 
@@ -41,6 +43,20 @@ report's central hypothesis. If Zero doesn't help either, that's a real,
 useful negative result — it means the checkpoint-divergence theory isn't
 the (whole) story, and Tier 2 becomes more urgent rather than optional.
 
+**Result: negative, executed 2026-08-19.** Swapping to Zero (same seed
+340034, same PuLID fidelity/weight=1.0, only the checkpoint changed)
+broke ControlNet pose-following entirely — generated a figure facing
+away from camera, no face visible, where Opt reliably produces a
+face-forward pose. Zero is too raw/unrefined to follow ControlNet
+conditioning precisely. Reverted to Opt (main release); see
+`MODEL_PINS.md` for the full writeup. **This also resolves Tier 2 step 3
+below** — LoRA should train against Opt (the main release), not Zero.
+Unlike PuLID/FaceID, LoRA edits UNet weights directly rather than
+injecting a foreign cross-attention signal, so it doesn't carry the
+distribution-mismatch problem that motivated trying Zero in the first
+place — no reason to inherit Zero's pose-fidelity regression along with
+it.
+
 **Secondary, same tier:** if the face-detailer touchup is worth keeping
 at all, it needs a real fix, not more identity tuning inside it — per
 the research, it should be a sharpening pass only:
@@ -61,7 +77,8 @@ doing for card sharpness eventually, not expected to fix likeness.
 
 ## Tier 2 — the real fix (~1-2 weeks, ~$2-9 + 15-45 min per subject)
 
-**Pilot per-subject LoRA training on Animagine XL 4.0 Zero.**
+**Pilot per-subject LoRA training on Animagine XL 4.0 Opt** (the main
+release already deployed — see Tier 1 result above for why not Zero).
 
 Why: this is the only approach in the whole research pass with a clear
 mechanism for not fighting the checkpoint — it edits UNet weights
@@ -71,17 +88,45 @@ confirm the pattern (their LoRA variant beats their full-finetune variant
 on consistency). It also sidesteps the InsightFace licensing question
 entirely.
 
-Steps:
-1. Pick a Modal-compatible LoRA trainer (kohya-ss sd-scripts is the
-   community standard; check for an existing Modal example/template
-   before building one from scratch).
-2. Pilot on one subject — Brandon is the obvious choice, already has the
-   most source material (72 frames in `~/Nick/work/people/09_BRANDON/`).
-   Community practice is 10-30 photos; may need to pull more frames or
-   supplement from other photos if 72 video frames don't give enough
-   distinct angles/expressions.
-3. Train against Zero (not Opt) with the actual card style prompts baked
-   into training captions.
+Steps, with status as of 2026-08-19:
+1. **Done.** Trainer chosen: HuggingFace `diffusers`' own
+   `train_dreambooth_lora_sdxl.py`, driven the way Modal's own official
+   example does it (`modal-labs/modal-examples`,
+   `06_gpu_and_ml/dreambooth/diffusers_lora_finetune.py` — that exact
+   file now targets FLUX, but its `App`/`Volume`/`accelerate launch
+   subprocess` pattern is a direct, proven template; only the training
+   script target and its args need to change from Flux's to SDXL's).
+   Not kohya-ss — the diffusers script needs no separate toolchain and
+   the pattern is already Modal-native. Confirmed
+   `cagliostrolab/animagine-xl-4.0` has full diffusers-format subfolders
+   (`unet/`, `vae/`, `text_encoder/`, `text_encoder_2/`, `tokenizer*/`,
+   `scheduler/`, `model_index.json`), so `--pretrained_model_name_or_path`
+   can point at it directly — same checkpoint already deployed, no
+   separate conversion step.
+2. **Blocked on source photos, paused here.** Pilot subject is Brandon.
+   The plan's original assumption — 72 video frames give enough
+   distinct angles/expressions — turned out wrong on inspection:
+   - Frames past `f_0293.jpg` in `~/Nick/work/people/09_BRANDON/` are a
+     **different person** ("Donnie") — the folder isn't uniformly
+     Brandon across its full range.
+   - Nearly the entire Brandon range (`f_0226`–`f_0288`) has a burned-in
+     "BRANDON" name-card graphic that overlaps the face itself, not just
+     background — unusable, since training on it would teach the LoRA
+     to associate that graphic with his face.
+   - After filtering both: **only 6 clean frames survive, collapsing to
+     2 real distinct moments** (one at `f_0225`, a near-duplicate
+     5-frame cluster at `f_0289`–`f_0293` spanning under 0.2s) — same
+     angle/lighting/shirt/lens-distance throughout, since it's one
+     continuous phone clip.
+   - These 6 are face-cropped, normalized to 1024x1024, and sitting in
+     `tools/player-cards/art/lora_training/brandon/` (gitignored, not
+     committed) as a starting point. See the README.txt in that folder
+     for exactly what additional photos would help and why.
+   - Brandon's call (asked 2026-08-19): send more photos before running
+     the pilot, rather than run now on a dataset likely too thin to
+     produce a fair test of the LoRA mechanism itself.
+3. Train against Opt with the actual card style prompts baked into
+   training captions, once step 2's dataset is real.
 4. Generate a test card the same way as before (same ControlNet pose
    pipeline, style reference, seed) but with the subject's own LoRA
    active instead of any FaceID/PuLID branch.
@@ -119,10 +164,13 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 
 ## Suggested order for next session
 
-1. Read this doc + `FACIAL_LIKENESS_RESEARCH.md` together.
-2. Decide the licensing question (even if the answer is "revisit later,"
-   it should be a conscious decision, not a default).
-3. Run Tier 1's checkpoint swap test — cheap, fast, directly informs
-   whether Tier 2 is worth the bigger investment.
-4. Based on that result, decide whether to greenlight the Tier 2 LoRA
-   pilot.
+1. ~~Run Tier 1's checkpoint swap test~~ — done, negative, see above.
+2. Drop additional Brandon photos into
+   `tools/player-cards/art/lora_training/brandon/` (see that folder's
+   README.txt for what helps).
+3. Resume Tier 2 at step 3: write captions, build the Modal training
+   function (pattern already identified above), run the pilot.
+4. Still open, independent of the above: decide the InsightFace
+   licensing question (non-commercial-research-only — affects the
+   currently-deployed PuLID/FaceID path regardless of how Tier 2 goes;
+   LoRA itself sidesteps it since it needs no face encoder).
