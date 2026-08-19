@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness: USO/FLUX (Tier 3) breakthrough works in headshot framing; THREE full-body attempts (varying style pass, prompt, subject photo) all lost identity identically -- next: try waist-up/3-quarter framing, not full head-to-toe"
+description: "Player-card facial likeness: REAL BREAKTHROUGH via FLUX.1 Kontext (Tier 4, image-editing model) after USO (Tier 3) failed full-body 5x -- likeness + full body + muscular superhero style all worked in ONE shot. Next: tune art style toward more cartoon, carefully"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T17:12:15.919Z
+  modified: 2026-08-19T17:28:42.687Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -163,11 +163,44 @@ on a completely different mechanism too -- suggests this may be a
 general property of identity-conditioning methods on this class of
 model, not a bug specific to either pipeline.
 
-**Next step per the plan, not yet tried:** waist-up or three-quarter
-body framing instead of full head-to-toe -- basketball cards
-conventionally use this anyway, so it may not even require compromising
-the card format. Stopped after 3 consecutive same-axis failures to
-report rather than keep iterating unprompted.
+**v5 also negative:** waist-up/chest-up framing instead of full
+head-to-toe (the "next step" above) -- also lost identity completely,
+same as v2-v4. This falsifies the frame-share theory itself, not just
+specific levers under it. 5 USO tests total: 1 success (headshot), 4
+failures (every framing/prompt/photo variation), none isolate cleanly.
+Stopped chasing USO parameters at this point.
+
+**TIER 4 BREAKTHROUGH, same day: FLUX.1 Kontext.** Brandon's question
+after watching USO fail 5 times: "How was Meta able to do this so
+quickly? Can't we use a HuggingFace model geared for exactly this kind
+of work?" -- the real answer is architectural: Meta's cartoonifier is
+an IMAGE-EDITING model (denoise from the actual photo's own latent,
+trained end-to-end for "preserve everything except what's asked"), not
+generate-from-scratch-with-conditioning like USO. FLUX.1 Kontext is the
+open equivalent, same FLUX lineage, already using the same ComfyUI
+toolchain.
+
+Built `tools/player-cards/modal_app_kontext.py` (3rd separate app, zero
+shared risk with the other two). Graph reverse-engineered from
+ComfyUI's own reference workflow the same rigorous way as USO's was.
+Also corrected the jersey prompt to use REAL Fonde colors from
+`arch/player-cards.md` (dark charcoal/black or cream, no numbers, no
+crest) instead of the orange/blue placeholder every earlier test used.
+
+**Result, first attempt: genuine likeness, full body, AND the requested
+muscular superhero style, all in one shot.** Dramatically more
+recognizable than anything USO produced. Leans more "realistic CG
+render" than the exaggerated cartoon look Brandon wants (Meta's
+Response 2), not yet fully styled, but the actual hard problem --
+identity surviving full-body -- is solved. This is style tuning now,
+not a mechanism search. **Caution for next tuning pass:** USO's
+identity broke the one time style was pushed hard on multiple fronts
+at once (v2) -- change one variable at a time this round.
+
+Review page moved off Claude Artifacts to
+**https://fairchildlabs.org/likeness-review/** (plain HTTP, Brandon's
+preference -- see [[feedback_prefer_server_hosting]]), now current
+through the Kontext breakthrough.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
