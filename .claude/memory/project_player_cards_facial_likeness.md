@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker, Tier 1 + Tier 2 LoRA both tried and negative -- see confound note on pose before concluding LoRA itself failed"
+description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker -- 13 approaches tried (identity mechanisms, checkpoint swap, LoRA, pose swap), all negative; pose ControlNet reliability now the leading suspect"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T14:46:57.017Z
+  modified: 2026-08-19T15:21:25.186Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -82,13 +82,26 @@ matched). **Result: no legible eyes/nose/mouth structure at all —
 blanker than the PuLID baseline, no Brandon-recognizable signal.** Real
 negative result, not a bug.
 
-**Confound flagged, not yet isolated:** v6's own baseline (no identity
-mechanism at all) is *also* facially weak on this exact pose —
-downward-tilted head, self-occluding the eyes. Every likeness test in
-this project has reused the same pose/seed, so it's not yet known
-whether a more front-facing pose would do better regardless of identity
-mechanism. Worth testing before concluding LoRA itself is a dead end —
-see PLAN_facial_likeness.md Tier 2 step 4's note for the exact framing.
+**Pose isolation test, 2026-08-19: negative, and surprising.** Tested
+the confound above directly — swapped to a level, camera-facing source
+photo (`f_0287.jpg`, same video), same PuLID settings/seed/style ref as
+v6, only the pose input changed. Result: **worse**, not better — the
+figure's head turned almost entirely away from camera, no face visible
+at all, same structural failure as Tier 1's checkpoint swap but with
+the checkpoint unchanged this time. This *weakens* the pose-confound
+theory rather than confirming it: a cleaner source photo produced a
+less camera-facing result, suggesting the pose ControlNet itself may be
+unreliable at pinning head orientation for this composition (OpenPose's
+skeleton only coarsely encodes head yaw/pitch), independent of which
+photo drives it, or its fixed strength (0.6) is too weak to override
+the checkpoint's own pull toward three-quarter/looking-away angles.
+
+**13 real combinations tried now, all negative.** Stopped here
+deliberately — two costly GPU tests on two different hypotheses
+(identity mechanism, then pose) back to back is a real decision point,
+not a place to keep spending unilaterally. Full writeup + images:
+PLAN_facial_likeness.md's "Pose isolation test" section and the
+Claude Artifact review page (URL in prior session — ask if needed).
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
