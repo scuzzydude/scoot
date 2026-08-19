@@ -514,6 +514,53 @@ the crotch in the sample"):
   "over-strength conditioning breaks everything" pattern that recurred
   constantly on the SDXL and USO stacks hasn't shown up here yet.
 
+### Hair regression -- three prompt fixes failed, needs compositing instead
+
+Brandon's read on v3: "the right idea," but flagged a real regression --
+his hair (correctly short/buzzed in v1 and v2) drifted to a longer,
+styled, swept-back look once the face-cartoon push (v3) landed. Also
+asked for jersey compositing rather than relying on the model to draw
+the exact Fonde jersey.
+
+Three escalating prompt-only attempts to fix the hair, same failure
+every time:
+- **v4:** added "Keep the EXACT SAME short buzz-cut hairstyle... do not
+  lengthen it or change the style" to the existing v3 prompt. Same
+  drifted hair.
+- **v5:** restructured so hair is the FIRST thing described (before any
+  cartoon-style language), with explicit negatives ("do not give him
+  longer hair, wavy hair, thick hair, or a styled swept-back haircut").
+  Same drifted hair again.
+- **v6:** simplified to one directive ("do not change the hair at all")
+  and lowered `guidance` from 2.5 to 1.8 (weakens text influence,
+  strengthens the input photo's own pull) to test whether the model was
+  simply prioritizing text over the reference image. Same drifted hair
+  a third time.
+
+**This rules out under-specification.** Three different wording
+strategies plus a parameter change all converged on the identical wrong
+hairstyle -- a persistent bias toward a "styled cartoon protagonist"
+hair archetype when the cartoon-style transformation is strong, not a
+prompting problem text can fix.
+
+**Conclusion, and it validates Brandon's own proposal for the jersey:**
+this needs pixel-level compositing, not more prompting. Mask the hair
+region and paste real hair back in deterministically -- the exact same
+pattern as overlaying the precise Fonde jersey rather than trusting the
+model to draw it. One compositing system, two uses (hair region, jersey
+region), both following the project's own established principle
+(`build_cards.py`'s `jersey_variant()` already does exactly this for
+jersey color -- AI generates the shape/shading, deterministic
+compositing handles what needs to be exact).
+
+**Not yet built:** the actual masking/compositing step for either hair
+or jersey. Needs a segmentation approach (reuse `segformer_b2_clothes`
+from the SDXL pipeline, or a simpler technique given Kontext's outputs
+are consistently posed/framed) to produce hair-region and jersey-region
+masks on the Kontext output, then composite in the correct source
+pixels/colors the same way `jersey_variant()` already does for jersey
+recoloring.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
@@ -530,14 +577,24 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 3. ~~Tier 4: build + first Kontext test~~ — done, real breakthrough:
    likeness + full body + muscular build all worked in one shot. See
    above.
-4. Tune Kontext toward card-ready: push the art style further toward
-   flat/exaggerated cartoon (currently a realistic muscular CG render) —
-   change ONE thing at a time this time (prompt wording OR guidance
-   value, not both at once), given USO's identity broke the one time
-   style was pushed aggressively on multiple fronts simultaneously.
-5. Once card-ready, decide the licensing question (InsightFace,
+4. ~~Tune Kontext toward card-ready~~ — done. Crop/muscle fixed cleanly
+   (v2); real cartoon face achieved (v3), but Brandon caught a hair
+   regression v3 introduced.
+5. ~~Fix the hair via prompting~~ — done, negative. 3 attempts (v4/v5/v6)
+   all converged on the same wrong hairstyle regardless of wording or
+   guidance value — a persistent model bias, not a prompting gap. See
+   "Hair regression" above.
+6. **Next, not yet started:** build the compositing step Brandon proposed
+   for the jersey, extended to also cover hair — mask the hair and
+   jersey regions on the Kontext output, paste in the real hair and the
+   correct Fonde jersey color deterministically. Reuse
+   `build_cards.py`'s existing `jersey_variant()` pattern (already does
+   exactly this for jersey recoloring) rather than building something
+   new. Needs a segmentation source for the masks (segformer, reused
+   from the SDXL pipeline, or a simpler technique).
+7. Once card-ready, decide the licensing question (InsightFace,
    FLUX.1-dev/Kontext non-commercial — three items now) before this
    becomes the deployed default — independent of how good results look.
-6. Tier 2's per-subject LoRA and Tier 3's USO path are both
+8. Tier 2's per-subject LoRA and Tier 3's USO path are both
    deprioritized given Tier 4's result — not abandoned, just no longer
    the leading approach.
