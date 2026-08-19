@@ -84,8 +84,24 @@ CUSTOM_NODES = [
 # specific name to match on -- HF's own filenames are generic ("model.safetensors")
 # and never match those patterns as-is.
 MODEL_DOWNLOADS = [
-    ("cagliostrolab/animagine-xl-4.0", "animagine-xl-4.0.safetensors",
-     "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96", "checkpoints", None),
+    # Checkpoint swapped 2026-08-19 (Tier 1 of FACIAL_LIKENESS_RESEARCH.md /
+    # PLAN_facial_likeness.md): "Zero" instead of the initial-release file
+    # from the main animagine-xl-4.0 repo. PuLID/FaceID's cross-attention
+    # identity layers were calibrated against frozen base SDXL/
+    # SDXL-Lightning; Animagine XL 4.0's main release is a full-parameter
+    # finetune (8.4M images, ~2650 GPU-hours) far from that distribution --
+    # the documented, citable reason the adapters kept fighting the
+    # checkpoint across 10 tuning attempts. "Zero" is a genuinely separate,
+    # earlier-stage, less-diverged checkpoint in its OWN HF repo
+    # (cagliostrolab/animagine-xl-4.0-zero, not a file within the main
+    # animagine-xl-4.0 repo -- confirmed via the cagliostrolab blog post,
+    # not assumed from the filename), explicitly positioned by
+    # cagliostrolab as the base for LoRA/finetune/adapter work. This tests
+    # the research's central hypothesis directly. Previous pin:
+    # ("cagliostrolab/animagine-xl-4.0", "animagine-xl-4.0.safetensors",
+    #  "2b7c1b397761bf5bd3cc42e5b39ec99314a75a96", "checkpoints", None)
+    ("cagliostrolab/animagine-xl-4.0-zero", "animagine-xl-4.0-zero.safetensors",
+     "22e4c70aa48a58db60e7fd7fd9d959f69339327f", "checkpoints", None),
     ("xinsir/controlnet-union-sdxl-1.0", "diffusion_pytorch_model.safetensors",
      "801a4a3fa3d4c936f4feea95b98607bc6726f80c", "controlnet", None),
     ("h94/IP-Adapter", "sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",

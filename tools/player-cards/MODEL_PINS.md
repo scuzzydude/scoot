@@ -42,7 +42,7 @@ Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
 
 | Role | Repo | File | Revision (sha) |
 |---|---|---|---|
-| SDXL checkpoint (anime/comic) | `cagliostrolab/animagine-xl-4.0` | `animagine-xl-4.0.safetensors` | `2b7c1b397761bf5bd3cc42e5b39ec99314a75a96` |
+| SDXL checkpoint (anime/comic) — **"Zero" variant, swapped 2026-08-19** | `cagliostrolab/animagine-xl-4.0-zero` | `animagine-xl-4.0-zero.safetensors` | `22e4c70aa48a58db60e7fd7fd9d959f69339327f` |
 | SDXL Union ControlNet (lineart + openpose, one file) | `xinsir/controlnet-union-sdxl-1.0` | `diffusion_pytorch_model.safetensors` | `801a4a3fa3d4c936f4feea95b98607bc6726f80c` |
 | IP-Adapter SDXL Plus | `h94/IP-Adapter` | `sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | `018e402774aeeddd60609b4ecdb7e298259dc729` |
 | Matching CLIP vision encoder | `h94/IP-Adapter` | `models/image_encoder/model.safetensors`, saved locally as `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` (**NOT** `sdxl_models/image_encoder/` — despite the SDXL checkpoint, `ip-adapter-plus_sdxl_vit-h.safetensors` needs the ViT-H encoder its own filename names, hidden_size 1280/32 layers; `sdxl_models/image_encoder/` is ViT-bigG, hidden_size 1664/48 layers, only for the "VIT-G" preset. This repo briefly had it backwards in the other direction on 2026-08-17 — see git history — caught by an actual failed `generate()` call raising "ClipVision model not found", not by re-reasoning. IPAdapterUnifiedLoader's `get_clipvision_file()` also matches by filename **regex** against the preset, not content — the raw HF filename `model.safetensors` never matches, hence the rename) | `018e402774aeeddd60609b4ecdb7e298259dc729` |
@@ -51,6 +51,19 @@ Pinned via the HF API's `sha` field (`GET /api/models/<repo_id>`), checked
 | Facial identity — IP-Adapter FaceID Plus V2 | `h94/IP-Adapter-FaceID` | `ip-adapter-faceid-plusv2_sdxl.bin` | `43907e6f44d079bf1a9102d9a6e56aef7a219bae` |
 | Facial identity — matching LoRA | `h94/IP-Adapter-FaceID` | `ip-adapter-faceid-plusv2_sdxl_lora.safetensors` (saved to `models/loras/`, not `models/ipadapter/`) | `43907e6f44d079bf1a9102d9a6e56aef7a219bae` |
 | Facial identity — face analysis | InsightFace `buffalo_l` model pack | fetched via `insightface.app.FaceAnalysis`, not HF — baked into the image build the same way, `models/insightface/` | pinned by named release (`buffalo_l`), not a HF sha |
+
+**Checkpoint swap to "Zero", 2026-08-19.** `FACIAL_LIKENESS_RESEARCH.md`
+found a documented mechanism for the 10-combination plateau: PuLID/FaceID's
+identity cross-attention layers were calibrated against frozen base SDXL/
+SDXL-Lightning, and the main `animagine-xl-4.0` release is a full-parameter
+finetune far from that distribution. "Zero" is a genuinely separate,
+earlier-stage checkpoint in its own HF repo
+(`cagliostrolab/animagine-xl-4.0-zero`) that cagliostrolab explicitly
+positions as the base for LoRA/finetune/adapter work — confirmed via their
+own blog post, not inferred from the filename. Same prompt, same PuLID
+settings (fidelity, weight 1.0), same seed (340034) as the prior best
+result (`34-TEST-BRANDON-v6`) — only the checkpoint changes, to isolate
+the variable. See `PLAN_facial_likeness.md` Tier 1.
 
 **Second IPAdapter branch, added 2026-08-18.** The three-card likeness test
 (Brandon usable, Nick/Rufus lost all facial structure) traced to an
