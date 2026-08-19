@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness is the open blocker, Tier 1 done (negative), Tier 2 LoRA training set ready (7 images), next step is captions + Modal training function"
+description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker, Tier 1 + Tier 2 LoRA both tried and negative -- see confound note on pose before concluding LoRA itself failed"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T13:43:12.248Z
+  modified: 2026-08-19T14:46:57.017Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -64,8 +64,31 @@ variation in lighting/angle/outfit now, still thin vs. the 10-20
 community norm but no longer degenerate. Staged in
 `tools/player-cards/art/lora_training/brandon/` (gitignored, not
 committed — personal photos; see that folder's README.txt for the exact
-inventory). **Resume at PLAN_facial_likeness.md Tier 2 step 3** —
-captions + the actual Modal training function, the next unstarted step.
+inventory).
+
+**Trained and tested, 2026-08-19: result negative.** `train_lora.py`
+(new Modal app, diffusers' `train_dreambooth_lora_sdxl.py` via Modal's
+own official dreambooth example pattern) ran clean — 500 steps, rank 16,
+against Opt (not Zero), ~24.5 min, loss 0.0306, no errors. First deploy
+attempt pinned diffusers main HEAD and hit a real pip conflict
+(0.40.0.dev0 needs huggingface-hub>=1.23, transformers 4.x caps it
+<1.0) — repinned to the stable v0.39.0 tag, resolved clean.
+
+Wired into `modal_app.py` as an opt-in `lora_test` flag on `generate()`
+(swaps PuLID for `LoraLoaderModelOnly` on the same style branch, so only
+the identity mechanism changes). Ran the identical `34-TEST-BRANDON-v6`
+conditions. Logs confirm the LoRA substantially loaded (1113/1120 keys
+matched). **Result: no legible eyes/nose/mouth structure at all —
+blanker than the PuLID baseline, no Brandon-recognizable signal.** Real
+negative result, not a bug.
+
+**Confound flagged, not yet isolated:** v6's own baseline (no identity
+mechanism at all) is *also* facially weak on this exact pose —
+downward-tilted head, self-occluding the eyes. Every likeness test in
+this project has reused the same pose/seed, so it's not yet known
+whether a more front-facing pose would do better regardless of identity
+mechanism. Worth testing before concluding LoRA itself is a dead end —
+see PLAN_facial_likeness.md Tier 2 step 4's note for the exact framing.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
