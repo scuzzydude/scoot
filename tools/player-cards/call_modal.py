@@ -40,6 +40,8 @@ def generate(args):
     if args.lora_test:
         payload["lora_test"] = True
         payload["lora_strength"] = args.lora_strength
+    if args.pose_strength is not None:
+        payload["pose_strength"] = args.pose_strength
     result = cls().generate.remote(payload)
     print(result)
 
@@ -74,6 +76,12 @@ def main():
     p2.add_argument("--lora-strength", type=float, default=1.0,
                      help="strength_model for --lora-test's LoraLoaderModelOnly. Default 1.0 "
                           "matches train_lora.py's training scale.")
+    p2.add_argument("--pose-strength", type=float, default=None,
+                     help="Override node 11's (openpose ControlNet) strength, default template "
+                          "value is 0.6. Pose isolation test (2026-08-19) found a level, "
+                          "camera-facing source photo still turned the head away -- testing "
+                          "whether 0.6 is too weak to override the checkpoint's own pull toward "
+                          "looking-away angles.")
     p2.set_defaults(func=generate)
 
     args = ap.parse_args()

@@ -196,6 +196,36 @@ GPU-costing negative results back to back on two different hypotheses
 keep unilaterally spending. See "Where this stands" below for the
 options this actually leaves open.
 
+## Pose ControlNet strength test (2026-08-19) — result: negative, worse
+
+Directly tested the "strength too weak" candidate above: re-ran the
+same pose-isolation setup (`f_0287.jpg`, level/camera-facing) with
+node 11's (openpose ControlNetApplyAdvanced) strength pushed from 0.6
+to 1.0 -- everything else identical (PuLID fidelity/1.0, seed 340034,
+style ref). Added as a one-off `pose_strength` payload override in
+`generate()`, not a template change, so it's fully reversible.
+
+**Result: substantially worse, not better.** Not just the face -- the
+*entire image* collapsed into a dark, muddy, low-contrast mass with no
+cel-shading, no bold lineart, nothing readable at all. This is the same
+over-strength failure pattern already seen twice before in this
+project: FaceID's weight bump (1.0→1.8) and PuLID's weight bump
+(1.0→1.6) both degraded overall image coherence instead of adding
+identity signal. Pushing ANY single conditioning input hard on this
+checkpoint/composition seems to reliably break the whole render, not
+just improve the thing being pushed. Reverted (test-only override,
+nothing to undo in the deployed template).
+
+**This rules out "pose strength is simply too low" as the fix.** Combined
+with the pose-swap result above, three separate levers (identity
+mechanism, pose source, pose strength) have all failed to produce a
+recognizable face, with two of them making a full body of coherence
+worse, not just failing narrowly. Stopping here again -- three
+consecutive negative GPU tests is well past "quick things to try,"
+this now looks like it needs either a smaller/more surgical intervention
+(e.g. tune strength in a narrower band like 0.7-0.8 rather than jumping
+to max) or the bigger Tier 3 swap.
+
 **Operational math for the full roster:** if the pilot works, 34
 members × ~$5-9 × ~30 min ≈ **$170-300 and a few hours of Modal compute,
 one time per edition.** Very plausibly viable given the effort already

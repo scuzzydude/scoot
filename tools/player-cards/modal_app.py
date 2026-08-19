@@ -805,6 +805,18 @@ class CardGenerator:
         prompt["19"]["inputs"]["filename_prefix"] = f"raw/{serial}_figure"
         prompt["21"]["inputs"]["filename_prefix"] = f"raw/{serial}_jersey_mask"
 
+        # Pose ControlNet strength override (2026-08-19, PLAN_facial_likeness.md
+        # "pose isolation test") -- OFF BY DEFAULT (None = template's own
+        # value, currently 0.6), same gating pattern as the other test
+        # flags. The pose-isolation test showed a level, camera-facing
+        # source photo still produced a figure whose head turned almost
+        # entirely away -- candidate cause: 0.6 is too weak to override
+        # the checkpoint's own pull toward three-quarter/looking-away
+        # angles. This lets a test call push it up without touching the
+        # shared template (node 11 = openpose ControlNetApplyAdvanced).
+        if payload.get("pose_strength") is not None:
+            prompt["11"]["inputs"]["strength"] = payload["pose_strength"]
+
         # Tier 2 LoRA test (2026-08-19, PLAN_facial_likeness.md step 4) --
         # OFF BY DEFAULT, same gating pattern as face_touchup above. Swaps
         # the identity mechanism from PuLID (node 27) to Brandon's own
