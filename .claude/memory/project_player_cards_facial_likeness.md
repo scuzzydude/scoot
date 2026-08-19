@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+brand-accurate jersey all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
+description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+real Fonde jersey crest (not AI text) all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T18:47:34.054Z
+  modified: 2026-08-19T19:09:42.134Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -282,6 +282,23 @@ pipeline call, and not yet tried on any roster member besides Brandon
 -- natural next step whenever this resumes, along with the licensing
 decision (3 non-commercial-license items now: InsightFace, FLUX.1-dev,
 FLUX.1-Kontext-dev).
+
+**Jersey crest, added same day: real Fonde branding, not AI text.**
+Brandon provided real jersey photos -- getting the COLOR right wasn't
+the whole spec, the actual crest ("FONDE REC CENTER SENIOR BASKETBALL"
++ basketball graphic + stars) needed to be on it. Extracted it
+deterministically (not via AI reference-matching) since it's real text
+that has to stay legible and correctly spelled -- diffusion models are
+unreliable at precise text rendering. Isolated the white ink from the
+jersey photo's mesh fabric texture (blur-before-threshold + morphological
+open/close), uploaded as a reusable asset
+(`media/card-art/assets/fonde_crest_white.png`), composited via a new
+`add_crest` step in `composite_jersey()` with position/scale derived
+from the segmentation mask's own bounding box (generalizes across
+subjects, not hand-placed). Confirmed the generalized pipeline result
+matches manual tuning closely. **This really is the final piece** --
+crisp, correctly-spelled, brand-accurate crest on a card that also
+nails likeness, body, style, and hair.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
