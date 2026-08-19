@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness: REAL BREAKTHROUGH via FLUX.1 Kontext (Tier 4, image-editing model) after USO (Tier 3) failed full-body 5x -- likeness + full body + muscular superhero style all worked in ONE shot. Next: tune art style toward more cartoon, carefully"
+description: "Player-card facial likeness: SOLVED via FLUX.1 Kontext (Tier 4). v1 breakthrough (likeness+full body+style, one shot), v2/v3 tuned crop/muscle/cartoon-face per Brandon's feedback, no regressions. Cost ~$0.02-0.03/card, ~$0.81/roster -- no per-subject training"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T17:28:42.687Z
+  modified: 2026-08-19T17:41:38.598Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -199,8 +199,32 @@ at once (v2) -- change one variable at a time this round.
 
 Review page moved off Claude Artifacts to
 **https://fairchildlabs.org/likeness-review/** (plain HTTP, Brandon's
-preference -- see [[feedback_prefer_server_hosting]]), now current
-through the Kontext breakthrough.
+preference -- see [[feedback_prefer_server_hosting]]).
+
+**Tuning round 2, same day, per Brandon's direct feedback** ("more
+cartoony on the face, too much muscle... needs to be waist up, you have
+the crotch in the sample"): v2 fixed framing (explicit "waist-up,
+cropped above the waist") and muscle (toned down language) cleanly --
+no identity regression. Face still photoreal though, and jersey
+drifted to a generic cape/collar. v3 pushed face-cartoon language much
+harder (flat cel-shaded skin, simplified eyes/nose/mouth, explicitly
+"NOT photorealistic") and recovered the jersey specificity -- real
+cartoon face achieved, correct jersey, framing/muscle held. Identity
+reads a bit softer than v1's more photoreal face, an expected tradeoff,
+not yet resolved which is "right" -- Brandon's call.
+
+**Notable: Kontext did not exhibit USO's fragility.** Every USO tuning
+attempt that pushed style harder broke identity outright. None of
+Kontext's prompt-only tuning changes did -- suggests the edit-model
+mechanism is substantially more robust to style pressure, not just
+better at the baseline task.
+
+**Real cost, measured not estimated:** ComfyUI's own log reported
+77.82s for one generation (55s of that the actual 20-step sampler).
+At Modal's published A10G rate: **~$0.02-0.03/card, ~$0.81 for the
+full 34-member roster** in one batch run. No per-subject training --
+the real economic advantage over Tier 2's LoRA approach ($170-300 for
+the roster before any generation).
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
