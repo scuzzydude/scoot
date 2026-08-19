@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker -- 13 approaches tried (identity mechanisms, checkpoint swap, LoRA, pose swap), all negative; pose ControlNet reliability now the leading suspect"
+description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker -- 14 approaches tried, all negative; over-strength conditioning reliably collapses whole-image coherence on this checkpoint, not just the targeted thing"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T15:21:25.186Z
+  modified: 2026-08-19T16:08:40.254Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -96,12 +96,23 @@ skeleton only coarsely encodes head yaw/pitch), independent of which
 photo drives it, or its fixed strength (0.6) is too weak to override
 the checkpoint's own pull toward three-quarter/looking-away angles.
 
-**13 real combinations tried now, all negative.** Stopped here
-deliberately — two costly GPU tests on two different hypotheses
-(identity mechanism, then pose) back to back is a real decision point,
-not a place to keep spending unilaterally. Full writeup + images:
-PLAN_facial_likeness.md's "Pose isolation test" section and the
-Claude Artifact review page (URL in prior session — ask if needed).
+**Pose ControlNet strength test, 2026-08-19: also negative, worse.**
+Directly tested whether 0.6 was just too weak — pushed to 1.0, same
+setup. Result: not just the face, the *entire image* collapsed into a
+dark muddy mass with no cel-shading or lineart at all. Same
+over-strength coherence-collapse pattern as FaceID/PuLID weight bumps
+earlier in the project (1.0→1.8, 1.0→1.6) — pushing any single
+conditioning input hard on this checkpoint/composition breaks the whole
+render, not just the targeted thing. Rules out "just too weak."
+
+**14 real combinations tried now, all negative.** Stopped here
+deliberately — three costly GPU tests on three different hypotheses
+(identity mechanism, pose source, pose strength) back to back is a real
+decision point, not a place to keep spending unilaterally. Two threads
+left open: a narrower pose ControlNet tune (0.7-0.8, not another wide
+swing) or Tier 3 (USO on FLUX, bigger architectural swap). Full
+writeup + images: PLAN_facial_likeness.md's pose-related sections and
+the Claude Artifact review page (URL in prior session — ask if needed).
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
