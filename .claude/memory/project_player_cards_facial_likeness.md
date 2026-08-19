@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face+hair all working (~$0.02-0.03/card). Jersey compositing proof-of-concept works (exact hex colors), mask needs segformer not color-threshold"
+description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+brand-accurate jersey all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T18:24:36.010Z
+  modified: 2026-08-19T18:47:34.054Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -258,18 +258,30 @@ mask, not literal photo-hair pixels pasted in. Built two mechanisms in
    needs to be shown correct content for something this specific, not
    told about it in words.
 
-**Jersey compositing, built same day: proof of concept works.** Reused
+**Jersey compositing, built and FINISHED same day.** First pass reused
 `jersey_variant()`'s exact recolor logic (luminance-preserving blend to
-brand hex values) on a mask over the Kontext output -- deterministic,
-not AI reference-matching, since jersey has an exact hex-color spec
-that generative matching would risk drifting on. **Color mechanism
-confirmed exactly right** (real Fonde hex values, shading preserved).
-**Mask quality is the open problem** -- the mask itself was a quick
-hand-tuned color threshold, not a real segmentation model, and leaves a
-visible seam near the collar. Recommended fix: reuse
-`segformer_b2_clothes` (already deployed in the SDXL pipeline) for
-proper garment segmentation instead. Not yet built -- next concrete
-step.
+brand hex values) on a hand-tuned color-threshold mask -- proved the
+recolor mechanism (exact Fonde hex values, shading preserved) but left
+a visible seam near the collar. Second pass: new standalone CPU-only
+app `modal_app_jersey.py`, real `segformer_b2_clothes` segmentation
+(same pinned model as the SDXL pipeline, run via `transformers`
+directly rather than ComfyUI's node wrapper). Class 4 ("Upper-clothes")
+is the jersey region. Mask cleanup took 3 real diagnostic iterations --
+a fixed morphological close shrank but didn't fix a defect near the
+armhole; a flood-fill hole-check left it untouched, which proved it was
+a channel connected to the background, not a sealed hole; a stronger
+close (51x51) to physically bridge the channel, kept alongside the
+flood-fill check as a safety net, got it down to a tiny residual patch.
+
+**Status: pipeline is feature-complete for a single subject.**
+Likeness, full-body framing, cartoon art style, correct hair, and
+brand-accurate jersey all confirmed working end to end, across 3
+separate Modal apps (`modal_app_kontext.py` generation + hair inpaint,
+`modal_app_jersey.py` jersey composite). Not yet wired into one
+pipeline call, and not yet tried on any roster member besides Brandon
+-- natural next step whenever this resumes, along with the licensing
+decision (3 non-commercial-license items now: InsightFace, FLUX.1-dev,
+FLUX.1-Kontext-dev).
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
