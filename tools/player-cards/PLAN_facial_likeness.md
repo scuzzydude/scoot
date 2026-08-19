@@ -103,30 +103,28 @@ Steps, with status as of 2026-08-19:
    `scheduler/`, `model_index.json`), so `--pretrained_model_name_or_path`
    can point at it directly — same checkpoint already deployed, no
    separate conversion step.
-2. **Blocked on source photos, paused here.** Pilot subject is Brandon.
-   The plan's original assumption — 72 video frames give enough
-   distinct angles/expressions — turned out wrong on inspection:
-   - Frames past `f_0293.jpg` in `~/Nick/work/people/09_BRANDON/` are a
-     **different person** ("Donnie") — the folder isn't uniformly
-     Brandon across its full range.
-   - Nearly the entire Brandon range (`f_0226`–`f_0288`) has a burned-in
-     "BRANDON" name-card graphic that overlaps the face itself, not just
-     background — unusable, since training on it would teach the LoRA
-     to associate that graphic with his face.
-   - After filtering both: **only 6 clean frames survive, collapsing to
-     2 real distinct moments** (one at `f_0225`, a near-duplicate
-     5-frame cluster at `f_0289`–`f_0293` spanning under 0.2s) — same
-     angle/lighting/shirt/lens-distance throughout, since it's one
-     continuous phone clip.
-   - These 6 are face-cropped, normalized to 1024x1024, and sitting in
-     `tools/player-cards/art/lora_training/brandon/` (gitignored, not
-     committed) as a starting point. See the README.txt in that folder
-     for exactly what additional photos would help and why.
-   - Brandon's call (asked 2026-08-19): send more photos before running
-     the pilot, rather than run now on a dataset likely too thin to
-     produce a fair test of the LoRA mechanism itself.
+2. **Done, for the pilot subject.** Original assumption — 72 video
+   frames at `~/Nick/work/people/09_BRANDON/` give enough distinct
+   angles/expressions — turned out wrong on inspection: frames past
+   `f_0293.jpg` are a different person ("Donnie"), and nearly the whole
+   Brandon range has a burned-in "BRANDON" name-card graphic overlapping
+   the face. Only 6 clean frames survived, collapsing to 2 real distinct
+   moments — too thin on its own. Brandon supplied 6 additional photos
+   via the share drive (2026-08-19), mostly group shots; pulled his face
+   out of 5 of them (1 dropped — mirrored sunglasses fully occluded his
+   eyes). Final set, **7 images, 7 distinct real moments** (one
+   representative frame kept from the video's near-duplicate burst, the
+   other 4 near-dupes deleted so they don't outweigh the rest 5-to-1):
+   studio flash (2 crops, different distance/framing), window daylight,
+   warm tungsten night, low-angle home selfie, plus the 2 video frames.
+   Real variation now in lighting, angle, and outfit — thin by the usual
+   10-20-image community norm but no longer the same-lighting/angle/
+   outfit degenerate case it started as. Source photos deleted after
+   cropping (both from the share drive and not retained elsewhere).
+   Sitting in `tools/player-cards/art/lora_training/brandon/` (gitignored,
+   not committed) — see that folder's README.txt for the exact inventory.
 3. Train against Opt with the actual card style prompts baked into
-   training captions, once step 2's dataset is real.
+   training captions — **next unstarted step.**
 4. Generate a test card the same way as before (same ControlNet pose
    pipeline, style reference, seed) but with the subject's own LoRA
    active instead of any FaceID/PuLID branch.
@@ -165,9 +163,8 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 ## Suggested order for next session
 
 1. ~~Run Tier 1's checkpoint swap test~~ — done, negative, see above.
-2. Drop additional Brandon photos into
-   `tools/player-cards/art/lora_training/brandon/` (see that folder's
-   README.txt for what helps).
+2. ~~Collect Brandon's training photos~~ — done, 7 images staged in
+   `tools/player-cards/art/lora_training/brandon/`.
 3. Resume Tier 2 at step 3: write captions, build the Modal training
    function (pattern already identified above), run the pilot.
 4. Still open, independent of the above: decide the InsightFace

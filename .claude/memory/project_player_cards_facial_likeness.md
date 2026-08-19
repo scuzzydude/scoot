@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness is the open blocker, Tier 1 done (negative), Tier 2 LoRA pilot paused on source-photo collection"
+description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness is the open blocker, Tier 1 done (negative), Tier 2 LoRA training set ready (7 images), next step is captions + Modal training function"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T13:35:39.772Z
+  modified: 2026-08-19T13:43:12.248Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -48,20 +48,24 @@ targets FLUX, adapt to SDXL). `cagliostrolab/animagine-xl-4.0` confirmed
 to have full diffusers-format subfolders, so it can be the
 `--pretrained_model_name_or_path` directly.
 
-Blocked on source photos: the plan assumed 72 video frames at
+Source photos: the plan assumed 72 video frames at
 `~/Nick/work/people/09_BRANDON/` would give enough training data.
 Inspection found otherwise — frames past `f_0293` are a different
 person ("Donnie"), and nearly the whole Brandon range has a burned-in
 "BRANDON" name-card graphic overlapping the face. After filtering, only
-6 clean frames survive, collapsing to 2 real distinct moments (same
-angle/lighting/shirt throughout — one continuous phone clip). Asked
-Brandon; he chose to send more photos before running the pilot rather
-than run now on data too thin to fairly test the LoRA mechanism. Staging
-folder + instructions for what to add:
-`tools/player-cards/art/lora_training/brandon/README.txt` (gitignored,
-not committed — personal photos). **Resume at PLAN_facial_likeness.md
-Tier 2 step 3** (captions + the actual Modal training function) once
-more photos land there.
+6 clean frames survived, collapsing to 2 real distinct moments (same
+angle/lighting/shirt throughout — one continuous phone clip) — too thin.
+Asked Brandon; he sent 6 more photos via the share drive (mostly group
+shots). Pulled his face out of 5 of them (1 dropped — sunglasses
+occluded his eyes), deleted the source photos after cropping. **Final
+set: 7 images, 7 distinct real moments** — studio flash, window
+daylight, warm tungsten night, low-angle selfie, 2 video frames — real
+variation in lighting/angle/outfit now, still thin vs. the 10-20
+community norm but no longer degenerate. Staged in
+`tools/player-cards/art/lora_training/brandon/` (gitignored, not
+committed — personal photos; see that folder's README.txt for the exact
+inventory). **Resume at PLAN_facial_likeness.md Tier 2 step 3** —
+captions + the actual Modal training function, the next unstarted step.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
