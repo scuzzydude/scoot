@@ -657,6 +657,57 @@ the rest of this project already established. Could run as a ComfyUI
 node inside a Kontext-pipeline pass, or as a lightweight standalone
 post-process step outside Modal entirely.
 
+### Jersey, take 2 -- real segformer mask, done
+
+Built as a new, separate, CPU-only Modal app: `modal_app_jersey.py`.
+Same pinned model/revision as `modal_app.py`'s SDXL pipeline
+(`mattmdjaga/segformer_b2_clothes`), but run directly via `transformers`
+(`AutoModelForSemanticSegmentation` + `SegformerImageProcessor`) instead
+of through the ComfyUI custom-node wrapper -- simpler for a standalone
+post-process step that doesn't need ComfyUI's graph machinery, and
+avoids adding the custom node's dependencies to a whole new Modal image.
+Class 4 ("Upper-clothes") in the model's 18-class label set is the
+jersey region. Recolor logic is a direct, line-for-line port of
+`build_cards.py`'s `jersey_variant()`.
+
+**Two real bugs hit, both the established gotchas from earlier in this
+session:** forgot to attach the `azure-blob-creds` secret to the
+function decorator (`KeyError: 'AZURE_STORAGE_KEY'`, fixed by adding
+`secrets=[...]`); then a redeployed fix didn't take effect until the
+warm container was explicitly killed -- same stale-container pattern
+hit twice already on the Kontext app.
+
+**Mask cleanup, three real diagnostic iterations, not guessed:**
+1. First real run: segformer's raw output had a couple of stray
+   misclassified specks and a defect near the armhole (visible as a
+   streak in the recolored image, worse than expected from a real
+   segmentation model). Largest-connected-component filtering cleanly
+   removed the specks.
+2. For the armhole defect: tried a 9x9 then 31x31 morphological close
+   -- shrank it but never fully closed it.
+3. Suspected an enclosed hole, tried flood-filling the mask's inverse
+   from the frame's outer edge (anything unreached is a sealed hole,
+   fill it). **This left the defect completely untouched** -- the
+   useful diagnostic result, since it proves the defect is NOT a sealed
+   hole. It's a narrow channel connected to the background right at the
+   armhole edge, which the flood-fill reaches straight through.
+4. Correct fix for a channel (not a hole): closing strong enough to
+   physically bridge it (51x51 kernel) as the primary step, with the
+   flood-fill hole-check kept as a secondary safety net for genuinely
+   enclosed gaps elsewhere.
+
+**Result: clean collar and armhole edges, exact Fonde hex colors,
+shading preserved.** One tiny residual patch remains near the shoulder
+strap -- far smaller than the original color-threshold seam, a minor
+cosmetic detail rather than a real defect. Real segmentation model
+confirmed to generalize the deterministic-recolor approach cleanly from
+the SDXL pipeline to Kontext's output.
+
+**Status: every piece of the pipeline now works end to end** --
+likeness, full-body framing, cartoon art style, correct hair, and
+brand-accurate jersey compositing, all confirmed on real generated
+output, not just individually.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
@@ -680,17 +731,24 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
    all converged on the same wrong hairstyle regardless of wording or
    guidance value — a persistent model bias, not a prompting gap. See
    "Hair regression" above.
-6. **Next, not yet started:** build the compositing step Brandon proposed
-   for the jersey, extended to also cover hair — mask the hair and
-   jersey regions on the Kontext output, paste in the real hair and the
-   correct Fonde jersey color deterministically. Reuse
-   `build_cards.py`'s existing `jersey_variant()` pattern (already does
-   exactly this for jersey recoloring) rather than building something
-   new. Needs a segmentation source for the masks (segformer, reused
-   from the SDXL pipeline, or a simpler technique).
-7. Once card-ready, decide the licensing question (InsightFace,
-   FLUX.1-dev/Kontext non-commercial — three items now) before this
-   becomes the deployed default — independent of how good results look.
-8. Tier 2's per-subject LoRA and Tier 3's USO path are both
-   deprioritized given Tier 4's result — not abandoned, just no longer
-   the leading approach.
+6. ~~Fix the hair via masking~~ — done. Masked inpainting alone (4th
+   attempt) still failed; adding a visual reference image via
+   `ReferenceLatent` fixed it immediately. See "Hair fix, take 2" above.
+7. ~~Build the jersey compositing step~~ — done, twice. First pass
+   (color-threshold mask) proved the recolor mechanism but left a
+   visible seam. Second pass (real `segformer_b2_clothes` segmentation,
+   `modal_app_jersey.py`) fixed it down to a tiny residual patch. See
+   "Jersey, take 2" above.
+8. **Pipeline is now feature-complete for a single subject** — likeness,
+   full body, cartoon style, correct hair, and brand-accurate jersey all
+   confirmed working end to end (three separate Modal apps:
+   `modal_app_kontext.py` for generation + hair inpainting,
+   `modal_app_jersey.py` for jersey compositing). Not yet wired
+   together into one pipeline call, and not yet run on any roster member
+   besides Brandon.
+9. Before production/full roster: decide the licensing question
+   (InsightFace, FLUX.1-dev/Kontext non-commercial — three items now)
+   — independent of how good results look.
+10. Tier 2's per-subject LoRA and Tier 3's USO path are both
+    deprioritized given Tier 4's result — not abandoned, just no longer
+    the leading approach.
