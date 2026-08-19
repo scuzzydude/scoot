@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: ddc7ab1a-729e-40b8-a8f1-8456f9a6d11d
+  modified: 2026-08-19T17:08:12.324Z
 ---
 
 Production Scoot host. Distinct from WSL dev box (this VM vs WSL2 at 192.168.1.118 — see [[infra_wsl_network]]).
@@ -26,6 +27,18 @@ Production Scoot host. Distinct from WSL dev box (this VM vs WSL2 at 192.168.1.1
 - **Apache IS reverse-proxying thedreamlaboratory.org to Scoot** (as of 2026-05-27). Vhost forwards `/api` and `/media` → Express :3000, `/ws` → Express :3000 WebSocket, everything else → Vite :5175. HTTP redirects to HTTPS. Vhost files mirrored in repo at `ri/physical/apache/`.
 - **HTTPS is live** for both `thedreamlaboratory.org` and `www.thedreamlaboratory.org` (Let's Encrypt, expires 2026-08-25, certbot auto-renew configured). Cert lives at `/etc/letsencrypt/live/thedreamlaboratory.org/`.
 - **Static legal pages** served via Apache `Alias` outside the proxy: `/privacy` and `/terms` resolve to `/var/www/thedreamlaboratory.org/html/{privacy,terms}.html`. Source-of-truth copies committed at `ri/physical/legal/`.
+
+**Ad-hoc static review pages:** `fairchildlabs.org`'s DocumentRoot
+(`/var/www/html/`) is plain Apache static serving, separate from the
+Scoot stack/proxy — used as a dropbox for one-off HTML review pages
+reachable over plain HTTP (no claude.ai artifact needed). Existing
+example: `nick-review/` (full Brotherhood roster photo review, 22+
+people). Convention: `sudo mkdir -p /var/www/html/<name>/`, drop
+`index.html` there, `sudo chown -R www-data:www-data /var/www/html/<name>`.
+Reachable at `https://fairchildlabs.org/<name>/`. Brandon's explicit
+preference (2026-08-19): serve review pages this way rather than via
+Claude Artifacts when working directly on this box, since there's no
+reason to route through claude.ai when already running on the server.
 
 **Why:** Brandon's production target for the Dream Laboratory / Fonde Brotherhood (Scoot(34)). Server bringup happened 2026-05-27 after a HW bump (RAM/CPU) made the VM able to actually run the stack.
 

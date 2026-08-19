@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness: BREAKTHROUGH 2026-08-19 via USO on FLUX (Tier 3) after 14 negative attempts on the SDXL/ControlNet stack -- first legible, recognizable face. Style/framing tuning still needed; also a style-direction pivot to 3D-cartoon look, Brandon's call"
+description: "Player-card facial likeness: USO/FLUX (Tier 3) breakthrough works in headshot framing; TWO follow-up tests pushing full-body both lost identity entirely -- untested lever: full-body subject photo (every test so far fed a headshot)"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T16:55:58.908Z
+  modified: 2026-08-19T17:07:55.838Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -135,9 +135,24 @@ to resolve before production use, tracked at the top of
 PLAN_facial_likeness.md.
 
 Full writeup + images: PLAN_facial_likeness.md's Tier 3 section and the
-Claude Artifact review page (URL in prior session — ask if needed).
-Next step per the plan: tune style strength + push full-body framing,
-not start over.
+review page, now hosted at **https://fairchildlabs.org/likeness-review/**
+(plain HTTP on fairchildlabs.org's `/var/www/html/`, same convention as
+the existing `nick-review/` roster page there) -- moved off the Claude
+Artifact per Brandon's request 2026-08-19, "whatever is better and
+easier." Source: `build_review.py` +
+`review_images*.py` in this session's scratchpad; republish by copying
+the built `review.html` to `/var/www/html/likeness-review/index.html`
+(sudo chown www-data:www-data after).
+
+**Follow-up tuning, same day: two tests pushing full-body both lost
+identity entirely** (generic child character, no likeness at all),
+isolated across different specific settings changed between them.
+Working hypothesis: identity signal ties to how much of the frame the
+face occupies, not any one setting -- matches the SDXL/PuLID work's
+identical theory earlier in this project. Untested lever before
+concluding that's fundamental: every test so far fed a HEADSHOT subject
+photo even when asking for full-body output -- a genuine full-body
+subject photo hasn't been tried. Next step per the plan: try that.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
