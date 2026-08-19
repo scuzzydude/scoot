@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness: SOLVED via FLUX.1 Kontext (Tier 4). v1 breakthrough (likeness+full body+style, one shot), v2/v3 tuned crop/muscle/cartoon-face per Brandon's feedback, no regressions. Cost ~$0.02-0.03/card, ~$0.81/roster -- no per-subject training"
+description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face all work (~$0.02-0.03/card). Open item: hair drifts when style is pushed, 3 prompt fixes failed -- needs mask+composite (same fix Brandon proposed for jersey), not yet built"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T17:41:38.598Z
+  modified: 2026-08-19T17:57:08.602Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -225,6 +225,24 @@ At Modal's published A10G rate: **~$0.02-0.03/card, ~$0.81 for the
 full 34-member roster** in one batch run. No per-subject training --
 the real economic advantage over Tier 2's LoRA approach ($170-300 for
 the roster before any generation).
+
+**Hair regression found, 3 prompt fixes all failed.** Brandon's read on
+v3: "right idea," but caught that his hair (correct short/buzzed in
+v1/v2) drifted to a longer styled look once the cartoon-face push
+landed. v4 (explicit preserve instruction), v5 (hair described first +
+explicit negatives), v6 (simplified wording + guidance lowered
+2.5→1.8 to favor the photo over text) all produced the SAME wrong
+hairstyle. Rules out under-specification -- persistent model bias
+toward a "styled protagonist" archetype under cartoon-style pressure,
+not fixable via prompting.
+
+**Conclusion, validates Brandon's own proposal for the jersey:** needs
+pixel-level compositing (mask the region, paste real content back in),
+not more prompting -- exactly what `build_cards.py`'s existing
+`jersey_variant()` already does for jersey color. One compositing
+system, two uses (hair region + jersey region). **Not yet built** --
+next concrete step, needs a segmentation source for the masks (reuse
+segformer from the SDXL pipeline, or something simpler).
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
