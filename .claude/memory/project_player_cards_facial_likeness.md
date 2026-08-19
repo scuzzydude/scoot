@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face+correct hair all working (~$0.02-0.03/card). Hair needed masked inpaint + visual reference image (text alone failed 4x). Remaining: jersey compositing"
+description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face+hair all working (~$0.02-0.03/card). Jersey compositing proof-of-concept works (exact hex colors), mask needs segformer not color-threshold"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T18:18:03.565Z
+  modified: 2026-08-19T18:24:36.010Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -258,11 +258,18 @@ mask, not literal photo-hair pixels pasted in. Built two mechanisms in
    needs to be shown correct content for something this specific, not
    told about it in words.
 
-**Remaining: jersey compositing.** Same reference-image pattern could
-apply, but jersey's exact-brand-color requirement (hex-precise, per
-`build_cards.py`'s `JERSEY` dict) probably still favors the existing
-deterministic mask+recolor approach over AI reference-matching. Not yet
-built -- next step.
+**Jersey compositing, built same day: proof of concept works.** Reused
+`jersey_variant()`'s exact recolor logic (luminance-preserving blend to
+brand hex values) on a mask over the Kontext output -- deterministic,
+not AI reference-matching, since jersey has an exact hex-color spec
+that generative matching would risk drifting on. **Color mechanism
+confirmed exactly right** (real Fonde hex values, shading preserved).
+**Mask quality is the open problem** -- the mask itself was a quick
+hand-tuned color threshold, not a real segmentation model, and leaves a
+visible seam near the collar. Recommended fix: reuse
+`segformer_b2_clothes` (already deployed in the SDXL pipeline) for
+proper garment segmentation instead. Not yet built -- next concrete
+step.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
