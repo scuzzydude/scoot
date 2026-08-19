@@ -621,6 +621,42 @@ own hair reference crop (from their own subject photo) is the natural
 source -- no manual reference-authoring needed per person, the pattern
 generalizes directly.
 
+### Jersey -- proof of concept works, mask quality is the open item
+
+Unlike hair, jersey has an exact brand spec (`build_cards.py`'s
+`JERSEY` dict: hex-precise dark charcoal/light cream, reversible, no
+numbers). AI reference-matching risks color drift that's tolerable for
+hair shape but not for brand-color consistency across 34 cards -- chose
+the deterministic path instead: reuse `jersey_variant()`'s existing
+luminance-preserving recolor logic (already proven in the SDXL
+pipeline) on a mask applied to the Kontext output.
+
+**Mask:** quick color-threshold heuristic (luminance < 70, restricted
+to below the detected face box to avoid merging with hair/face shadow,
+morphological close+open, largest connected component, feathered).
+Not a real segmentation model -- hand-tuned against this one image.
+
+**Recolor:** exact port of `jersey_variant()`'s logic -- luminance
+within the mask drives a blend between the JERSEY dict's base/shadow
+hex tones, so the AI-generated shading pattern survives, just recolored
+to precise brand values.
+
+**Result: color mechanism works exactly right** -- real Fonde hex
+values, shading preserved, confirms the deterministic-recolor approach
+generalizes cleanly from the SDXL pipeline to Kontext's output. **Mask
+quality is the open problem** -- a visible seam near the collar where
+the color-threshold mask has a gap (missed jersey pixels near the
+neckline that never got recolored). This is a mask-precision issue, not
+a concept issue.
+
+**Recommended fix, not yet built:** reuse `segformer_b2_clothes` (the
+clothing-segmentation model already deployed in `modal_app.py`'s SDXL
+pipeline) instead of the ad-hoc color threshold -- proper per-pixel
+garment segmentation, no per-image hand-tuning, matches the quality bar
+the rest of this project already established. Could run as a ComfyUI
+node inside a Kontext-pipeline pass, or as a lightweight standalone
+post-process step outside Modal entirely.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
