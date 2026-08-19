@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card art pipeline works end-to-end (Modal/ComfyUI); facial likeness open blocker -- 14 approaches tried, all negative; over-strength conditioning reliably collapses whole-image coherence on this checkpoint, not just the targeted thing"
+description: "Player-card facial likeness: BREAKTHROUGH 2026-08-19 via USO on FLUX (Tier 3) after 14 negative attempts on the SDXL/ControlNet stack -- first legible, recognizable face. Style/framing tuning still needed; also a style-direction pivot to 3D-cartoon look, Brandon's call"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T16:08:40.254Z
+  modified: 2026-08-19T16:55:58.908Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -105,14 +105,39 @@ earlier in the project (1.0→1.8, 1.0→1.6) — pushing any single
 conditioning input hard on this checkpoint/composition breaks the whole
 render, not just the targeted thing. Rules out "just too weak."
 
-**14 real combinations tried now, all negative.** Stopped here
-deliberately — three costly GPU tests on three different hypotheses
-(identity mechanism, pose source, pose strength) back to back is a real
-decision point, not a place to keep spending unilaterally. Two threads
-left open: a narrower pose ControlNet tune (0.7-0.8, not another wide
-swing) or Tier 3 (USO on FLUX, bigger architectural swap). Full
-writeup + images: PLAN_facial_likeness.md's pose-related sections and
-the Claude Artifact review page (URL in prior session — ask if needed).
+**14 real combinations tried, all negative — then Tier 3 (USO on FLUX)
+broke through, same day.** Built `tools/player-cards/modal_app_uso.py`
+(separate from `modal_app.py`, zero shared risk). USO conditions
+identity via a VAE-encoded reference latent, not ControlNet pose/
+lineart -- sidesteps the pose-reliability problem entirely. Node graph
+reverse-engineered from ComfyUI's own official reference workflow
+template (fetched directly, every class_type/input verified against
+ComfyUI source, not guessed). USO's nodes were already in the pinned
+ComfyUI commit (merged core 2025-09-02) -- no version bump, no
+third-party custom nodes needed at all.
+
+**Result: first legible, recognizable face in 15 total attempts.**
+Real eyes/nose/mouth, genuinely reads as Brandon. Not yet card-ready --
+headshot crop not full-body, style leans "smooth CG render" not
+cartoon -- but this is tuning on a working mechanism now, not a search.
+
+**Style direction also pivoted same session:** Brandon tried Meta AI's
+cartoonifier on his photo and preferred its 3D-Pixar-style result over
+this project's locked flat 2D cel-shaded anime look. That image (cropped
+from the comparison screenshot) is now the style reference for Tier 3
+testing -- a real, deliberate style change for the edition, not fully
+resolved yet (need to confirm this is the final direction and re-derive
+a proper full-body-capable style reference).
+
+**New licensing flag:** flux1-dev-fp8 is FLUX.1[dev]'s Non-Commercial
+License -- same class of open question as InsightFace's, now two items
+to resolve before production use, tracked at the top of
+PLAN_facial_likeness.md.
+
+Full writeup + images: PLAN_facial_likeness.md's Tier 3 section and the
+Claude Artifact review page (URL in prior session — ask if needed).
+Next step per the plan: tune style strength + push full-body framing,
+not start over.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,

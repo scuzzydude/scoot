@@ -19,4 +19,4 @@
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
-- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 14 approaches tried, all negative; over-strength conditioning collapses whole-image coherence, not just the target
+- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — BREAKTHROUGH via USO/FLUX (Tier 3) after 14 negative attempts; style/framing tuning + style-direction pivot still open
