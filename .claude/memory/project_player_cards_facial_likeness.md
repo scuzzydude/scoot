@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face all work (~$0.02-0.03/card). Open item: hair drifts when style is pushed, 3 prompt fixes failed -- needs mask+composite (same fix Brandon proposed for jersey), not yet built"
+description: "Player-card facial likeness via FLUX.1 Kontext (Tier 4): likeness+full body+cartoon face+correct hair all working (~$0.02-0.03/card). Hair needed masked inpaint + visual reference image (text alone failed 4x). Remaining: jersey compositing"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T17:57:08.602Z
+  modified: 2026-08-19T18:18:03.565Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -239,10 +239,30 @@ not fixable via prompting.
 **Conclusion, validates Brandon's own proposal for the jersey:** needs
 pixel-level compositing (mask the region, paste real content back in),
 not more prompting -- exactly what `build_cards.py`'s existing
-`jersey_variant()` already does for jersey color. One compositing
-system, two uses (hair region + jersey region). **Not yet built** --
-next concrete step, needs a segmentation source for the masks (reuse
-segformer from the SDXL pipeline, or something simpler).
+`jersey_variant()` already does for jersey color.
+
+**Hair fix built and confirmed working, same day.** Brandon clarified
+the spec: cartoon-style rendering matching his REAL HAIR SHAPE via a
+mask, not literal photo-hair pixels pasted in. Built two mechanisms in
+`modal_app_kontext.py`:
+1. `inpaint_region()` -- standard ComfyUI `SetLatentNoiseMask`
+   inpainting on a face-detected, feathered hair-region mask, text
+   prompt only. **Confirmed the mask itself works perfectly** (face/
+   jersey/everything outside came back pixel-identical) but hair inside
+   the mask was STILL wrong -- 4th straight failure, conclusively
+   ruling out "not following instructions."
+2. `inpaint_with_reference()` -- same mask, PLUS a real photo crop of
+   the correct hair (from v2) fed through `ReferenceLatent` (same node
+   Kontext's edit instruction uses, pointed at an image instead of
+   text). **Fixed immediately, first attempt.** Real lesson: this model
+   needs to be shown correct content for something this specific, not
+   told about it in words.
+
+**Remaining: jersey compositing.** Same reference-image pattern could
+apply, but jersey's exact-brand-color requirement (hex-precise, per
+`build_cards.py`'s `JERSEY` dict) probably still favors the existing
+deterministic mask+recolor approach over AI reference-matching. Not yet
+built -- next step.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
