@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest+matched framing/scale+adjustable expression (BADASS/MEAN confirmed, CHARMING needs work), via FLUX.1 Kontext + segformer (~$0.02-0.03/card). Seed drives output scale -- lock roster-wide. Any prompt change needs a per-subject hair/mustache touch-up re-applied. Not yet wired into one call."
+description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon='Rocket Man', Cleo): FIRST COMPLETE CARD FRONT assembled through real build_cards.py template with BADASS art (likeness+body+hair+crest+expression all working). Seed drives output scale -- lock roster-wide. Any prompt change needs a per-subject hair/mustache touch-up re-applied. Card data still placeholder; not yet wired into one call."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T16:47:35.060Z
+  modified: 2026-08-20T17:15:44.360Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -441,6 +441,29 @@ needs this same hair(+facial hair) touch-up pass re-applied per
 subject — it does not carry over automatically from a prior fix. Full
 8-card spread (DEFAULT/BADASS/MEAN/CHARMING × Brandon/Cleo) published
 on the review page.
+
+**First complete card FRONT assembled, 2026-08-20** — through the real
+`build_cards.py` template (chip band, manga speed lines, tier accent,
+nameplate, glyph disc), not just a bare portrait. Took the BADASS art
+(fixed seed/framing, correct hair/mustache, real crest) through rembg
+alpha cutout → crop to the art slot's 0.7 aspect ratio centered on the
+figure → `{serial}_figure.png` + `{serial}_jersey_mask.png` in a local
+art dir → CSV row → PDF → `pdftoppm` to PNG for review. Brandon's
+handle set to "Rocket Man" (his choice); everyone else keeps their real
+name/nickname from the roster. All other fields (tier, position, stats,
+profile lines) still placeholder — this pass is art-only, data deferred
+per Brandon's explicit call ("let's work on art, just card with filler
+data").
+
+Two things flagged, not yet resolved: **Starter tier's accent stripe is
+invisible against white card stock** (matches spec's "bare token white"
+by design, but worth confirming Brandon wants that for his own card);
+and the **crest reads slightly softer at full card resolution** than in
+the standalone portrait — tested removing an unnecessary intermediate
+PIL upscale in the art-prep crop, no visible change, so this is most
+likely the crest's own intentional distressed/worn texture (matches the
+real jersey photos it was extracted from), not a resolution bug.
+Published on the review page's "Complete card front" section.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,

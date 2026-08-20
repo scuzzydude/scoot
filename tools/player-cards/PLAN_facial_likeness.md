@@ -1002,3 +1002,44 @@ published on the review page.
 the same way BADASS/MEAN did), then decide how expression gets chosen
 per roster member (a CSV column, most likely, alongside a locked seed)
 before generating anyone past these two.
+
+### First complete card FRONT assembled, 2026-08-20
+
+Brandon: "let's create the complete card (front) first, work on how
+that looks." First time the art has gone through the real
+`build_cards.py` template rather than being reviewed as a bare
+portrait. Pipeline: BADASS jersey-composited figure → rembg alpha
+cutout → crop to the art slot's 0.7 aspect ratio (700x1000px spec),
+centered on the figure's horizontal midpoint from its own alpha mask →
+`{serial}_figure.png` + `{serial}_jersey_mask.png` in a local art dir →
+placeholder roster CSV row → `build_cards.py` → PDF → `pdftoppm` to PNG
+for review.
+
+Per Brandon's instruction this pass is art-only — roster data (tier,
+position, stats, profile lines) stays placeholder filler. Handle set
+per his direct request: Brandon → "Rocket Man" (his call), everyone
+else keeps their real name or database nickname (Cleo → "Cleo").
+
+**Result: reads well.** Likeness/expression clear even at card scale,
+crest legible and correctly branded, manga speed-line background gives
+real energy without fighting the figure, tier accent shows nicely on
+Cleo's OG/amber.
+
+**Two open items, not yet fixed:**
+1. Starter tier's accent stripe (bare white per spec) is literally
+   invisible against white card stock. Matches the documented design
+   intent, not a bug — but worth confirming with Brandon that he
+   actually wants that for his own card once tier is real, not
+   placeholder.
+2. Crest reads slightly softer at full card print resolution than in
+   the standalone portrait. Tested removing an unnecessary intermediate
+   PIL upscale step in the art-prep crop (was resizing a 526px-wide
+   native crop up to 700px before handing it to `build_cards.py`, which
+   already does its own scale into the PDF regardless of source pixel
+   count) — no visible improvement, so the softness most likely comes
+   from the crest's own intentional distressed/worn texture (it was
+   extracted from real jersey photos on purpose, see "Jersey crest"
+   section above), not a resolution bug. Not chasing further unless
+   Brandon flags it as a real problem.
+
+Published on the review page's "Complete card front" section.
