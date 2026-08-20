@@ -1092,3 +1092,63 @@ a real problem with a non-obvious cause, one wasn't a card bug at all:
 Real source changes committed to `build_cards.py` (wedge inset) and
 `modal_app_jersey.py` (crest opacity), not just scratchpad art-prep
 tweaks. Published on the review page's "Card art fixes" section.
+
+### Second crest bug + first full-roster batch, same day
+
+Brandon, after the first crest fix: "the last cards still had the
+fonde logo greyed too much." Pixel-sampled the actual final PDF-
+rendered card (not just the Modal-side composite already fixed) and
+found it dimmed there specifically — a SECOND, independent bug.
+`build_cards.py`'s `jersey_variant()` runs its own luminance-based
+recolor across the whole jersey mask, written for the original spec
+("blank AI jersey, recolor everything") before the crest got baked
+into the source art. It has no concept of "this is real branding, not
+a fabric highlight" — it just remaps every luminance level toward the
+base/shade tones, pulling the crest's true-white pixels down to
+`JERSEY["dark"][0]` (#2E2E2A, ~46 not 255). Confirmed by sampling each
+pipeline stage directly: white in `{serial}_figure.png` (Modal
+output), grey in `.variants/{serial}_dark.png` (build_cards.py's own
+cache). Fixed by skipping the recolor for `side == "dark"` — the art
+pipeline already delivers brand-correct color there. `"light"` (card
+backs, not built yet) still needs it.
+
+Then, per Brandon's request ("give me sample cards (front) for all the
+remaining players you have photos for"): built a local contact sheet
+(one middle frame per person) from the already-local
+`~/Nick/work/people/` folders — all 22 people's source frames were
+present locally, no cold-storage restore needed — to pick a usable
+photo per person. Manually upgraded 4 default picks that were unusable
+on inspection:
+- `04_EDUB` — the whole clip is a tight selfie closeup, no waist-up
+  frame exists at all. Picked the least-bad frame and let the locked
+  seed handle scale, the same fix that worked for Brandon's original
+  framing bug.
+- `09b_DONNIE`, `10_BO` — default frames were mid-action/distant;
+  picked frames facing the camera instead.
+- `17_FRANK` — only 3 source frames total; picked the one where he's
+  actually looking at the camera.
+
+Ran all 21 through one batched Modal script (upload → Kontext BADASS
+generation at the locked seed → jersey composite) sequentially in the
+background (~40 min for all 21), then a second batch pass for rembg
+cutout + the arm-safe padded crop from the "arms cut off" fix.
+
+**Result: zero failures across 21 generations.** Generalized well —
+distinct likenesses, personal details preserved correctly (E-Dub's
+du-rag, Kiwi's backwards cap, Rick's cap, McGhee's beard/hairline),
+good variety of skin tones and ages, crest reads true white on every
+card (validates both crest fixes at scale, not just on the 2 subjects
+tested individually). Two isolated issues, not fixed:
+- Chef's source photo has his hand raised near his chin — confused the
+  framing, card crops tighter than the others with the jersey/crest
+  mostly hidden behind his own arm.
+- Anthony's eyes rendered an unusually pale/light color.
+
+Neither looks pipeline-wide, both isolated to their own source photo.
+Handles used are placeholder nicknames guessed from the footage's own
+name-card overlays (e.g. "Kiwi", "Mike MP3", "Snake"), not real roster
+data — per Brandon's "just card with filler data" instruction, this
+pass is art-only. Published as "Full roster sample" on the review
+page.
+
+**Next, per Brandon's own sequencing:** move to the back-of-card side.

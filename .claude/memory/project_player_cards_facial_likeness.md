@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon='Rocket Man', Cleo): FIRST COMPLETE CARD FRONT assembled through real build_cards.py template with BADASS art (likeness+body+hair+crest+expression all working). Seed drives output scale -- lock roster-wide. Any prompt change needs a per-subject hair/mustache touch-up re-applied. Card data still placeholder; not yet wired into one call."
+description: "Player-card pipeline CONFIRMED at scale: 23-person full-roster batch (Brandon='Rocket Man', Cleo, +21), zero failures, real build_cards.py card fronts, BADASS expression, crest true white (two separate greying bugs found+fixed: Modal alpha blend, then build_cards.py's own recolor pass). 2 isolated per-photo issues flagged (Chef framing, Anthony eye color). Card data still placeholder; back-of-card not started."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T17:30:38.031Z
+  modified: 2026-08-20T20:43:42.347Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -499,6 +499,54 @@ Published on the review page's "Card art fixes" section. Real source
 changes committed to `build_cards.py` (wedge inset) and
 `modal_app_jersey.py` (crest opacity) — not just art-prep script tweaks
 in scratchpad.
+
+**Second crest-greying bug found and fixed, same day.** Brandon, after
+the first fix: "the last cards still had the fonde logo greyed too
+much." Pixel-sampled the ACTUAL final PDF-rendered card (not just the
+Modal-side composite I'd already fixed) and found the crest still
+dimmed there specifically. Root cause: `build_cards.py`'s own
+`jersey_variant()` runs a SECOND, independent recolor pass — a
+luminance-based blend across the whole jersey mask, originally written
+for the spec's "blank AI jersey, recolor everything" design, before the
+crest got baked into the source art. It has no concept of "this bright
+region is real branding, not fabric shading" — it just remaps every
+luminance level in the masked region toward the base/shade tones,
+which took the crest's true-white pixels (correct at the Modal stage)
+and pulled them down to `JERSEY["dark"][0]` (#2E2E2A, ~46 not 255).
+Confirmed via direct pixel sampling at each pipeline stage: white in
+`{serial}_figure.png` (the Modal output), grey in
+`.variants/{serial}_dark.png` (build_cards.py's own cache). Fixed by
+skipping the recolor entirely for `side == "dark"`, since the art
+pipeline already delivers brand-correct color there — only `"light"`
+(the back-of-card reverse jersey, not yet built) still needs it.
+
+**First full-roster batch, same day — 23 fronts, zero failures.**
+Brandon: "give me sample cards (front) for all the remaining players
+you have photos for." Built a quick local contact sheet (middle frame
+per person) from the already-local `~/Nick/work/people/` folders (all
+22 people's source frames were local, no cold-storage restore needed)
+to pick a usable photo per person, manually upgrading 4 picks whose
+default middle-frame was unusable (04_EDUB — no waist-up frame exists
+in that clip at all, picked the least-bad closeup and let the
+now-locked seed handle scale as it did for Brandon originally;
+09b_DONNIE and 10_BO — picked frames facing camera instead of
+mid-action/distant; 17_FRANK — only 3 source frames total, picked the
+one where he's actually looking at the camera). Ran all 21 through one
+batched Modal script (upload → Kontext BADASS generation, locked seed
+552011 → jersey composite) sequentially in the background, then a
+second batch pass for rembg cutout + the arm-safe padded crop. **Zero
+failures across 21 generations.** Result generalized well: distinct
+likenesses, personal details preserved correctly from source photos
+(E-Dub's du-rag, Kiwi's backwards cap, Rick's cap, McGhee's beard/
+hairline), good variety of skin tones and ages, crest reads true white
+on every card (validates both crest fixes above at scale). Two isolated
+issues flagged, not fixed: Chef's raised-hand-near-chin source pose
+confused the framing (tighter crop, jersey/crest mostly hidden behind
+his own arm); Anthony's eyes rendered an unusually pale/light color.
+Neither looks pipeline-wide — both isolated to their own source photo.
+Handles are placeholder nicknames guessed from the footage's own
+name-card overlays, not real roster data. Published as "Full roster
+sample" on the review page.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
