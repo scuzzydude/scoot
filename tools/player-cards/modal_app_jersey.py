@@ -212,26 +212,43 @@ def composite_jersey(payload: dict) -> dict:
     # different subjects' body sizes/framing, not just Brandon's.
     #
     # First version anchored the top margin to jy0 = the mask's GLOBAL
-    # topmost pixel, which sits at the shoulder/strap peak -- not the
-    # neckline. Real-run feedback: the crest bled up into neck skin,
-    # because the V-neck collar dips well below the shoulder peak at
-    # the horizontal center, so a margin measured from the shoulder
-    # left less clearance than it looked like it should. Fixed by
-    # measuring the collar depth AT the actual horizontal center column
-    # (where the crest gets placed) instead of the mask's global bbox.
+    # topmost pixel (shoulder/strap peak, not the neckline) -- crest bled
+    # into neck skin. Second version centered on a top-10%-of-height
+    # band's x-extent -- still off-center on a real run, because on a
+    # 3/4-turned, flexed pose the near shoulder/arm reads foreshortened
+    # wider than the far one, so ANY bbox- or band-extent measurement
+    # (min/max of x) gets pulled toward whichever side is posed bigger,
+    # not the true sternum line.
+    #
+    # Fixed by finding the collar's actual V-notch instead of measuring
+    # extents at all: for each column, the topmost mask pixel traces the
+    # garment's top edge -- two peaks at the shoulder straps, with a dip
+    # between them at the neckline. That dip's x position is the true
+    # chest centerline by garment construction (a symmetric tank top's
+    # V-cut is sewn centered), independent of how the arms/shoulders
+    # happen to be posed or foreshortened. Search is restricted to the
+    # central 50% of the mask's width so a strap peak can't be mistaken
+    # for the notch.
     if payload.get("add_crest", True) and side == "dark":
         ys, xs = np.where(garment > 127)
         if len(xs) > 0:
             jx0, jx1 = int(xs.min()), int(xs.max())
-            jy1 = int(ys.max())
+            jy0, jy1 = int(ys.min()), int(ys.max())
             jw = jx1 - jx0
-            jcx = (jx0 + jx1) // 2
 
-            # Topmost jersey pixel specifically at (a small window around)
-            # the horizontal center -- the actual collar depth the crest
-            # needs to clear, not the shoulder peak.
-            center_band = (xs >= jcx - 10) & (xs <= jcx + 10)
-            neck_y = int(ys[center_band].min()) if center_band.any() else int(ys.min())
+            order = np.argsort(xs)
+            xs_sorted, ys_sorted = xs[order], ys[order]
+            uniq_x, first_idx = np.unique(xs_sorted, return_index=True)
+            top_y_per_x = np.minimum.reduceat(ys_sorted, first_idx)
+
+            cx_lo, cx_hi = jx0 + int(jw * 0.25), jx0 + int(jw * 0.75)
+            central = (uniq_x >= cx_lo) & (uniq_x <= cx_hi)
+            if central.any():
+                cand_x, cand_y = uniq_x[central], top_y_per_x[central]
+                notch_idx = int(np.argmax(cand_y))  # deepest dip = notch
+                jcx, neck_y = int(cand_x[notch_idx]), int(cand_y[notch_idx])
+            else:
+                jcx, neck_y = (jx0 + jx1) // 2, jy0
             jh = jy1 - neck_y
 
             # media is a private container -- needs the authenticated SDK
