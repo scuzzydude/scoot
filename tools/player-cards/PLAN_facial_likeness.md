@@ -6,9 +6,11 @@ Tier 3/USO (worked in headshot framing, failed on every full-body
 variation tried, 5 tests), and **Tier 4/FLUX.1 Kontext (real
 breakthrough — likeness + full body + muscular build all worked in one
 shot)** all executed 2026-08-19 — see each section below. Current
-status: identity + full-body composition both work via Kontext; art
-style needs a pass toward more cartoon/less realistic-CG before this is
-card-ready.
+status (2026-08-20): pipeline is feature-complete for a single subject
+— likeness, full body, cartoon style, correct hair, and a
+brand-accurate, correctly-textured jersey with the real Fonde crest all
+confirmed working end to end. Not yet wired into one call, not yet run
+on any roster member besides Brandon, licensing questions still open.
 
 ## Licensing — two open items now, decide before production use
 
@@ -758,6 +760,41 @@ generalized (mask-driven) version matches the manually-tuned version
 closely -- the auto-positioning logic works, not just the one
 hand-placed test.
 
+### Jersey, take 4 -- crest neck-bleed and flat texture, both fixed
+
+Brandon caught two remaining issues in the take-3 result: the crest
+bled into the neck skin above the collar, and the jersey looked flat
+next to the real jersey's visible mesh weave.
+
+**Crest neck-bleed, root cause:** the vertical top margin was computed
+as a ratio of jersey height measured from `jy0 = ys.min()` -- the
+mask's GLOBAL topmost pixel, which sits at the shoulder/strap peak, not
+the actual collar. A V-neck collar dips well below the shoulder peak,
+so the margin (correctly sized against the wrong reference point) left
+too little real clearance and the crest overlapped collar-adjacent neck
+skin. Fixed by computing `neck_y` from a narrow band around the
+horizontal center column only (`center_band = (xs >= jcx-10) & (xs <=
+jcx+10)`), i.e. measuring collar depth where the crest is actually
+placed, not the shoulder peak; also bumped the margin ratio from 0.13
+to 0.18 of this now-correctly-measured height as a deliberate buffer.
+
+**Flat jersey texture, fix:** extracted a clean 200x200 patch of real
+mesh fabric from `fonde_jersey_black.jpg`, converted to grayscale,
+normalized by its own mean (values >1 = lighter weave holes, <1 =
+darker threads), clamped to [0.65, 1.45], stored as an 8-bit PNG
+(128 = 1.0x/neutral) at `media/card-art/assets/mesh_texture_mult.png`.
+Applied as a new `add_mesh_texture` step in `composite_jersey()`,
+inserted after the color-recolor step and before the crest overlay:
+tile the multiplier map across the canvas and multiply it onto the
+already-recolored jersey RGB channels (not a color paste), so the exact
+brand hex colors, the AI's own shading, and the fine dot-weave pattern
+all survive together.
+
+**Result, confirmed via a real generation run:** clear collar/neck
+fabric separation (no more skin bleed) and a visible mesh-weave texture
+across the jersey, with brand colors and crest text/graphic unchanged.
+Committed as `cdc8aa5`.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
@@ -789,16 +826,20 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
    visible seam. Second pass (real `segformer_b2_clothes` segmentation,
    `modal_app_jersey.py`) fixed it down to a tiny residual patch. See
    "Jersey, take 2" above.
-8. **Pipeline is now feature-complete for a single subject** — likeness,
-   full body, cartoon style, correct hair, and brand-accurate jersey all
-   confirmed working end to end (three separate Modal apps:
-   `modal_app_kontext.py` for generation + hair inpainting,
-   `modal_app_jersey.py` for jersey compositing). Not yet wired
-   together into one pipeline call, and not yet run on any roster member
-   besides Brandon.
-9. Before production/full roster: decide the licensing question
-   (InsightFace, FLUX.1-dev/Kontext non-commercial — three items now)
-   — independent of how good results look.
-10. Tier 2's per-subject LoRA and Tier 3's USO path are both
+8. ~~Fix crest neck-bleed and add real mesh texture~~ — done. Neck-bleed
+   was a wrong-reference-point bug (shoulder peak vs. actual collar
+   depth), texture added via a real fabric-swatch multiplier map. See
+   "Jersey, take 4" above.
+9. **Pipeline is now feature-complete for a single subject** — likeness,
+   full body, cartoon style, correct hair, and brand-accurate,
+   correctly-textured jersey all confirmed working end to end (three
+   separate Modal apps: `modal_app_kontext.py` for generation + hair
+   inpainting, `modal_app_jersey.py` for jersey compositing). Not yet
+   wired together into one pipeline call, and not yet run on any roster
+   member besides Brandon.
+10. Before production/full roster: decide the licensing question
+    (InsightFace, FLUX.1-dev/Kontext non-commercial — three items now)
+    — independent of how good results look.
+11. Tier 2's per-subject LoRA and Tier 3's USO path are both
     deprioritized given Tier 4's result — not abandoned, just no longer
     the leading approach.

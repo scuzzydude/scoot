@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+real Fonde jersey crest (not AI text) all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
+description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+real Fonde jersey crest (crisp collar, mesh texture, not AI text) all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-19T19:09:42.134Z
+  modified: 2026-08-20T11:36:52.926Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -299,6 +299,29 @@ subjects, not hand-placed). Confirmed the generalized pipeline result
 matches manual tuning closely. **This really is the final piece** --
 crisp, correctly-spelled, brand-accurate crest on a card that also
 nails likeness, body, style, and hair.
+
+**Jersey polish, added 2026-08-20: neck-bleed fixed, real mesh texture
+added.** Brandon caught two remaining flaws in the crest result: it
+bled into his neck skin above the collar, and the jersey looked flat
+next to the real garment's visible weave. Root cause of the bleed: the
+crest's top margin was measured from the mask's GLOBAL topmost pixel
+(shoulder/strap peak), not the V-neck collar depth where the crest
+actually sits -- fixed by measuring `neck_y` from a narrow band at the
+horizontal center column instead, plus a bumped margin ratio
+(0.13→0.18) as a buffer. Texture: extracted a real fabric swatch from
+`fonde_jersey_black.jpg`, built a normalized grayscale multiplier map
+(128=1.0x, clamped 0.65-1.45x, `media/card-art/assets/mesh_texture_mult.png`),
+tiled and multiplied onto the already-recolored jersey pixels (not a
+color paste) so exact brand hex + AI shading + weave texture all
+survive together. Confirmed via a real generation run. Committed
+`cdc8aa5`. Full diagnostic writeup: PLAN_facial_likeness.md's "Jersey,
+take 4" section.
+
+**New standing behavioral rule from this thread:** when Brandon hands
+off files via the `/var/www/shared/` WebDAV share, archive them to
+cold storage (`azarchive:archive/var-www/shared/<date>/`) once used
+rather than leaving them on the live share -- see
+[[feedback_archive_share_after_use]].
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
