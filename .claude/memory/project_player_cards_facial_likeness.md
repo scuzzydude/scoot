@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline COMPLETE for single-subject: likeness+full body+cartoon face+hair+real Fonde jersey crest (crisp collar, mesh texture, not AI text) all working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on other roster members"
+description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest (centered, crisp collar, mesh texture) working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on full roster"
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T11:36:52.926Z
+  modified: 2026-08-20T12:03:51.929Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -322,6 +322,45 @@ off files via the `/var/www/shared/` WebDAV share, archive them to
 cold storage (`azarchive:archive/var-www/shared/<date>/`) once used
 rather than leaving them on the live share -- see
 [[feedback_archive_share_after_use]].
+
+**Crest centering fixed + FIRST SECOND-SUBJECT TEST, 2026-08-20.**
+Brandon: vertical crest position was right, horizontal wasn't centered.
+Root cause was the same class of bug as the neck-bleed fix -- measuring
+an x-extent (bbox, then a top band) gets pulled off-center on a
+3/4-turned, flexed pose since the near/foreshortened shoulder reads
+wider. Fixed by detecting the collar's actual V-notch (per-column top
+profile, deepest dip in the central 50% of width) instead of measuring
+any extent -- that point is the true chest centerline by garment
+construction, pose-independent. Confirmed centered on a real run,
+committed `9b16a7b`.
+
+Then ran the full pipeline (generation, hair fix, jersey composite) on
+a roster member besides Brandon for the first time, per Brandon's
+direct request: Cleo (`01_CLEO/f_0008.jpg`, gray hair/mustache).
+**Framing, cartoon style, and jersey base color all generalized
+correctly on the first attempt.** Two real bugs surfaced and were
+fixed, not silently ignored:
+1. Hair rendered black instead of Cleo's real gray/white -- same class
+   of model bias as Brandon's earlier hair-SHAPE regression, this time
+   on color. Fixed with the identical mechanism already built for
+   Brandon (masked region + `ReferenceLatent` on a real photo crop).
+   Verified via pixel diff that only the masked region changed (2.4
+   mean diff outside the mask vs. 24.6 inside).
+2. Segformer classified Cleo's sleeveless tank as "Dress" (class 7),
+   not "Upper-clothes" (class 4) -- a debug class-histogram (new
+   `debug` flag on `composite_jersey()`) showed only 837/1,046,784
+   pixels landed in class 4. Brandon's own mask was clean class-4-only,
+   so this is real classifier inconsistency across photos for this
+   garment style, not a bug in the earlier pass. Fixed by unioning both
+   candidate classes instead of assuming one.
+
+**Status: pipeline confirmed working end to end on two independent
+subjects now**, with two real generalization bugs found and fixed by
+actually testing on a second subject. Natural next roster members to
+try if this continues: anyone with notably different hair color/style
+or build than Brandon or Cleo, to keep surfacing this class of bug
+early. Full diagnostic writeup: PLAN_facial_likeness.md's "Jersey, take
+5" and "Second subject -- Cleo" sections.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,

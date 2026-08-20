@@ -6,11 +6,14 @@ Tier 3/USO (worked in headshot framing, failed on every full-body
 variation tried, 5 tests), and **Tier 4/FLUX.1 Kontext (real
 breakthrough — likeness + full body + muscular build all worked in one
 shot)** all executed 2026-08-19 — see each section below. Current
-status (2026-08-20): pipeline is feature-complete for a single subject
-— likeness, full body, cartoon style, correct hair, and a
-brand-accurate, correctly-textured jersey with the real Fonde crest all
-confirmed working end to end. Not yet wired into one call, not yet run
-on any roster member besides Brandon, licensing questions still open.
+status (2026-08-20): pipeline is feature-complete and confirmed on two
+subjects (Brandon, Cleo) — likeness, full body, cartoon style, correct
+hair, and a brand-accurate, correctly-textured, correctly-centered
+jersey with the real Fonde crest all confirmed working end to end.
+Cleo's run surfaced and fixed two real generalization bugs (hair-color
+drift, segformer garment-class inconsistency) — see "Second subject"
+below. Not yet wired into one call, not yet run on the rest of the
+roster, licensing questions still open.
 
 ## Licensing — two open items now, decide before production use
 
@@ -795,6 +798,73 @@ fabric separation (no more skin bleed) and a visible mesh-weave texture
 across the jersey, with brand colors and crest text/graphic unchanged.
 Committed as `cdc8aa5`.
 
+### Jersey, take 5 -- crest horizontal centering
+
+Brandon's next feedback: vertical position was right (take 4), but the
+crest wasn't horizontally centered on the jersey.
+
+**Root cause, same class of bug as take 4:** the horizontal center was
+computed from an x-extent (first the full mask bbox, then a top-of-mask
+band) -- both get pulled off-center on a 3/4-turned, flexed pose, where
+the near shoulder/arm reads foreshortened wider than the far one, so
+any min/max-of-x measurement is biased toward whichever side the pose
+makes bigger.
+
+**Fix:** stop measuring extents; find the collar's actual V-notch
+instead. For each column, the topmost mask pixel traces the garment's
+top edge -- two peaks at the shoulder straps, with a dip between them
+at the neckline. That dip's x position is the true chest centerline by
+garment construction (a symmetric tank top's V-cut is sewn centered),
+independent of pose. Implemented via `np.minimum.reduceat` over a
+per-column top-profile, searched only in the central 50% of the mask's
+width so a strap peak can't be mistaken for the notch. This single fix
+also now supplies `neck_y` directly (the dip's y-value), replacing the
+separate ±10px-band lookup take 4 used.
+
+**Result: confirmed centered on a real run**, verified visually against
+the previous off-center output before moving on. Committed as
+`9b16a7b`.
+
+### Second subject -- Cleo, generalization test
+
+Per Brandon's request, ran the full pipeline (Kontext generation, hair
+fix, jersey composite) on a roster member besides Brandon for the first
+time. Chose `01_CLEO/f_0008.jpg` (gray hair, gray mustache, clean
+front-facing frame). Reused the take-3-winning style prompt unchanged.
+
+**Result: framing, cartoon style, and jersey base color all
+generalized correctly on the first attempt.** Two real issues surfaced,
+both root-caused and fixed, not two more mystery failures:
+
+1. **Hair color drifted dark.** Cleo's real hair is gray/white; Kontext
+   rendered it black -- the same class of bias as Brandon's earlier
+   hair-SHAPE regression, but for hair COLOR this time. Fixed with the
+   exact same mechanism already built for Brandon: mask the hair
+   region (a feathered ellipse over the top of the head, hand-placed
+   via a grid-overlay check, not guessed), condition on a real photo
+   crop of the correct hair via `ReferenceLatent`. Confirmed via pixel
+   diff that only the masked region changed (mean abs diff 2.4 outside
+   the mask vs. 24.6 inside) -- same verification method used to
+   validate Brandon's hair fix originally.
+2. **Jersey mask came back nearly empty.** `composite_jersey()` looked
+   only at segformer's class 4 ("Upper-clothes"). Added a `debug` flag
+   to the app (prints the full class histogram) to diagnose --
+   confirmed only 837 of 1,046,784 pixels landed in class 4, while
+   131,200 landed in class 7 ("Dress") instead. Brandon's own mask WAS
+   clean class-4-only, so this isn't a bug in that earlier pass -- it's
+   the classifier being genuinely inconsistent across photos for this
+   garment style (a sleeveless tank cropped waist-up, with no visible
+   waistline to signal "top, not one-piece"). Fixed by unioning both
+   candidate classes (`np.isin(pred, [UPPER_CLOTHES_CLASS_ID,
+   DRESS_CLASS_ID])`) instead of assuming one. This also validated the
+   take-5 centering fix on a second, independent mask shape once the
+   mask was actually correct-sized.
+
+**Status: full pipeline now confirmed working end to end on two
+different subjects**, including two real generalization bugs found and
+fixed by testing on a second subject rather than assumed fixed.
+Committed alongside the take-5 fix.
+
 ## Monitor, no action needed
 
 **AnimeAdapter** ([arXiv:2605.20237](https://arxiv.org/html/2605.20237))
@@ -830,8 +900,16 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
    was a wrong-reference-point bug (shoulder peak vs. actual collar
    depth), texture added via a real fabric-swatch multiplier map. See
    "Jersey, take 4" above.
-9. **Pipeline is now feature-complete for a single subject** — likeness,
-   full body, cartoon style, correct hair, and brand-accurate,
+8b. ~~Fix crest horizontal centering~~ — done. Same class of bug as
+   take 4 (extent measurement biased by pose), fixed via collar V-notch
+   detection instead. See "Jersey, take 5" above.
+8c. ~~Run the full pipeline on a second roster member~~ — done, Cleo.
+   Framing/style/jersey-color generalized cleanly first try; found and
+   fixed two real bugs (hair color drift, segformer classifying the
+   tank as "Dress" not "Upper-clothes" for this subject). See "Second
+   subject -- Cleo" above.
+9. **Pipeline is now feature-complete and confirmed on two subjects** —
+   likeness, full body, cartoon style, correct hair, and brand-accurate,
    correctly-textured jersey all confirmed working end to end (three
    separate Modal apps: `modal_app_kontext.py` for generation + hair
    inpainting, `modal_app_jersey.py` for jersey compositing). Not yet

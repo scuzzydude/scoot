@@ -32,6 +32,16 @@ SEGFORMER_REPO = "mattmdjaga/segformer_b2_clothes"
 SEGFORMER_REVISION = "584abc1e1d260e23c0fc627c5217a09b2b461046"  # same pin as modal_app.py
 
 UPPER_CLOTHES_CLASS_ID = 4  # confirmed via the model card's label table, not guessed
+# Second run (Cleo, 2026-08-20) surfaced a real classifier flakiness:
+# debug histogram showed only 837/1,046,784 px landed in class 4, with
+# 131,200 landing in class 7 ("Dress") instead -- this label set's
+# "Dress" vs "Upper-clothes" boundary is apparently ambiguous for a
+# sleeveless tank cropped waist-up with no visible waistline to signal
+# "this is a top, not a one-piece." Brandon's own mask WAS clean class-4
+# only, so this isn't a bug in that pass -- it's the classifier being
+# inconsistent across different photos of the same style of garment.
+# Union both candidate classes rather than picking one.
+DRESS_CLASS_ID = 7
 
 # Same hex dict as build_cards.py's JERSEY -- source of truth stays there;
 # duplicated here (not imported) since this runs in a separate Modal
@@ -114,7 +124,13 @@ def composite_jersey(payload: dict) -> dict:
         logits, size=src_img.size[::-1], mode="bilinear", align_corners=False,
     )
     pred = upsampled.argmax(dim=1)[0].numpy()
-    raw_mask = (pred == UPPER_CLOTHES_CLASS_ID).astype(np.uint8) * 255
+    raw_mask = np.isin(pred, [UPPER_CLOTHES_CLASS_ID, DRESS_CLASS_ID]).astype(np.uint8) * 255
+
+    if payload.get("debug"):
+        vals, counts = np.unique(pred, return_counts=True)
+        hist = {int(v): int(c) for v, c in sorted(zip(vals, counts), key=lambda t: -t[1])}
+        print(f"DEBUG class histogram: {hist}")
+        print(f"DEBUG raw_mask nonzero px: {int((raw_mask > 0).sum())} / {raw_mask.size}")
 
     # Cleanup pass -- first real run showed two artifacts: a couple of
     # stray misclassified specks well outside the garment, and a defect
