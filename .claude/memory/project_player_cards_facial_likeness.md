@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest (centered, crisp collar, mesh texture) working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Not yet wired into one call or run on full roster"
+description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest+matched framing/scale, working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Seed found to drive output scale, not just content -- needs a locked roster-wide seed before the full 34-member run. Not yet wired into one call."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T12:03:51.929Z
+  modified: 2026-08-20T15:34:25.884Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -361,6 +361,56 @@ try if this continues: anyone with notably different hair color/style
 or build than Brandon or Cleo, to keep surfacing this class of bug
 early. Full diagnostic writeup: PLAN_facial_likeness.md's "Jersey, take
 5" and "Second subject -- Cleo" sections.
+
+**VM crash + recovery, 2026-08-20.** Host-level restart (external
+power/Azure event, not in-guest — journal for the prior boot just stops
+cold with no shutdown/OOM/panic message, matching the exact timestamp
+our session's last tool call was cut off) wiped `/tmp` (session
+scratchpad) and the system-level `modal`/`rembg`/`pillow`/`reportlab`
+pip packages, but NOT the Azure blob storage outputs, Modal app
+deployments/auth, or the `~/Nick/work/venv` venv that had these same
+packages installed separately — recovered by reinstalling system-wide
+via `pip3 install --break-system-packages` and reading the crashed
+session's own transcript JSONL (`~/.claude/projects/-home-brandon-scoot/<session-id>.jsonl`)
+to reconstruct exactly where work left off, including exact blob paths
+for in-flight outputs. Added `~/.local/bin` to PATH in `.bashrc`.
+**No swap configured on this VM (Standard_B2s, 2 vCPU/4GB) and disk at
+79% used** — not the cause this time, but a real risk for future
+crashes given occasional heavy local pip installs (onnxruntime etc.);
+worth adding swap.
+
+**Head-size bug, real root cause found 2026-08-20 (supersedes the
+"source photo framing" theory above).** Brandon's report after the
+crash-interrupted reframe attempt: "my head is big, the centering is
+good" — this was based on the *stale* published review page, not the
+reframed result. Measuring head-width/shoulder-width on the reframed
+Brandon vs. Cleo cutouts came back nearly identical (0.44 vs 0.45) —
+ruling that out as the metric. Brandon's own suggested diagnostic
+(use where Cleo's crest text "SENIOR BASKETBALL" gets cut off at the
+frame's bottom edge as a shared reference line) found the real signal:
+Brandon's card cut off a full line earlier than Cleo's, meaning his
+whole figure was scaled larger within the same canvas — invisible to
+a head:shoulder ratio check since that's scale-invariant.
+
+Tested padding the source photo 20% (explicit zoom-out cue) — **no
+visible effect**, showing Kontext's own "waist-up, cropped just above
+the waist" prompt instruction dominates over input framing/scale cues,
+contradicting the earlier "Kontext anchors on input's own composition"
+theory, at least for this prompt template. Diffed the two generation
+calls directly instead: Brandon's reframe run used a different seed
+(552013) than Cleo's (552011) and an extra "keep natural head-to-
+shoulder proportions" sentence Cleo's winning prompt never had.
+**Matching Brandon's call to Cleo's exact seed + prompt text (same
+waist-up source photo, otherwise unchanged) reproduced her framing
+almost exactly** — headroom and the crest cutoff line now match.
+Confirmed and published as a new section on the review page.
+
+**Real finding for the full 34-member roster:** seed measurably affects
+output *scale/framing*, not just stochastic content details, on this
+model/prompt combination. Before generating the full roster, lock a
+single seed (or a small tested seed set) as the default rather than
+letting each subject pick its own — otherwise this exact framing-drift
+bug will recur per subject at scale. Not yet decided/implemented.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,

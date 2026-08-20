@@ -921,3 +921,50 @@ acceptance"). Worth a periodic check on the repo, not worth blocking on.
 11. Tier 2's per-subject LoRA and Tier 3's USO path are both
     deprioritized given Tier 4's result — not abandoned, just no longer
     the leading approach.
+
+### Framing/scale bug — real root cause, 2026-08-20
+
+VM crashed mid-session (host-level power event, confirmed via
+`journalctl` — the previous boot's log just stops with no shutdown/
+OOM/panic message, timestamp matching exactly when the running tool
+call was cut off). Recovered by reinstalling `modal`/`rembg`/`pillow`/
+`reportlab` (system pip packages didn't survive the reboot; Azure blob
+outputs, Modal app deployments, and the separate `~/Nick/work/venv`
+venv all did) and reading the crashed session's own transcript JSONL to
+reconstruct exactly where the work had left off.
+
+Brandon's report on resuming: "my head is big, the centering is good"
+— based on the stale published review page (predates the reframe fix
+below), not the actual reframed result. Once shown the reframed
+version, head-width/shoulder-width measured nearly identical to
+Cleo's (0.44 vs 0.45) — that ratio wasn't the bug. Brandon proposed the
+real diagnostic himself: use where Cleo's crest text "SENIOR
+BASKETBALL" gets cut off at the frame's bottom edge as a shared
+reference line for both cards. By that measure, Brandon's card cut off
+a full crest line earlier than Cleo's — his whole figure was scaled
+larger within the same canvas, a difference invisible to a
+scale-invariant head:shoulder ratio check.
+
+Tested padding the source photo 20% (an explicit zoom-out cue) — no
+visible effect on output framing, meaning Kontext's own "waist-up,
+cropped just above the waist" prompt instruction dominates over input
+framing/scale cues (at least for this prompt template — this
+contradicts the earlier working assumption that "Kontext anchors on
+the input's own composition," which was true for the *original*
+extreme-closeup-vs-waist-up bug but not for this finer scale
+difference). Diffing the two Modal calls directly found the actual
+variable: Brandon's reframe run used a different seed (552013) than
+Cleo's (552011), plus an extra "keep natural head-to-shoulder
+proportions" sentence Cleo's winning prompt never had. Matching
+Brandon's call to Cleo's exact seed + prompt text, same waist-up source
+photo otherwise unchanged, reproduced her framing almost exactly —
+confirmed via the same crest-cutoff-line check, now matching. Published
+as a new section on the review page (`likeness-review/index.html`).
+
+**Real finding for the full 34-member roster:** seed measurably affects
+output *scale/framing*, not just stochastic content variation, on this
+model/prompt combination. Before generating the full roster, lock a
+single seed (or a small tested seed set) as the roster-wide default —
+otherwise this exact framing-drift bug will likely recur per subject.
+Not yet decided/implemented — next thing to resolve before scaling past
+2 subjects.
