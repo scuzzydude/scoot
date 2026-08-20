@@ -307,6 +307,13 @@ def draw_manga_bg(c, x, y, serial):
     for i in range(n_cols):
         for j in range(n_rows):
             px, py = x0 + i * step, y0 + j * step
+            # Inset from the anchor edge so the wedge never crowds the chip
+            # band -- at the true edge (u=0) it used to read as broken/
+            # misaligned stripes rather than a deliberate corner accent.
+            edge_gap = 16.0
+            if (left and (px - x0) < edge_gap) or \
+               (not left and (x0 + ART_W - px) < edge_gap):
+                continue
             u = (px - x0) / ART_W if left else 1.0 - (px - x0) / ART_W
             if u > wx / ART_W:
                 continue

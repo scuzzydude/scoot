@@ -278,8 +278,10 @@ def composite_jersey(payload: dict) -> dict:
             scale = target_w / crest.width
             target_h = max(1, int(crest.height * scale))
             crest_resized = crest.resize((target_w, target_h), Image.LANCZOS)
-            alpha = crest_resized.split()[3].point(lambda p: int(p * 0.92))
-            crest_resized.putalpha(alpha)
+            # Full opacity -- this used to carry a 0.92 alpha blend that
+            # made the crest top out around RGB 236 instead of true white
+            # (255), confirmed by direct pixel sampling. Brandon's call:
+            # he wants it whiter, not softened into the jersey.
 
             left = jcx - target_w // 2
             # Margin bumped 0.13 -> 0.18 of the (now correctly-measured

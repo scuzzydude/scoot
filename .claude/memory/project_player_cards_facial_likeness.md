@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T17:15:44.360Z
+  modified: 2026-08-20T17:30:38.031Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -464,6 +464,41 @@ PIL upscale in the art-prep crop, no visible change, so this is most
 likely the crest's own intentional distressed/worn texture (matches the
 real jersey photos it was extracted from), not a resolution bug.
 Published on the review page's "Complete card front" section.
+
+**Card art fixes, same day** — Brandon's blunt read on the first
+assembled front: "name is cutoff, arms cut off the figure, edge stripes
+misaligned, cards don't look good. Also fonde and basketball logo on
+jersey is grey, not white enough." Checked each claim individually
+rather than guessing:
+1. **Crest grey — real bug, fixed.** Direct pixel sampling found the
+   crest's brightest pixels topped out at RGB 236, not 255, even though
+   the source crest asset itself is pure white — traced to a 92%-opacity
+   alpha blend in `modal_app_jersey.py`'s crest compositing step.
+   Removed it, redeployed, brightest pixels now ~254.
+2. **Arms cut off — real bug, fixed.** The art-prep crop width was
+   narrower than the figure's actual shoulder/arm span (542-610px vs a
+   526px crop), slicing through both biceps. Fixed by padding the
+   canvas at the bottom (hidden under the nameplate bar, which already
+   covers the bottom ~14% of the art slot per spec) to earn a wider
+   crop at the same 0.7 portrait aspect without touching the arms.
+3. **Edge stripes "misaligned" — the chip band itself was never broken.**
+   Confirmed by re-rendering with a different fake serial and watching
+   the "misaligned" pattern move — it's `draw_manga_bg()`'s
+   serial-seeded screentone wedge (small halftone dots, intentionally
+   anchored to a bottom corner) landing close enough to the true edge
+   to blur visually into the band's checker rhythm. Real readability
+   problem even though not a band bug — inset the wedge 16pt from its
+   anchor edge in `build_cards.py` so it no longer crowds the band.
+4. **Name cutoff — not a card bug at all.** Measured actual PDF text
+   width for "Rocket Man" (112.8pt) against the 168pt art slot — comfortable
+   margin. What looked cut off was my own earlier zoomed review
+   screenshot, which had cropped the bottom of the nameplate bar out of
+   frame, not a defect in the actual card.
+
+Published on the review page's "Card art fixes" section. Real source
+changes committed to `build_cards.py` (wedge inset) and
+`modal_app_jersey.py` (crest opacity) — not just art-prep script tweaks
+in scratchpad.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
