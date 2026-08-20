@@ -968,3 +968,37 @@ single seed (or a small tested seed set) as the roster-wide default —
 otherwise this exact framing-drift bug will likely recur per subject.
 Not yet decided/implemented — next thing to resolve before scaling past
 2 subjects.
+
+### Expression control — a real per-subject knob, 2026-08-20
+
+Brandon's feedback on the framing-fixed cards: size is right, but both
+faces are "goofy" — same wide-eyed, open-mouth surprised-joy look
+regardless of the source photo's actual (neutral) expression. Wants
+this adjustable per roster member: charming, bad-ass, mean, serious.
+
+Replaced the "preserve the same expression" prompt line with an
+explicit directive, same locked seed (552011) and source photo. Three
+distinct results: BADASS (confident, subtle smirk, focused eyes) and
+MEAN (furrowed brow, stern) landed clean on the first attempt, for both
+Brandon and Cleo. CHARMING did not — still too close to the goofy
+default; the "warm smile" wording doesn't push far enough from the
+model's grin/wide-eyes bias. **Brandon's pick: BADASS.**
+
+Running these prompts on Cleo surfaced a real bug: the locked seed with
+a modified prompt reintroduced the earlier hair-color regression (gray
+hair rendering black), and — new, not covered by the original fix —
+**dropped his mustache entirely**. The original hair fix's mask only
+covers the top-of-head region. Built a second mask for the mustache and
+pointed both regions at one reference crop from Cleo's already-correct
+final card; fixed cleanly, first attempt, for all three variants.
+
+**Implication for the roster:** any prompt change (expression, style,
+anything) likely needs this same hair/facial-hair touch-up re-applied
+per subject — it doesn't carry over from a prior fix automatically.
+Full 8-card spread (DEFAULT/BADASS/MEAN/CHARMING × Brandon/Cleo)
+published on the review page.
+
+**Next:** fix CHARMING's prompt (explicitly negate the open-mouth grin
+the same way BADASS/MEAN did), then decide how expression gets chosen
+per roster member (a CSV column, most likely, alongside a locked seed)
+before generating anyone past these two.

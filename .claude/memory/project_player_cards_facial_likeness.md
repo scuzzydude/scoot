@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest+matched framing/scale, working via FLUX.1 Kontext + segformer (~$0.02-0.03/card, no training). Seed found to drive output scale, not just content -- needs a locked roster-wide seed before the full 34-member run. Not yet wired into one call."
+description: "Player-card pipeline CONFIRMED on 2 subjects (Brandon, Cleo): likeness+full body+cartoon face+hair+real Fonde jersey crest+matched framing/scale+adjustable expression (BADASS/MEAN confirmed, CHARMING needs work), via FLUX.1 Kontext + segformer (~$0.02-0.03/card). Seed drives output scale -- lock roster-wide. Any prompt change needs a per-subject hair/mustache touch-up re-applied. Not yet wired into one call."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T15:34:25.884Z
+  modified: 2026-08-20T16:47:35.060Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -411,6 +411,36 @@ model/prompt combination. Before generating the full roster, lock a
 single seed (or a small tested seed set) as the default rather than
 letting each subject pick its own — otherwise this exact framing-drift
 bug will recur per subject at scale. Not yet decided/implemented.
+
+**Expression as a controllable knob, 2026-08-20.** Brandon's read after
+the framing fix: size is right, but both faces are "goofy" — the same
+wide-eyed, open-mouth surprised-joy look regardless of the source
+photo's actual (neutral, mid-sentence) expression. Confirmed this is a
+real, controllable parameter, not baked into the seed/checkpoint:
+replaced the old "preserve the same expression" prompt line with an
+explicit directive (same locked seed 552011, same source photo) and
+got three genuinely distinct results. **BADASS** (confident, subtle
+smirk, focused eyes) and **MEAN** (furrowed brow, stern) landed clean
+on the first attempt for both Brandon and Cleo. **CHARMING** did not —
+still reads too close to the goofy default; the "warm smile" language
+doesn't push far enough from the model's default grin/wide-eyes bias.
+**Brandon's pick: BADASS.**
+
+**Real bug found applying this to Cleo: hair/mustache regression is
+per-generation, not a one-time fix.** Reusing the locked seed with a
+modified prompt reintroduced the earlier hair-color regression (gray
+hair rendering black) on Cleo — expected, since it's a fresh generation
+from scratch. Less expected: **his mustache disappeared entirely**,
+something the original hair-only masked fix never had to handle (its
+mask only covers the top-of-head hair region). Built a second mask
+region for the mustache and pointed both regions at one reference crop
+from Cleo's already-correct final card — fixed cleanly, first attempt,
+for all three expression variants. **Implication for the roster:** any
+change to the generation prompt (expression, style, anything) likely
+needs this same hair(+facial hair) touch-up pass re-applied per
+subject — it does not carry over automatically from a prior fix. Full
+8-card spread (DEFAULT/BADASS/MEAN/CHARMING × Brandon/Cleo) published
+on the review page.
 
 **Where to pick this up:**
 - `tools/player-cards/FACIAL_LIKENESS_RESEARCH.md` — full research,
