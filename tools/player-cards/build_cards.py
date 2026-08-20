@@ -166,6 +166,22 @@ def jersey_variant(serial, art_dir, side):
         _JERSEY_CACHE[key] = None
         return None
 
+    # "dark" side: the art pipeline (modal_app_jersey.py's composite_jersey)
+    # already delivers brand-hex-correct jersey color AND the real Fonde
+    # crest baked in as true-white pixels -- pass it through unchanged.
+    # Recoloring here used to remap the WHOLE masked region by luminance
+    # (simulating fabric shading for a blank AI-generated jersey, the
+    # original spec before the crest got baked in), which treated the
+    # crest's white ink as just the brightest highlight on the fabric and
+    # remapped it down to the dark base tone -- confirmed via direct pixel
+    # sampling: crest read true white (~254) in the source figure.png but
+    # ~46 (JERSEY["dark"][0], #2E2E2A) after this recolor. Only "light"
+    # (the back-of-card reverse jersey, not yet built) still needs the
+    # recolor -- there's no brand-correct pre-colored source for that side.
+    if side == "dark":
+        _JERSEY_CACHE[key] = fig
+        return fig
+
     from PIL import Image
     import numpy as np
 
