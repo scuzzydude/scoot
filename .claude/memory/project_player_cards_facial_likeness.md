@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED at scale: 23-person full-roster batch (Brandon='Rocket Man', Cleo, +21), zero failures, real build_cards.py card fronts, BADASS expression, crest true white (two separate greying bugs found+fixed: Modal alpha blend, then build_cards.py's own recolor pass). 2 isolated per-photo issues flagged (Chef framing, Anthony eye color). Card data still placeholder; back-of-card not started."
+description: "Player-card pipeline CONFIRMED at scale: 23-person full-roster batch, zero failures, crest true white (two bugs fixed). ART STYLE NOW UNDER RECONSIDERATION -- Brandon flagged the locked Pixar/DreamWorks style as whitewashing Black subjects; anime/comic-graphic style tests read as more accurate, no style chosen yet. Card data still placeholder; back-of-card not started."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-20T20:43:42.347Z
+  modified: 2026-08-21T11:39:12.853Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -557,3 +557,30 @@ sample" on the review page.
 - See [[scoot_currency_ledger]] and [[project_plan]] for where this sits
   relative to the main Phase 5 ledger work — player-cards is a parallel
   track, not blocking Phase 5b.
+
+**Art style under real reconsideration, 2026-08-21.** Brandon's read on
+the full 23-person roster sample: "most of the men featured are black
+men and that style 'white-washes' it a bit" — the locked Pixar/
+DreamWorks 3D style (chosen a session earlier, comparing against Meta
+AI's cartoonifier) tends to round and soften every subject toward the
+same generic "cute movie mascot" look, which reads as a real flattening
+effect on Black subjects specifically, not just an aesthetic quibble.
+
+Tested 3 alternatives against the Pixar default: same subject ("Black"),
+same source photo, same locked seed (552011), only the style language
+changed, plus an explicit "preserve accurate skin tone, do not lighten
+or wash out" instruction added to all three (not present in the Pixar
+default prompt — worth adding there too regardless of which style wins).
+**Anime** (flat cel-shaded, bold ink outlines) and **comic/graphic-novel**
+(dramatic ink shading, realistic stylized proportions) both read as
+sharper, more specific to the actual person, and kept true skin tone.
+**Classic comic book** (halftone Ben-Day dots, primary colors, heroic
+proportions) also read well but ignored the "simple plain background"
+instruction (kept a stylized dotted background instead — not a problem
+for the pipeline since rembg strips backgrounds regardless).
+**No style has been chosen yet — Brandon is reviewing the comparison.**
+Published on the review page's "Style test" section. If a new style is
+picked, the entire roster (this pass's 23 subjects, all now BADASS/
+locked-seed) will need regenerating, and both the hair/mustache fix
+mechanism and the crest-compositing step should still work unchanged
+since they operate on the composited jersey mask, not the base style.
