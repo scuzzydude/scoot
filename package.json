@@ -55,6 +55,7 @@
     "express": "^4.21.2",
     "express-session": "^1.18.1",
     "hls.js": "^1.5.20",
+    "imapflow": "^1.7.1",
     "jszip": "^3.10.1",
     "lucide-react": "^0.487.0",
     "mammoth": "^1.12.0",

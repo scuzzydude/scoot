@@ -352,6 +352,17 @@ export const smsShutdownQueue = pgTable("sms_shutdown_queue", {
   receivedAt: timestamp("received_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// BigMo's periodic mailbox poll (see mail/poller.ts). One row per monitored
+// IMAP mailbox+folder. lastUid tracks the highest UID already notified on —
+// UIDs are monotonic per folder and unaffected by read/unread state on
+// Brandon's own mail client, unlike an "unseen" search would be.
+export const mailCheckState = pgTable("mail_check_state", {
+  id: serial("id").primaryKey(),
+  mailbox: text("mailbox").notNull().unique(),
+  lastUid: integer("last_uid"),
+  lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Bot = typeof bots.$inferSelect;

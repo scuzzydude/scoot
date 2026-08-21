@@ -6,6 +6,7 @@ import { initProvider } from "./llm/provider.js";
 import { initProvider as initSmsProvider } from "./sms/provider.js";
 import { seedDefaultUser } from "./db/seed-default-user.js";
 import { seedBots } from "./db/seed-bots.js";
+import { startMailPoller } from "./mail/poller.js";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
@@ -34,6 +35,12 @@ try {
   await initSmsProvider();
 } catch (err) {
   process.stderr.write(`SMS provider init failed (set TWILIO_* env vars to enable): ${err}\n`);
+}
+
+try {
+  startMailPoller();
+} catch (err) {
+  process.stderr.write(`Mail poller init failed (set IMAP_* env vars to enable): ${err}\n`);
 }
 
 server.listen(PORT, () => {
