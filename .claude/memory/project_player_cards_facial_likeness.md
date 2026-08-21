@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED at scale: 23-person full-roster batch, zero failures, crest true white (two bugs fixed). ART STYLE NOW UNDER RECONSIDERATION -- Brandon flagged the locked Pixar/DreamWorks style as whitewashing Black subjects; anime/comic-graphic style tests read as more accurate, no style chosen yet. Card data still placeholder; back-of-card not started."
+description: "Player-card pipeline CONFIRMED at scale (23-person batch, zero failures). ART STYLE PILOT DONE: anime shows a real repeated whitewashing bias (wrong eye colors, lightened skin, dropped accessories) across most subjects tested; comic/graphic-novel held accurate skin+eyes on every subject, recommended. Correction technique (mask+real-photo-reference) proven but needs 2 sequential passes, not 1. Style choice not yet confirmed by Brandon; full 92-gen batch not started."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-21T11:39:12.853Z
+  modified: 2026-08-21T13:34:09.998Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -584,3 +584,56 @@ picked, the entire roster (this pass's 23 subjects, all now BADASS/
 locked-seed) will need regenerating, and both the hair/mustache fix
 mechanism and the crest-compositing step should still work unchanged
 since they operate on the composited jersey mask, not the base style.
+
+**4-person pilot + style verdict, 2026-08-21.** Brandon: "let's do the
+full roster, all 4 styles, but add something that rechecks with the
+original photo for facial resemblance and tries to vector in." Piloted
+on Rufus, McGhee, Kiwi, Rodney before committing to the full
+23x4=92-generation batch.
+
+Built an automated reference-crop tool for the correction step: OpenCV
+Haar cascade face detection on the local source photos (had to hand-
+install the cascade XML -- the venv's opencv-python build shipped
+without `cv2.data.haarcascades` populated; needed OpenCV 4.x pinned too,
+since 5.0.0 doesn't expose `CascadeClassifier` at all in this build).
+Worked automatically for 3/4 pilot subjects; failed on McGhee (false-
+positived on his own name-card text graphic instead of his face) --
+confirms per-subject visual spot-checking of any auto-crop is still
+required, not fully trustworthy standalone.
+
+**Correction mechanism confirmed to work, but is NOT one-shot.** Rufus's
+anime version didn't just get his hair wrong -- his real dark brown
+skin and dark eyes came out lightened with BLUE eyes. A single combined
+mask+reference correction pass (skin+eyes+hair together) fixed skin and
+eyes cleanly but left hair wrong; a second, hair-only pass on top
+finished the job. Two targeted sequential passes, same technique both
+times, not one broad pass.
+
+**Bigger finding: the drift is style-dependent and repeats across
+subjects, not random.** Checked all 4 pilot subjects x 3 alternative
+styles:
+- **ANIME: real, repeated whitewashing pattern.** Rufus got blue eyes +
+  lightened skin. Kiwi got purple eyes. McGhee got lighter skin AND
+  lost his glasses and beard entirely. 3 of 4 subjects affected, not a
+  one-off.
+- **COMIC/GRAPHIC NOVEL: held accurate skin tone and eye color on
+  EVERY pilot subject, zero exceptions.** Only recurring issue was hair
+  STATE (wrong style/color, e.g. Rufus still had hair instead of bald)
+  -- not skin or eye color drift. The proven hair-only correction pass
+  handles this reliably.
+- **CLASSIC COMIC: least predictable.** Nailed Rufus perfectly (bald,
+  correct skin tone, no correction needed) but rendered McGhee as an
+  unrecognizable different person entirely -- no cap, no beard, no
+  glasses, wrong build.
+
+**Recommendation given to Brandon: COMIC/GRAPHIC NOVEL style for the
+full roster.** Lightest correction burden (hair-state only, not full
+skin/eye correction), most consistent across subjects tested so far.
+Decision on which style to commit to for the full 92-generation batch
+is Brandon's -- not yet confirmed. Published as "4-person pilot" on the
+review page.
+
+**Review page is now ~37MB** (embedded base64 images accumulating
+across many sections this session) -- still serves fine over plain
+HTTP but worth flagging if it keeps growing; may want to prune older
+superseded sections or split into multiple pages eventually.
