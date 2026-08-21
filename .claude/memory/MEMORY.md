@@ -1,6 +1,7 @@
 # Memory Index
 
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
+- [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP checks bigmo@ alias, texts Brandon on new mail; deployed but inert until he adds real IMAP creds to .env
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
 - [SMS build resume — §8 complete + Phase 4 staking complete](project_sms_build_resume.md) — full SMS⇄Rooms + staking ritual/trust graph/revocation/self-stake history; superseded by [[scoot_currency_ledger]] for what's next
 - [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat + staking done; Phase 5a token ledger now in progress, see [[scoot_currency_ledger]]; scootchain (5b) last
