@@ -168,6 +168,31 @@ def composite_jersey(payload: dict) -> dict:
     holes = flood
     raw_mask = cv2.bitwise_or(garment, holes)
 
+    # Clip anything above the collar line -- found 2026-08-22 running the
+    # full roster in the comic/graphic style: segformer's garment
+    # classification bled into the head/neck region for 16 of 23
+    # subjects (up to 66% of the head-region pixels on the worst case),
+    # which the mesh-texture multiplier then darkened along with the
+    # actual jersey, reading as a muddy half-face shadow. Reuses the
+    # exact neckline-detection method already proven for crest placement
+    # below: the deepest dip in the mask's own top-edge profile, within
+    # the central 50% of width, is the true collar notch by garment
+    # construction -- independent of pose and of whatever segformer
+    # misclassified above it.
+    ys0, xs0 = np.where(raw_mask > 127)
+    if len(xs0) > 0:
+        jx0c, jx1c = int(xs0.min()), int(xs0.max())
+        jwc = jx1c - jx0c
+        order0 = np.argsort(xs0)
+        xs0_sorted, ys0_sorted = xs0[order0], ys0[order0]
+        uniq_x0, first_idx0 = np.unique(xs0_sorted, return_index=True)
+        top_y_per_x0 = np.minimum.reduceat(ys0_sorted, first_idx0)
+        cx_lo0, cx_hi0 = jx0c + int(jwc * 0.25), jx0c + int(jwc * 0.75)
+        central0 = (uniq_x0 >= cx_lo0) & (uniq_x0 <= cx_hi0)
+        neck_y0 = int(np.max(top_y_per_x0[central0])) if central0.any() else int(ys0.min())
+        clip_y = max(0, neck_y0 - int(0.05 * raw_mask.shape[0]))
+        raw_mask[:clip_y, :] = 0
+
     # Light feather so the recolor blends at the edge instead of a hard
     # segmentation-boundary seam -- same spirit as jersey_variant()'s
     # source mask, which is itself pre-feathered by the ComfyUI
