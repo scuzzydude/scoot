@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline CONFIRMED at scale (23-person batch, zero failures). ART STYLE PILOT DONE: anime shows a real repeated whitewashing bias (wrong eye colors, lightened skin, dropped accessories) across most subjects tested; comic/graphic-novel held accurate skin+eyes on every subject, recommended. Correction technique (mask+real-photo-reference) proven but needs 2 sequential passes, not 1. Style choice not yet confirmed by Brandon; full 92-gen batch not started."
+description: "Player-card pipeline SHIPPED at full scale: 23-person roster in COMIC/GRAPHIC style (chosen over Pixar/anime for whitewashing reasons), 2 real bugs found+fixed running the whole roster (4 cards wrong-color, segformer mask bleeding into heads on 16/23 -- root-caused and fixed in modal_app_jersey.py). Card data still placeholder; back-of-card not started."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-21T13:34:09.998Z
+  modified: 2026-08-22T07:56:58.483Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -633,7 +633,42 @@ Decision on which style to commit to for the full 92-generation batch
 is Brandon's -- not yet confirmed. Published as "4-person pilot" on the
 review page.
 
-**Review page is now ~37MB** (embedded base64 images accumulating
+**Review page is now ~42MB** (embedded base64 images accumulating
 across many sections this session) -- still serves fine over plain
 HTTP but worth flagging if it keeps growing; may want to prune older
 superseded sections or split into multiple pages eventually.
+
+**Style decided + full 23-person COMIC/GRAPHIC roster shipped,
+2026-08-22.** Brandon: "Go with comic/graphic for the full roster."
+Regenerated all 23 (same locked seed/framing/expression, only style
+language changed) and found two real bugs running the WHOLE roster
+that neither the pilot (4 people) nor the single-subject tests caught:
+
+1. **4 cards rendered black-and-white instead of full color** (Chef,
+   John, Sheldon, Shipp) — Shipp's was worse, keeping the full busy
+   background and "SHIPP" name-card text baked in instead of a clean
+   portrait. Fixed by regenerating those four with an explicit "FULL
+   COLOR... remove all scenery/people/text" prompt + fresh seed.
+2. **Segformer's jersey mask bled into the head/neck region for 16 of
+   23 subjects** (up to 66% of head-region pixels, Cleo worst) — the
+   mesh-texture darkening step then applied there too, reading as a
+   muddy half-face shadow. **Real fix committed** (`bc63da7`) to
+   `modal_app_jersey.py`: clip the garment mask to below the collar's
+   V-notch — reusing the exact neckline-detection method already
+   proven for crest placement — before recolor/texture ever runs.
+   Fixed 15 of 16 outright; Cleo's segmentation was a genuine outlier
+   (spilling across a huge swath of background, not just his head),
+   got a manually-built mask instead of fighting the detector further.
+
+**Lesson for future style/prompt changes:** pilot-testing on a handful
+of subjects is necessary but not sufficient — both bugs above only
+showed up once the FULL roster ran, because they were per-subject-photo
+failure modes (busy background, unusual pose) with a low individual
+hit rate but a high aggregate one. Budget a full-roster verification
+pass after any pilot, not just a bigger pilot.
+
+Published as "Full roster in COMIC/GRAPHIC style" on the review page.
+Handles are still placeholder nicknames; card data (tier/position/
+stats) untouched. Brandon separately asked BigMo to check
+thedreamlaboratory.org mail periodically — see [[bigmo_mail_poller]],
+unrelated to this track, built the same session.
