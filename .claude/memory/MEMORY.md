@@ -20,6 +20,6 @@
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
-- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 23-person roster SHIPPED in COMIC/GRAPHIC style; 2 real bugs found+fixed at full-roster scale; data still placeholder
+- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — PIVOTED to likeness-first/card-later flow (SMS-ready); age-skew+crest+shadow bugs fixed; new page likeness-review-2, batch 1 up
 - [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked

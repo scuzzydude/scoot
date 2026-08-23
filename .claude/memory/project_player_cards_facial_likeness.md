@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline SHIPPED at full scale: 23-person roster in COMIC/GRAPHIC style (chosen over Pixar/anime for whitewashing reasons), 2 real bugs found+fixed running the whole roster (4 cards wrong-color, segformer mask bleeding into heads on 16/23 -- root-caused and fixed in modal_app_jersey.py). Card data still placeholder; back-of-card not started."
+description: "Player-card pipeline PIVOTED to likeness-first, card-later workflow (matches future SMS iteration). Fixed age skew (was too young, now correct '55+ superhero grandpa') + crest/shadow bugs at the root (mask darkness-intersection, not geometry patches). New review page likeness-review-2 (old one kept, not appended). Batch 1 of ~6-7 published, awaiting Brandon's per-person verdict before batch 2 or card assembly."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-22T07:56:58.483Z
+  modified: 2026-08-23T14:26:12.186Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -672,3 +672,88 @@ Handles are still placeholder nicknames; card data (tier/position/
 stats) untouched. Brandon separately asked BigMo to check
 thedreamlaboratory.org mail periodically — see [[bigmo_mail_poller]],
 unrelated to this track, built the same session.
+
+**Workflow pivot + 2 more real bugs found, 2026-08-23.** Brandon's read
+on the shipped comic/graphic roster: ~50% likeness accuracy, some way
+off; front/black-jersey card confirmed (shoulder+chest), BACK card
+will reuse the SAME face with the light/white jersey recolor (already
+supported — `composite_jersey(side="light")` exists, no new generation
+needed) but cropped tighter to a headshot. Two more real bugs, found
+by his own eye, not caught by the earlier fixes:
+
+1. **Crest still mis-sized/placed on most cards.** Root cause: my
+   previous fix (session before) only clipped the mask used for
+   *recoloring* — crest position/size is computed from a *different*
+   variable (`garment`) that was never touched, still built from
+   segformer's raw, contaminated classification. Confirmed via Rick's
+   card: crest bounding box was inflated by misclassified head pixels.
+2. **Skin below the shoulders reads "shadowed dark"** on every subject
+   except Rocket Man and Cleo (both had clean masks already, by
+   coincidence/manual fix). Same root cause as #1, just a different
+   symptom — the contaminated mask likely bleeds into arms too, not
+   just the head.
+
+**Real fix this time (committed `98e093c`):** instead of patching
+mask geometry again, fixed at the source — intersect segformer's
+classification with actual pixel darkness (the jersey is always
+rendered "solid dark charcoal-black," real jersey pixels are reliably
+darker than any skin tone). This cleans the mask BEFORE the
+morphological cleanup step that both the recolor path and the crest
+`garment` variable derive from, so one fix corrects both bugs instead
+of two separate patches. Verified on Rick: crest and shoulders both
+clean now. Cleo remains a standing exception — his segformer output
+bleeds into background, not skin, unrelated failure mode; keeps using
+his manually-built mask (already proven, `cleo_manual_final.png`
+pattern) rather than chasing segformer further for him specifically.
+
+**Age skew — real gap, fixed.** Brandon: everyone's reading too young;
+these are 55+ men and the treatment should be "superhero grandpa," not
+obscuring age. The prompt never mentioned age at all before. Added
+explicit language (natural gray hair, lined/weathered face, "NOT a
+young athlete," don't de-age) plus constrained the chiaroscuro dramatic
+shading to the face only (was likely also contributing to the
+shadowed-arms complaint independent of the mask bug). Confirmed
+working on the first test batch — all 7 read as clearly older men now.
+
+**Major workflow decision: likeness-first, card-later.** Brandon asked
+directly which order is better given the plan to iterate with users
+over SMS text. Recommended and confirmed: generate the styled bust
+ALONE (no jersey compositing, no crest, no card frame) as a fast, cheap
+review artifact (~$0.02-0.03, ~90s, one Modal call) that the user
+approves/iterates on directly over SMS; only once locked does the
+existing jersey+crest+card-layout pipeline run, once, without further
+back-and-forth. Rationale: iteration speed (jersey/crest/PDF steps add
+real minutes and more failure surface per round), and separation of
+concerns (facial likeness is the individual member's call; jersey
+color/crest/tier/layout are Scoot-level decisions, not something each
+member should need to review). This matches the existing
+`MODAL_BUILD_SPEC.md` async spawn/poll pattern already documented for
+BigMo's SMS path, built specifically because generation is too slow
+for a synchronous SMS reply.
+
+**Batching + new review page.** Brandon: work in batches of ~6-7 "like
+independent conversations" (simulating the future per-user SMS
+back-and-forth at small scale before wiring real SMS), one consolidated
+webpage per round rather than per-person pages. Started a fresh page,
+**`/var/www/html/likeness-review-2/`** (`fairchildlabs.org/likeness-
+review-2/`) — the original `likeness-review/` page (~43MB by this
+point) is kept as-is for history, not appended to further. **Batch 1
+(Brandon's picks): Rocket Man, Donnie, Kiwi, Black, Rick, Nick, Chef**
+— likeness-only busts (no jersey/crest), published. Confirmed the
+age-fix and shadow-fix both hold on this batch. Two open items flagged
+on the page itself, not yet fixed: Rick's cap didn't carry through
+this generation (had one before), Donnie's basketball has garbled fake
+text (diffusion models can't render real text — same reason the jersey
+crest is a real extracted image, not AI-drawn text).
+
+**Where this actually is right now:** waiting on Brandon's likeness
+verdict on batch 1 (approve/iterate per person) before either (a)
+running batch 2 with the next set of names, or (b) building the actual
+jersey+crest+card-assembly step for whichever batch-1 people get
+approved. The likeness-only generation script is
+`run_batch1_likeness.py` in that session's scratchpad — not yet a
+permanent repo script; if this pattern continues across many batches,
+worth promoting the prompt template (style+age+expression, no jersey
+mention needed since jersey color is still baked into the base
+generation per current architecture) into `tools/player-cards/` proper
+rather than re-deriving it per batch.
