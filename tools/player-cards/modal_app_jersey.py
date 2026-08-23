@@ -126,6 +126,23 @@ def composite_jersey(payload: dict) -> dict:
     pred = upsampled.argmax(dim=1)[0].numpy()
     raw_mask = np.isin(pred, [UPPER_CLOTHES_CLASS_ID, DRESS_CLASS_ID]).astype(np.uint8) * 255
 
+    # Intersect with a darkness check -- found 2026-08-22 running the full
+    # roster: segformer's garment classification alone regularly bled into
+    # adjacent skin (head, neck, arms), which the later recolor/mesh-
+    # texture steps then darkened right along with the actual jersey,
+    # reading as a muddy shadow, AND corrupted the crest's size/position
+    # (derived from this same mask's bounding box). The base generation
+    # always renders the jersey as a "solid dark charcoal-black" garment,
+    # so real jersey pixels are reliably much darker than any skin tone --
+    # this is the same principle that fixed Cleo's mask by hand that day
+    # (a pure luminance threshold), now applied generally instead of
+    # trusting segformer's boundary alone. Threshold picked generously
+    # below "dark charcoal" so cel-shaded highlights on the jersey itself
+    # survive; only true skin-brightness pixels get excluded.
+    src_arr = np.array(src_img)
+    lum_all = 0.299 * src_arr[..., 0] + 0.587 * src_arr[..., 1] + 0.114 * src_arr[..., 2]
+    raw_mask = np.where((raw_mask > 0) & (lum_all < 110), 255, 0).astype(np.uint8)
+
     if payload.get("debug"):
         vals, counts = np.unique(pred, return_counts=True)
         hist = {int(v): int(c) for v, c in sorted(zip(vals, counts), key=lambda t: -t[1])}
