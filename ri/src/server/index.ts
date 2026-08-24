@@ -7,6 +7,7 @@ import { initProvider as initSmsProvider } from "./sms/provider.js";
 import { seedDefaultUser } from "./db/seed-default-user.js";
 import { seedBots } from "./db/seed-bots.js";
 import { startMailPoller } from "./mail/poller.js";
+import { startAnthropicShim } from "./llm/anthropic-shim.js";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
@@ -41,6 +42,12 @@ try {
   startMailPoller();
 } catch (err) {
   process.stderr.write(`Mail poller init failed (set IMAP_* env vars to enable): ${err}\n`);
+}
+
+try {
+  startAnthropicShim();
+} catch (err) {
+  process.stderr.write(`Anthropic shim init failed (set PMP_SHIM_SECRET to enable): ${err}\n`);
 }
 
 server.listen(PORT, () => {

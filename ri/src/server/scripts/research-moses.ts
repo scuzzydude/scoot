@@ -6,7 +6,7 @@ import { searchWeb } from "../services/search.js";
 /*
  * research-moses.ts — scan the web for Moses Malone quotes, stories, and color
  * to enrich the BigMo personality. Uses the same searchWeb backend the bot uses
- * (Perplexity → Tavily → Gemini, per whichever API key is set).
+ * (scoot-pmp — self-hosted SearXNG + LLM synthesis, see PMP_URL).
  *
  * Output: ri/personalities/bigmo/source-moses-malone-web-research.md
  *
@@ -64,8 +64,8 @@ const QUERIES: { section: string; query: string }[] = [
 ];
 
 async function main(): Promise<void> {
-  if (!process.env.PERPLEXITY_API_KEY && !process.env.TAVILY_API_KEY && !process.env.GEMINI_API_KEY) {
-    process.stderr.write("No search API key set (PERPLEXITY_API_KEY / TAVILY_API_KEY / GEMINI_API_KEY).\n");
+  if (!process.env.PMP_URL) {
+    process.stderr.write("PMP_URL not set — scoot-pmp search is disabled.\n");
     process.exit(1);
   }
 

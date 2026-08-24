@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline is likeness-first, card-later (matches future SMS iteration), on likeness-review-2. 17 of 23 roster people done. PuLID-FLUX + Kontext (new app modal_app_kontext_pulid.py) is the breakthrough technique for stubborn likeness cases -- real face-embedding identity injection, not just prompt tweaking. Key gotchas: always say 'do not change his ethnicity' explicitly in prompts (not just 'don't lighten skin'); non-profit use confirmed by Brandon so InsightFace/FLUX non-commercial licensing is not a blocker."
+description: "Player-card pipeline: 25 roster people total, 24 have a clean noir render via PuLID-FLUX+Kontext (modal_app_kontext_pulid.py), 1 (Chef) has an unresolved closed-eyes issue. Full lineup + fixes on likeness-review-2. Key gotchas: ALWAYS say 'he is Black with dark brown skin' explicitly (generic 'preserve ethnicity' keeps failing -- recurred 3x); tight face-crop identity photos beat wide/distant ones for PuLID resemblance; check source photo folders for burned-in captions before using as subject."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-24T19:22:40.232Z
+  modified: 2026-08-24T21:30:50.762Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -877,6 +877,123 @@ app takes the same payload shape as the old app's generate() plus
 `identity_photo_url` (a face reference photo -- can be the same subject
 photo or a tighter crop) and `pulid_weight`/`pulid_start_at`/
 `pulid_end_at` (defaults 1.0/0.0/1.0, untuned beyond the first test).
+
+**Nick locked + full 24-person roster run through PuLID+noir, 2026-08-24
+(same day as the PuLID breakthrough above).** Nick vector-down: tested
+5 source photos across his two video sets (set 1 = original getwell
+shoot 1080p, set 2 = Nick.MP4 hallway shoot, 4K). Brandon's pick: photo
+A (set 1, `f_0515.jpg`, `nick_a_subject.jpg` on blob) — best resemblance
+of the five, despite the higher-res set 2 photos giving crisper detail
+on paper. One note: wanted A's natural slight closed-mouth smile
+preserved rather than the standard "serious game-face" expression —
+swap `EXPRESSION_NICK_SMILE` in for Nick specifically, not the roster
+default.
+
+Then ran the ENTIRE 24-person roster (all of batch 1/2/KennyG/Jen/Cleo
+plus the previously-untouched McGhee/John/Frank/Zelle/Sheldon/Rodney)
+through the same PuLID+Kontext noir pipeline in one batch —
+`tools/player-cards/run_full_roster_pulid.py` (not committed, scratch
+script; the permanent asset is `modal_app_kontext_pulid.py` itself).
+**Zero generation failures across 24 people.** Key simplification this
+run proved out: with PuLID doing real identity injection from the
+photo, per-person FRAMING text describing hair/facial-hair/build by
+hand (the old approach, error-prone -- see the Rufus goatee mistake
+above) is no longer necessary -- one generic FRAMING_MALE/FRAMING_FEMALE
+template plus "preserve his exact real hairstyle/facial hair/skin tone
+from the reference photo" was enough, and every person came out visibly
+distinct with no whitewashing/generic-face collapse. subject_photo_url
+and identity_photo_url were the SAME photo for all 24 (no separate face
+crop needed -- PuLID's own InsightFace step does its own face detection
+on whatever image it's given).
+
+Published as "Full lineup — noir + PuLID identity injection" on
+likeness-review-2. Three flagged for a quick fix, not yet done: KennyG
+and Shipp both picked up burned-in on-screen caption text from their
+source video ("KENNY" / "SHIPP") rendering into the image -- need
+different source frames without visible captions, or a tighter crop
+that excludes the caption area. Jen kept the full room background
+instead of going plain and the outfit/pose drifted off the jersey
+instruction -- same background-compliance issue seen with her in the
+earlier B&W style test, seems to recur specifically for her source
+photo. Everyone else (21 of 24) reads clean on first pass.
+
+**Roster fix round 2 + Kevin added, 2026-08-24 (same day).** Brandon
+flagged 4 issues from the full-lineup batch plus asked for a headcount:
+- **KennyG "work on resemblance"**: fixed by swapping the identity
+  photo from the wide/distant `kennyg_subject_v3.jpg` to the tight face
+  crop `kennyg_head_ref.png` (already existed from the earlier masked-
+  correction work) while keeping the same subject photo for pose/
+  framing. Big improvement -- confirms identity-photo tightness/clarity
+  matters even though PuLID's InsightFace does its own face detection;
+  a small/distant face in the source gives it less to work with.
+- **KennyG caption-text bug was actually Kiwi's**: I mislabeled this in
+  my report to Brandon. `kenny_kiwi_subject.jpg` has "KENNY aka: KIWI"
+  burned into the frame (his real photo folder has burned-in captions
+  in nearly every frame -- "KENNY", "aka: KIWI", "Mr. Flirt" -- but the
+  FIRST frame in the folder, before captions kick in, is clean).
+  Swapped to that clean frame, fixed.
+- **Nick's stray head artifact**: gone on a reroll (different seed,
+  same photo A / `nick_a_subject.jpg`) -- was a one-off sampling glitch,
+  not a structural problem with the photo or prompt.
+- **Jen's background**: fixed with the same stronger "CRITICAL:
+  completely plain, solid, empty background" language that fixed her
+  B&W-style-test background issue earlier -- confirms this is just a
+  standing quirk of her specific source photo that needs the emphatic
+  phrasing every time, not a one-off.
+- **Chef's closed eyes: NOT fixed.** Tried an explicit "eyes fully
+  open, alert" instruction on the same source photo -- stayed closed.
+  Checked his whole 28-frame reference folder: literally every frame
+  has his eyes closed/squinting mid-laugh, same moment. PuLID's
+  identity conditioning is pulling that closed-eye state through even
+  against a direct contradicting text instruction. Same resistance
+  class as KennyG's expression fight earlier in the project. Next step
+  if Brandon wants it pursued: masked eyes-only ReferenceLatent
+  correction (the technique that worked for KennyG's hair/skin), but
+  there's no real "eyes open" reference photo of Chef to condition on
+  -- would need text-only masked correction, which is a weaker version
+  of the technique. Not yet attempted.
+- **Kevin added as roster member #25** (previously flagged, unrostered,
+  found mixed into the Reggie folder). Used a clean caption-free frame
+  (`f_0369.jpg`, cropped to exclude the "Kevin" caption and a chunk of
+  background). First pass whitewashed him -- same bug as the batch-2
+  regression, generic "preserve skin tone/ethnicity" phrasing wasn't
+  enough. Fixed on retry with the same explicit "he is Black with dark
+  brown skin" clause. **Lesson reinforced again: always use the
+  strongest explicit ethnicity phrasing by default, every person, every
+  time -- the generic version keeps failing.**
+
+**Full roster headcount, as of 2026-08-24: 25 people total, 24 have a
+clean/approved-pending noir render, 1 (Chef) has an open issue.** No
+more untouched photo folders exist under `~/Nick/work/people/` --
+Brandon confirmed this is the complete set (told him so directly and
+he agreed). Any future new roster member would need fresh video
+sourcing, not something sitting unused in existing material.
+
+**MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
+Brandon asked whether BigMo could eventually text him his lineup pic on
+request. Two separate sessions running in parallel this day (see
+[[infra_claude_runs_on_dreamlab]] convention) -- this one owns the art
+pipeline, a peer session ("scoot-96") owns BigMo/SMS/email. Sent that
+session a spec via SendMessage: check whether the Twilio number
+(+13614232253) has MMS capability enabled (A2P 10DLC campaigns
+sometimes gate MMS separately from SMS even on a capable long code),
+check whether the existing send path supports Twilio's `mediaUrl`
+param, then send one test MMS end-to-end using an already-rendered card
+PNG. Explicitly scoped OUT the "BigMo, send me my lineup pic"
+intent-routing/trigger -- that's later work once MMS itself is proven.
+
+**MMS proven end-to-end, same day.** scoot-96 confirmed Twilio delivery
+(status: delivered, num_media: 1, no error_code) using a test image I
+handed off -- caught and fixed a real bug in the process: the blob's
+Content-Type was `application/octet-stream` instead of `image/png`
+(Azure default when upload doesn't set one explicitly), which could
+have made Twilio reject it; fixed via `az storage blob update
+--content-type image/png` before handing off the URL. Send-path
+plumbing now committed on main: `SMSProvider.send()`/`throttledSend()`
+accept an optional `mediaUrl: string[]`
+(`ri/src/server/sms/{provider,twilio,send}.ts`). Nothing triggers it
+yet -- the "BigMo, send me my lineup pic" intent-routing is still
+future work, but the transport layer is proven and ready.
 
 **Roster tally after batch 2:** done in the likeness-first flow —
 batch 1 (Rocket Man, Donnie, Kiwi, Black, Rick, Nick, Chef), KennyG,
