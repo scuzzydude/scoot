@@ -24,3 +24,5 @@
 - [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 25-person roster, 24 done via PuLID-FLUX+Kontext, Chef's closed eyes unresolved; always say "Black with dark brown skin" explicitly in prompts
 - [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
+- [BigMo search now via scoot-pmp](bigmo_search_scoot_pmp.md) — self-hosted SearXNG+LLM synthesis replaces dead Perplexity/Tavily/Gemini; systemd unit + shim, both on dreamlab
+- [dreamlab OOM reboot 2026-08-24](infra_dreamlab_oom_reboot_2026_08_24.md) — 3.8GB box, no swap, 162MB session transcript; SSH hung, manual Azure restart; no data lost
