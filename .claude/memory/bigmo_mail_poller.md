@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e915d70f-d9db-403c-8d29-6a6e5004097b
-  modified: 2026-08-21T14:02:05.666Z
+  modified: 2026-08-24T00:00:00.000Z
 ---
 
 Built 2026-08-21. Brandon: "I want to wire in thedreamlaboratory.org
@@ -57,12 +57,26 @@ imapflow`, then restart the container (tsx watch's process had already
 hard-crashed on the missing-module error, `restart` was required, a
 file edit alone wouldn't have recovered it).
 
-**Not yet done:** Brandon hasn't added the real `IMAP_USER`/
-`IMAP_PASSWORD`/`IMAP_MAILBOX` to `.env` yet (told him to add them
-directly rather than paste the password in chat) — feature is
-deployed but inert (logs "IMAP_HOST not set, mailbox checking
-disabled") until he does. Also touched on BigMo *sending* email:
-already possible today via the existing SendGrid integration
-(`ri/src/server/email/sendgrid.ts`, already sends OTP from
-`brandon@thedreamlaboratory.org`) — no new capability needed there,
-separate from this inbound-checking feature.
+**2026-08-24 update — fully working, verified end-to-end.** IMAP
+creds were added; poller confirmed connecting to `imappro.zoho.com`
+and picking up new UIDs. Outbound send was swapped from SendGrid to
+plain SMTP on this same Zoho mailbox — SendGrid's free plan turned out
+to have 0 allotted credits (not a daily quota, a dead account),
+confirmed via `GET /v3/user/credits`. `ri/src/server/email/sendgrid.ts`
+deleted, replaced by `ri/src/server/email/smtp.ts` (nodemailer,
+`smtppro.zoho.com:465`, reuses `IMAP_USER`/`IMAP_PASSWORD` — same
+account, so no new secret). Full send→reply→poll→SMS loop tested live
+(sent test mail, replied from scuzzydude@hotmail.com, forced a poll,
+got a real text back).
+
+**Gotcha worth remembering:** `docker compose restart app` does NOT
+reread `env_file` — it restarts the container with whatever env it
+was *created* with. Editing `.env` requires `docker compose -f
+ri/physical/docker-compose.yml up -d app` (recreate) for new/changed
+vars to actually reach the process. Verified by checking
+`/proc/1/environ` inside the container — `restart` left new vars
+absent, `up -d` picked them up. Also: `docker compose exec app <cmd>`
+does not inherit the container's env_file-derived environment either
+(a fresh exec shell only gets Dockerfile-baked ENV) — pass `-e VAR=val`
+explicitly on the exec command, or check `/proc/1/environ` to see what
+the real running process actually has.

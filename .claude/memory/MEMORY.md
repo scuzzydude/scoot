@@ -1,7 +1,8 @@
 # Memory Index
 
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
-- [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP checks bigmo@ alias, texts Brandon on new mail; deployed but inert until he adds real IMAP creds to .env
+- [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP+SMTP both live on Zoho (SendGrid dropped, 0-credit dead plan); `docker compose restart` doesn't reread .env, use `up -d`
+- [BigMo MMS capability — proven, unwired](bigmo_mms_capability.md) — mediaUrl now threaded through SMSProvider.send(); test MMS delivered successfully; no "send me my card" trigger built yet
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
 - [SMS build resume — §8 complete + Phase 4 staking complete](project_sms_build_resume.md) — full SMS⇄Rooms + staking ritual/trust graph/revocation/self-stake history; superseded by [[scoot_currency_ledger]] for what's next
 - [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat + staking done; Phase 5a token ledger now in progress, see [[scoot_currency_ledger]]; scootchain (5b) last
@@ -20,6 +21,6 @@
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
-- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — likeness-first flow, 17/23 roster done on likeness-review-2; always say "don't change his ethnicity" in prompts, not just "don't lighten skin"
+- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 25-person roster, 24 done via PuLID-FLUX+Kontext, Chef's closed eyes unresolved; always say "Black with dark brown skin" explicitly in prompts
 - [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
