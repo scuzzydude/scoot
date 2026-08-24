@@ -12,10 +12,10 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Serialized, throttled send. Returns the Twilio SID, or null on failure (a bad
 // recipient or uninitialized provider never aborts the rest of the queue).
-export function throttledSend(to: string, body: string): Promise<string | null> {
+export function throttledSend(to: string, body: string, mediaUrl?: string[]): Promise<string | null> {
   const result = sendChain.then(async () => {
     try {
-      const res = await getProvider().send(to, body);
+      const res = await getProvider().send(to, body, mediaUrl);
       return res.sid;
     } catch (err) {
       log.error({ err, to }, "sms send failed");

@@ -20,7 +20,7 @@ export interface InboundMessage {
 }
 
 export interface SMSProvider {
-  send(to: string, body: string): Promise<SendResult>;
+  send(to: string, body: string, mediaUrl?: string[]): Promise<SendResult>;
   validateInboundSignature(signature: string, url: string, params: Record<string, string>): boolean;
   parseInbound(payload: Record<string, string>): InboundMessage;
 }

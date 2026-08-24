@@ -18,8 +18,13 @@ export class TwilioProvider implements SMSProvider {
     this.authToken = token;
   }
 
-  async send(to: string, body: string): Promise<SendResult> {
-    const msg = await this.client.messages.create({ from: this.from, to, body });
+  async send(to: string, body: string, mediaUrl?: string[]): Promise<SendResult> {
+    const msg = await this.client.messages.create({
+      from: this.from,
+      to,
+      body,
+      ...(mediaUrl?.length ? { mediaUrl } : {}),
+    });
     return { sid: msg.sid, status: msg.status };
   }
 
