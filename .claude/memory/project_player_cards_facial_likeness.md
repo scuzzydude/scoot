@@ -1,11 +1,11 @@
 ---
 name: project-player-cards-facial-likeness
-description: "Player-card pipeline PIVOTED to likeness-first, card-later workflow (matches future SMS iteration). Fixed age skew (was too young, now correct '55+ superhero grandpa') + crest/shadow bugs at the root (mask darkness-intersection, not geometry patches). New review page likeness-review-2 (old one kept, not appended). Batch 1 of ~6-7 published, awaiting Brandon's per-person verdict before batch 2 or card assembly."
+description: "Player-card pipeline is likeness-first, card-later (matches future SMS iteration), on likeness-review-2. 17 of 23 roster people done. PuLID-FLUX + Kontext (new app modal_app_kontext_pulid.py) is the breakthrough technique for stubborn likeness cases -- real face-embedding identity injection, not just prompt tweaking. Key gotchas: always say 'do not change his ethnicity' explicitly in prompts (not just 'don't lighten skin'); non-profit use confirmed by Brandon so InsightFace/FLUX non-commercial licensing is not a blocker."
 metadata: 
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-23T14:26:12.186Z
+  modified: 2026-08-24T19:22:40.232Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -757,3 +757,132 @@ worth promoting the prompt template (style+age+expression, no jersey
 mention needed since jersey color is still baked into the base
 generation per current architecture) into `tools/player-cards/` proper
 rather than re-deriving it per batch.
+
+**KennyG (Snake) locked, 2026-08-23.** After 5 rounds of prompt-only
+iteration (smile fixed round 5, but a stray gray hair fringe and
+copper/orange skin tone resisted pure text prompting across 3 rounds),
+switched to the masked ReferenceLatent technique: mask the region,
+condition on a real photo crop via `inpaint_with_reference()`. First
+pass (head-only ellipse mask) fixed the hair completely but skin tone
+stayed copper — root cause: the mask stopped at the jaw, leaving the
+neck still orange from the original render, so the correction had to
+blend into that orange neck and got pulled back toward it. Expanding
+the mask to cover head+neck together (no orange anchor left to blend
+against) fixed both in one pass. Separately tried to move his
+expression from a wide open-toothy smile to a squinty closed-mouth
+grin (matching `f_0343.jpg`) — 5 more attempts (masked mouth/eyes
+region at various denoise/guidance, full-image edit up to guidance
+4.5) all plateaued around a slightly smaller version of the same open
+smile; mouth wouldn't fully close, eyes wouldn't squint. This reads as
+the same stubborn-attribute resistance as hair/skin, but for
+expression — masked/reference-latent correction didn't crack it this
+time. **Brandon's final call: use the guidance-4.5 full-image attempt
+(closest one), keep the head+neck skin/hair fix, move on** — expression
+is close enough, not worth further rounds.
+
+**Batch 2 shipped, 2026-08-23: Shipp, Rufus, EDub, Anthony, Mike MP3,
+Bo, Kobe, Reggie.** Real regression found and fixed: first pass came
+back badly whitewashed — all people collapsed into the same generic
+light-skinned gray-haired man regardless of the source photo, even for
+Shipp whose reference was a close, sharp, well-lit shot (ruled out
+"photo too small/far" as the cause). Root cause: the batch-2 FRAMING
+prompt only said "don't lighten/wash out skin tone" — missing the
+stronger "do not change his ethnicity" clause that fixed Nick's
+whitewashing earlier in the project. Added that exact phrasing back
+and reran all 8 — skin tone/ethnicity corrected across the board.
+Two per-person misses needed a second targeted pass after that: Rufus
+came out with hair + a beard (he's bald, clean-shaven in every real
+reference photo) and EDub was missing his signature do-rag — both
+fixed with person-specific FRAMING text emphasizing the missed
+attribute, same seed-per-person pattern as the KennyG/Jen fixes.
+**Lesson for future batches: the "don't lighten skin tone" phrasing
+alone is not reliable — always include the explicit "do not change his
+ethnicity/race" clause in the FRAMING block for every batch, not just
+for subjects already known to be problem cases.**
+
+**Roster folder data-quality bug found while sourcing batch 2 photos:**
+`~/Nick/work/people/11_KOBE/` is mislabeled — every frame in it carries
+the video's own "KENNY G" / "The SNAKE" burned-in caption text, i.e.
+it's a duplicate/misfiled set of KennyG frames, not a real Kobe. The
+actual Kobe photos, plus the real Reggie photos, are both sitting
+inside `13_REGGIE/` — that one folder spans three different burned-in
+video captions in sequence: "Kobe" (f_0349-0353), "Reggie" (f_0354-
+0366ish), and a third person captioned "Kevin" (f_0367+) who isn't on
+the 23-person roster at all — a new-person find the same way Jen was.
+Used the real Kobe/Reggie frames for batch 2. **Kevin not yet run
+through the pipeline — flag for the next batch**, same treatment as
+Jen (pull a couple of good reference frames, confirm with Brandon
+before generating). Given this mixup, worth spot-checking other
+roster folders for the same kind of caption drift before trusting them
+blindly.
+
+**PuLID-FLUX + Kontext — real breakthrough on likeness, 2026-08-24.**
+Two rounds of pure prompt/masked-ReferenceLatent iteration on Nick and
+Rufus plateaued (round 1: face-shape language got the round face/wide
+nose/goatee right per-feature but Brandon still called it "not better
+resemblance"; round 2: masked real-photo ReferenceLatent correction at
+denoise 0.9 barely changed anything, denoise 1.0 introduced artifacts).
+Researched alternatives — Meta AI has no developer API (consumer-only,
+confirmed dead end); PuLID-FLUX + Kontext is a real documented ComfyUI
+pattern ("Flux Kontext Pulid" workflow) purpose-built for keeping
+identity through style changes, which is exactly Kontext's known weak
+spot (it's documented to struggle specifically when output structure
+diverges a lot from input — photo → ink-comic is a big structural
+change). Brandon confirmed 2026-08-24 this is non-profit/non-commercial
+use, so the InsightFace antelopev2 commercial-license question (same
+one flagged back in the original Tier-1/2 SDXL research) is not a
+blocker — don't re-litigate this per person.
+
+Built `tools/player-cards/modal_app_kontext_pulid.py`, a new sibling app
+(`scoot34-kontext-pulid-test`) to the working Kontext app — adds
+balazik/ComfyUI-PuLID-Flux custom node + PuLID weights
+(guozinan/PuLID/pulid_flux_v0.9.0.safetensors) + InsightFace antelopev2
+(MonsterMMORPG/tools/antelopev2.zip, verified zip layout before writing
+extraction code) + EVA02-CLIP-L-14-336 (pre-warmed via the SAME
+hf_hub_download call pulidflux.py itself makes, so it's a cached no-op
+at runtime, not a manual path guess). Image build succeeded clean on
+the first attempt.
+
+**Real bug found and fixed on first run:** `TypeError: forward_orig()
+got an unexpected keyword argument 'timestep_zero_index'`. Root cause,
+confirmed by reading both sides directly (not guessed): PuLID's
+ApplyPulidFlux node REPLACES the model's `forward_orig` method with its
+own frozen local reimplementation (pulidflux.py line 65) instead of
+wrapping the original — and our pinned ComfyUI commit's actual FLUX
+`_forward` (comfy/ldm/flux/model.py) now calls forward_orig with three
+extra kwargs (`timestep_zero_index`, `transformer_options`, `attn_mask`)
+that PuLID's frozen copy doesn't accept. This is a genuine PuLID/
+ComfyUI version-skew bug, not a Kontext-specific problem or a config
+mistake — traced `timestep_zero_index` into model.py and confirmed it
+only refines how Kontext's reference-latent tokens get zero-timestep
+treatment INSIDE the transformer; the actual reference-latent
+conditioning happens via img/img_ids concatenation BEFORE forward_orig
+is called, so accepting-and-ignoring the extra kwargs (one `sed` patch
+appending `**kwargs,` to the signature, baked into the image build) is
+a safe fix, not a silent behavior break. Confirmed working after the
+patch — no further errors.
+
+**Result, tested on Nick and Rufus (noir style, pulid_weight=1.0):**
+clearly the best likeness yet on both — Nick's face is rounder/fuller
+with the right wide nose (previous best was still reading too lean/
+chiseled), Rufus's forehead creases/hooded eyes/goatee all read closer
+AND he spontaneously landed Rufus's characteristic forward-leaning head
+tilt from the real photos without being asked for it. Rufus's clothing
+didn't fully follow the "solid black sleeveless jersey" instruction
+(came out as a textured t-shirt) -- minor, not yet tuned. Published
+side-by-side (best-prior vs PuLID) on likeness-review-2. This is the
+technique to use going forward for anyone whose likeness isn't landing
+on `generate()` alone -- `PulidKontextGenerator.generate()` in the new
+app takes the same payload shape as the old app's generate() plus
+`identity_photo_url` (a face reference photo -- can be the same subject
+photo or a tighter crop) and `pulid_weight`/`pulid_start_at`/
+`pulid_end_at` (defaults 1.0/0.0/1.0, untuned beyond the first test).
+
+**Roster tally after batch 2:** done in the likeness-first flow —
+batch 1 (Rocket Man, Donnie, Kiwi, Black, Rick, Nick, Chef), KennyG,
+Jen, batch 2 (Shipp, Rufus, EDub, Anthony, Mike MP3, Bo, Kobe, Reggie)
+= 17 of 23 (+ Kevin as an unrostered 24th, pending). Remaining
+untouched: Cleo (01), Kenny/Kiwi already done — remaining are 01_CLEO
+(likely fine as-is per Brandon's earlier "not Cleo" comment on the old
+full-roster pass, but not yet run through this new likeness-first
+flow), 14_MCGHEE, 15_JOHN, 17_FRANK, 19_ZELLE, 20_SHELDON, 21_RODNEY.
