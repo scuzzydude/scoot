@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-24T23:50:38.844Z
+  modified: 2026-08-25T14:55:13.742Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1034,6 +1034,52 @@ Local pipeline scripts for this pass live in
 `tools/player-cards/` if this full-pipeline pass is repeated for more
 of the roster, since `finalize_card.py`'s rembg-cutout output has no
 existing committed step that crops/pads it to the art slot aspect.
+
+**Card-frame + jersey pipeline overhaul, 2026-08-25 (4 rounds on Cleo
+only, per Brandon's "let's get it right" directive).** Round 1
+(card-review-1, above) surfaced three real complaints: distracting
+speed-lines background, oversized/off-looking crest, blotchy dark
+"shadow" on the jersey.
+- **Round 2:** removed `draw_manga_bg()` from `build_cards.py` entirely
+  (blank field instead) -- committed `d20e3da`.
+- **Round 3:** traced the shadow to `modal_app_jersey.py`'s mesh-weave
+  multiplier (a real fabric-photo swatch tiled as a 0.65x-1.45x
+  brightness multiplier) -- too strong tiled over a curved,
+  already-segmented silhouette. Disabled it (flat recolor), shrunk the
+  crest 0.54x->0.32x of shoulder width. Committed `f6d1103`. Brandon's
+  follow-up: shadow still present, crest still not centered either
+  size.
+- **Round 4, the real fix:** Brandon's own suggestion -- build the
+  jersey (base color + mesh + logo) as ONE standalone flat texture
+  first, authored/previewable on its own, THEN stamp it onto the
+  player, instead of per-pixel recoloring + runtime crest-geometry math
+  per subject. Built `make_jersey_texture.py` (new, committed): flat
+  1200x800 canvas (matches a typical garment-bbox aspect so the crest
+  doesn't stretch into an oval), base jersey color, mesh baked in at a
+  much lower fixed intensity (0.06 vs the runtime version's 0.45 native
+  swing) via the SAME mesh swatch, crest centered by construction
+  (`assets/jersey_texture_dark.png`, regenerate via that script if
+  tuning changes). `composite_jersey()` now just resizes this texture
+  to the garment mask's own bounding box and stamps it in through the
+  mask -- no more notch-detection crest math, no more per-subject
+  recolor. Also caught and fixed a side-effect bug the flat/stamped
+  output made newly visible: the neck-clip margin bumped earlier that
+  day (0.05->0.09, tuned for Kevin) cut a visible rectangular notch out
+  of Cleo's own collar fabric (deeper V than Kevin's) -- reverted to
+  0.05. Committed `2c0ad02`, also commits the two source assets
+  (`fonde_crest_white.png`, `mesh_texture_mult.png`) that were
+  previously blob-only, so the texture is fully reproducible from the
+  repo. "light" side (back-of-card, still not built) keeps the old
+  per-pixel recolor as a fallback -- no light-side texture asset exists
+  yet.
+
+**Result confirmed matches production:** ran the real deployed
+`composite_jersey()` (not just the local iteration scripts) through
+the full finalize/crop/build_cards chain for Cleo and it reproduced
+the same clean result. Published as "Round 4" on card-review-1.
+**Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
+E-Dub, Anthony, Kiwi) through this same fixed pipeline -- Brandon
+scoped every round of this fix to Cleo only so far.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
