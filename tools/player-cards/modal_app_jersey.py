@@ -65,13 +65,15 @@ CREST_ASSET_BLOB = "card-art/assets/fonde_crest_white.png"
 MESH_TEXTURE_BLOB = "card-art/assets/mesh_texture_mult.png"
 
 MESH_STRENGTH = 0.10
-CREST_W_FRAC = 0.30
-# Crest top margin as a fraction of the jersey mask's own bbox height.
-# The mask's bottom edge is always the AI render's own photo-frame
-# cutoff (there's no real garment hem), consistent across the roster's
-# locked framing, so this stays clear of "SENIOR BASKETBALL" getting
-# clipped without needing per-subject tuning.
-CREST_TOP_FRAC = 0.14
+# 0.30 -> 0.40 and top-anchored -> bottom-anchored, 2026-08-25:
+# Brandon's call after card-review-2 -- bigger, and the crest's bottom
+# edge should line up with the bottom of the visible frame rather than
+# floating mid-chest. The mask's bottom edge is always the AI render's
+# own photo-frame cutoff (there's no real garment hem), consistent
+# across the roster's locked framing, so anchoring to it (margin 0)
+# works without per-subject tuning.
+CREST_W_FRAC = 0.40
+CREST_BOTTOM_MARGIN_FRAC = 0.04  # 0.0 clipped "SENIOR BASKETBALL" by a couple px on Cleo
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -181,7 +183,7 @@ def composite_jersey(payload: dict) -> dict:
     ch = int(crest.height * scale)
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
     cx = x0 + (bw - cw) // 2
-    cy = y0 + int(bh * CREST_TOP_FRAC)
+    cy = y1 - ch - int(bh * CREST_BOTTOM_MARGIN_FRAC)
     out_img.alpha_composite(crest_r, (cx, cy))
 
     buf = __import__("io").BytesIO()
