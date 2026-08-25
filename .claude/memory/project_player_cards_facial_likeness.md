@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-25T16:54:36.331Z
+  modified: 2026-08-25T17:23:02.845Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1148,9 +1148,28 @@ the same clean result. Committed `4d7dabf`.
 indefinitely to `card-review-1` -- published this round as
 `fairchildlabs.org/card-review-2/`.
 
+**Round 7, same day -- Brandon confirmed card-review-2 good, asked for
+one more crest tweak.** "Make the Fonde Logo a little bigger and line
+up the bottom of it with the bottom of frame." Crest width 0.30 ->
+0.40 of jersey width; position switched from a fixed top margin to
+bottom-anchored on the jersey mask's own bottom edge (reliable across
+the roster since that edge is always the photo's own frame cutoff, not
+a garment hem -- established in round 6). A zero margin clipped
+"SENIOR BASKETBALL" by a couple px on Cleo -- settled on a small
+buffer (`CREST_BOTTOM_MARGIN_FRAC = 0.04`, 4% of jersey height).
+Verified against the real deployed pipeline. Committed `c5528a8`.
+Published on **`card-review-3`**.
+
+**Naming convention going forward, per Brandon 2026-08-25: a fresh
+`card-review-N` page each round** (not appended indefinitely to
+`card-review-1` the way the likeness-review pages grew to 40-60MB+).
+Rounds so far: card-review-1 (rounds 1-5, background/mesh/sticker
+iteration, superseded), card-review-2 (round 6, the true-mask fix),
+card-review-3 (round 7, crest size/position).
+
 **Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
 E-Dub, Anthony, Kiwi) through this fixed pipeline -- Brandon scoped
-every round of this fix (2 through 6) to Cleo only so far. Note the
+every round of this fix (2 through 7) to Cleo only so far. Note the
 darkness-threshold torso/jersey detector was only tuned/tested on
 Cleo's photo -- worth watching for subjects with notably different
 lighting, hair color (very dark/black hair extending low on the frame
