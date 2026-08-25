@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-25T14:55:13.742Z
+  modified: 2026-08-25T15:25:21.330Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1077,9 +1077,50 @@ speed-lines background, oversized/off-looking crest, blotchy dark
 `composite_jersey()` (not just the local iteration scripts) through
 the full finalize/crop/build_cards chain for Cleo and it reproduced
 the same clean result. Published as "Round 4" on card-review-1.
+
+**Round 5, same day -- the actual real fix, per Brandon's own
+diagnosis.** His read on round 4: still shadowed on the neck/arms,
+crest still not centered, and the crest's "SENIOR BASKETBALL" text got
+clipped at the bottom. His call: the rectangle itself was the problem
+-- "make the shirt+mesh+logo one unit and just add it on top of their
+torso." Rebuilt around that:
+- `make_jersey_sticker.py` (new, committed, supersedes/removes
+  `make_jersey_texture.py`) bakes color+mesh+crest into ONE asset with
+  a real garment-shaped ALPHA channel (collar notch, shoulder straps,
+  sleeve width) instead of a rectangle -- built from
+  `assets/jersey_shape_template.png`, a known-clean subject's (Cleo's)
+  own mask shape cropped to its bbox, reused as a generic template
+  since the roster shares locked pose/framing. Crest kept well clear
+  of the template's bottom edge -- that edge is always the AI render's
+  own photo-frame cutoff (no true garment hem), consistent across
+  subjects given the locked framing, so a fixed margin works roster-wide.
+- `composite_jersey()` no longer needs ANY classifier for positioning:
+  the jersey always renders pure solid black in the AI art, so a plain
+  darkness threshold + largest-connected-component (lower 58% of frame,
+  to exclude hair/eyebrows) robustly finds the torso bbox. The sticker
+  is resized to that bbox and stamped in using ITS OWN alpha for the
+  edge shape.
+- **This dropped segformer/torch/transformers from the app entirely.**
+  Whole classes of bug (classifier bleeding into skin/neck/arms, crest
+  position math fighting mask geometry) can't recur since there's no
+  per-pixel classification left at all. Also much faster Modal cold
+  starts (no ML model to load).
+- "light" side (back-of-card, still not built) has no sticker asset --
+  `composite_jersey` now raises `NotImplementedError` for it rather
+  than carrying dead per-pixel-recolor code for a path nothing calls.
+
+Verified against the real deployed function end-to-end (not just local
+iteration), reproduced the same clean result. Committed `3d76b14`.
+Published as "Round 5" on card-review-1.
+
 **Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
-E-Dub, Anthony, Kiwi) through this same fixed pipeline -- Brandon
-scoped every round of this fix to Cleo only so far.
+E-Dub, Anthony, Kiwi) through this fixed pipeline -- Brandon scoped
+every round of this fix (2 through 5) to Cleo only so far. Note the
+darkness-threshold torso detector was only tuned/tested on Cleo's
+photo -- worth watching for subjects with notably different lighting,
+hair color (a subject with very dark/black hair extending low on the
+frame could confuse the "exclude top 42%" heuristic), or pose when
+this runs on the rest of the roster.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
