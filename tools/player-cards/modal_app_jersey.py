@@ -207,7 +207,12 @@ def composite_jersey(payload: dict) -> dict:
         cx_lo0, cx_hi0 = jx0c + int(jwc * 0.25), jx0c + int(jwc * 0.75)
         central0 = (uniq_x0 >= cx_lo0) & (uniq_x0 <= cx_hi0)
         neck_y0 = int(np.max(top_y_per_x0[central0])) if central0.any() else int(ys0.min())
-        clip_y = max(0, neck_y0 - int(0.05 * raw_mask.shape[0]))
+        # Margin bumped 0.05 -> 0.09 -- Brandon caught the recolor/mesh
+        # still nicking a couple pixels of jaw/neck skin right at the
+        # collar edge on Cleo's card (2026-08-25); a slightly bigger
+        # buffer above the notch costs a sliver of collar trim, not worth
+        # re-litigating per subject.
+        clip_y = max(0, neck_y0 - int(0.09 * raw_mask.shape[0]))
         raw_mask[:clip_y, :] = 0
 
     # Light feather so the recolor blends at the edge instead of a hard
@@ -243,15 +248,17 @@ def composite_jersey(payload: dict) -> dict:
     )
     container = blob_service.get_container_client(AZURE_CONTAINER)
 
-    # Mesh texture -- OFF by default (payload.get) like the crest. Real
-    # fabric weave extracted from a plain patch of the jersey photo (see
-    # MESH_TEXTURE_BLOB comment), tiled across the canvas and applied as
-    # a MULTIPLIER (not a paste) so it modulates the existing recolored
-    # pixels -- brand color and AI-generated shading both survive, just
-    # with the fine dot-weave pattern showing through, same relationship
-    # to the recolor step that a real screen-printed mesh jersey has to
-    # its own fabric.
-    if payload.get("add_mesh_texture", True):
+    # Mesh texture -- OFF by default. Real fabric weave extracted from a
+    # plain patch of the jersey photo (see MESH_TEXTURE_BLOB comment),
+    # tiled across the canvas as a MULTIPLIER. Turned off 2026-08-25:
+    # Brandon flagged the tiled multiplier reading as an uneven "shadow"
+    # across the torso/sleeves on Cleo's card -- the 0.65x-1.45x swing
+    # is too strong once tiled over a large curved area, especially on
+    # the sleeves where the square tile doesn't follow the fabric's
+    # implied curve. Flat recolor (below) is the clean baseline; revisit
+    # a subtler multiplier range separately if real-fabric texture is
+    # still wanted.
+    if payload.get("add_mesh_texture", False):
         mesh_bytes = container.download_blob(MESH_TEXTURE_BLOB).readall()
         mesh_img = Image.open(__import__("io").BytesIO(mesh_bytes)).convert("L")
         mesh_arr = np.array(mesh_img).astype(np.float32) / 128.0  # 128 stored as 1.0x, see MESH_TEXTURE_BLOB comment
@@ -316,7 +323,13 @@ def composite_jersey(payload: dict) -> dict:
             crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
             crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
 
-            target_w = max(1, int(jw * 0.54))
+            # 0.54 -> 0.32 of shoulder-to-shoulder width -- Brandon's call
+            # 2026-08-25: the crest was dominating half the chest instead
+            # of reading as a normal jersey logo, and its size (not the
+            # centering math, which was already correct) is what made it
+            # look off-center -- a logo this big has less room either side
+            # of the true centerline before it visibly overruns one edge.
+            target_w = max(1, int(jw * 0.32))
             scale = target_w / crest.width
             target_h = max(1, int(crest.height * scale))
             crest_resized = crest.resize((target_w, target_h), Image.LANCZOS)
