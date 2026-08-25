@@ -55,23 +55,18 @@ AZURE_ACCOUNT = "stevearchive10723"
 AZURE_CONTAINER = "media"
 AZURE_OUTPUT_PREFIX = "card-art/jersey-test"
 
-# Real Fonde crest (basketball + "FONDE REC CENTER SENIOR BASKETBALL" +
-# stars), extracted from photos of the actual jersey Brandon provided
-# 2026-08-19 -- white ink isolated from the mesh fabric via brightness
-# threshold + morphological cleanup (blur before threshold to average
-# out the weave's per-thread brightness spikes, open to strip
-# background speckle, close to fill letter-interior gaps). White fill
-# so it reads on the "dark" jersey side; would need a black-ink version
-# for the "light" side, not yet made.
-CREST_ASSET_BLOB = "card-art/assets/fonde_crest_white.png"
-
-# Mesh weave texture, extracted from a plain (no ink) patch of the same
-# real jersey photo, 2026-08-20 -- a grayscale MULTIPLIER map (128 =
-# 1.0x/neutral, clamped to 0.65x-1.45x so it can't blow out highlights
-# or crush shadows), not a color swatch. Tiled and multiplied onto the
-# recolored jersey so the fine dot-weave texture shows through while
-# the exact brand hex colors and AI-generated shading stay intact.
-MESH_TEXTURE_BLOB = "card-art/assets/mesh_texture_mult.png"
+# Standalone flat jersey texture -- base color + subtle baked-in mesh
+# weave + centered Fonde crest, built once by make_jersey_texture.py
+# and authored/previewed on its own (see that script's docstring).
+# Stamped into the "dark" side's garment-mask bbox below instead of
+# per-pixel recoloring the AI art in place: a 2026-08-25 fix after the
+# old approach's tiled mesh multiplier read as an uneven shadow once
+# applied over a curved, already-segmented silhouette, and the crest's
+# mask-geometry-derived position/size kept looking off. No equivalent
+# texture exists yet for "light" (the back-of-card reverse jersey,
+# not yet built) -- that side still falls back to the old per-pixel
+# luminance recolor further down.
+JERSEY_TEXTURE_BLOB = "card-art/assets/jersey_texture_dark.png"
 
 def _download_segformer():
     from transformers import AutoModelForSemanticSegmentation, SegformerImageProcessor
@@ -207,12 +202,15 @@ def composite_jersey(payload: dict) -> dict:
         cx_lo0, cx_hi0 = jx0c + int(jwc * 0.25), jx0c + int(jwc * 0.75)
         central0 = (uniq_x0 >= cx_lo0) & (uniq_x0 <= cx_hi0)
         neck_y0 = int(np.max(top_y_per_x0[central0])) if central0.any() else int(ys0.min())
-        # Margin bumped 0.05 -> 0.09 -- Brandon caught the recolor/mesh
-        # still nicking a couple pixels of jaw/neck skin right at the
-        # collar edge on Cleo's card (2026-08-25); a slightly bigger
-        # buffer above the notch costs a sliver of collar trim, not worth
-        # re-litigating per subject.
-        clip_y = max(0, neck_y0 - int(0.09 * raw_mask.shape[0]))
+        # 0.05 -> 0.09 (2026-08-25, fixing a couple stray neck-bleed
+        # pixels on Kevin) then back to 0.05 same day: 0.09 turned out
+        # too aggressive for Cleo's deeper collar V -- it cut into real
+        # collar fabric at the center, leaving a visible rectangular
+        # notch under the chin once the flat-recolor/stamped-texture
+        # approach made any mask error obvious. 0.05 is the better
+        # tradeoff between the two failure modes until this becomes a
+        # per-column contour clip instead of one flat cutoff line.
+        clip_y = max(0, neck_y0 - int(0.05 * raw_mask.shape[0]))
         raw_mask[:clip_y, :] = 0
 
     # Light feather so the recolor blends at the edge instead of a hard
@@ -222,25 +220,8 @@ def composite_jersey(payload: dict) -> dict:
     from PIL import ImageFilter
     mask_img = Image.fromarray(raw_mask, "L").filter(ImageFilter.GaussianBlur(radius=3))
 
-    def _hex_rgb(h):
-        h = h.lstrip("#")
-        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
-
     a = np.array(src_img.convert("RGBA")).astype(np.float32)
     m = (np.array(mask_img).astype(np.float32) / 255.0)[..., None]
-
-    lum = (0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]) / 255.0
-    if (m[..., 0] > 0.5).any():
-        lo, hi = np.percentile(lum[m[..., 0] > 0.5], [10, 90])
-    else:
-        lo, hi = 0.0, 1.0
-    t = np.clip((lum - lo) / max(hi - lo, 1e-3), 0.0, 1.0)[..., None]
-
-    base = np.array(_hex_rgb(JERSEY[side][0]), np.float32)
-    shade = np.array(_hex_rgb(JERSEY[side][1]), np.float32)
-    recol = shade + (base - shade) * t
-
-    a[..., 0:3] = a[..., 0:3] * (1 - m) + recol * m
 
     blob_service = BlobServiceClient(
         account_url=f"https://{AZURE_ACCOUNT}.blob.core.windows.net",
@@ -248,104 +229,47 @@ def composite_jersey(payload: dict) -> dict:
     )
     container = blob_service.get_container_client(AZURE_CONTAINER)
 
-    # Mesh texture -- OFF by default. Real fabric weave extracted from a
-    # plain patch of the jersey photo (see MESH_TEXTURE_BLOB comment),
-    # tiled across the canvas as a MULTIPLIER. Turned off 2026-08-25:
-    # Brandon flagged the tiled multiplier reading as an uneven "shadow"
-    # across the torso/sleeves on Cleo's card -- the 0.65x-1.45x swing
-    # is too strong once tiled over a large curved area, especially on
-    # the sleeves where the square tile doesn't follow the fabric's
-    # implied curve. Flat recolor (below) is the clean baseline; revisit
-    # a subtler multiplier range separately if real-fabric texture is
-    # still wanted.
-    if payload.get("add_mesh_texture", False):
-        mesh_bytes = container.download_blob(MESH_TEXTURE_BLOB).readall()
-        mesh_img = Image.open(__import__("io").BytesIO(mesh_bytes)).convert("L")
-        mesh_arr = np.array(mesh_img).astype(np.float32) / 128.0  # 128 stored as 1.0x, see MESH_TEXTURE_BLOB comment
-        H, W = a.shape[0], a.shape[1]
-        tiles_y = H // mesh_arr.shape[0] + 2
-        tiles_x = W // mesh_arr.shape[1] + 2
-        tiled = np.tile(mesh_arr, (tiles_y, tiles_x))[:H, :W][..., None]
-        a[..., 0:3] = np.clip(a[..., 0:3] * (1 - m) + (a[..., 0:3] * tiled) * m, 0, 255)
+    if side == "dark":
+        # Stamp the standalone jersey texture (base color + baked-in
+        # mesh + centered crest) into the mask's own bounding box,
+        # instead of per-pixel recoloring the AI art -- see
+        # JERSEY_TEXTURE_BLOB's comment above.
+        ys_b, xs_b = np.where(raw_mask > 127)
+        if len(xs_b) > 0:
+            bx0, bx1 = int(xs_b.min()), int(xs_b.max())
+            by0, by1 = int(ys_b.min()), int(ys_b.max())
+            bw, bh = bx1 - bx0 + 1, by1 - by0 + 1
+
+            texture_bytes = container.download_blob(JERSEY_TEXTURE_BLOB).readall()
+            texture = Image.open(__import__("io").BytesIO(texture_bytes)).convert("RGBA")
+            texture_r = texture.resize((bw, bh), Image.LANCZOS)
+            tex_full = Image.new("RGBA", (a.shape[1], a.shape[0]), (0, 0, 0, 0))
+            tex_full.paste(texture_r, (bx0, by0))
+            tex_arr = np.array(tex_full).astype(np.float32)
+
+            a[..., 0:3] = a[..., 0:3] * (1 - m) + tex_arr[..., 0:3] * m
+    else:
+        # "light" (back-of-card reverse jersey) has no standalone
+        # texture asset yet -- fall back to the old per-pixel
+        # luminance-based recolor until that side is actually built.
+        def _hex_rgb(h):
+            h = h.lstrip("#")
+            return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+        lum = (0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]) / 255.0
+        if (m[..., 0] > 0.5).any():
+            lo, hi = np.percentile(lum[m[..., 0] > 0.5], [10, 90])
+        else:
+            lo, hi = 0.0, 1.0
+        t = np.clip((lum - lo) / max(hi - lo, 1e-3), 0.0, 1.0)[..., None]
+
+        base = np.array(_hex_rgb(JERSEY[side][0]), np.float32)
+        shade = np.array(_hex_rgb(JERSEY[side][1]), np.float32)
+        recol = shade + (base - shade) * t
+
+        a[..., 0:3] = a[..., 0:3] * (1 - m) + recol * m
 
     out_img = Image.fromarray(a.astype(np.uint8), "RGBA")
-
-    # Crest overlay -- OFF by default (payload.get, not required) so
-    # this stays optional per-call, same gating pattern as the other
-    # apps' test flags. Position derived from the jersey mask's own
-    # shape (not fixed pixel coordinates) so it generalizes across
-    # different subjects' body sizes/framing, not just Brandon's.
-    #
-    # First version anchored the top margin to jy0 = the mask's GLOBAL
-    # topmost pixel (shoulder/strap peak, not the neckline) -- crest bled
-    # into neck skin. Second version centered on a top-10%-of-height
-    # band's x-extent -- still off-center on a real run, because on a
-    # 3/4-turned, flexed pose the near shoulder/arm reads foreshortened
-    # wider than the far one, so ANY bbox- or band-extent measurement
-    # (min/max of x) gets pulled toward whichever side is posed bigger,
-    # not the true sternum line.
-    #
-    # Fixed by finding the collar's actual V-notch instead of measuring
-    # extents at all: for each column, the topmost mask pixel traces the
-    # garment's top edge -- two peaks at the shoulder straps, with a dip
-    # between them at the neckline. That dip's x position is the true
-    # chest centerline by garment construction (a symmetric tank top's
-    # V-cut is sewn centered), independent of how the arms/shoulders
-    # happen to be posed or foreshortened. Search is restricted to the
-    # central 50% of the mask's width so a strap peak can't be mistaken
-    # for the notch.
-    if payload.get("add_crest", True) and side == "dark":
-        ys, xs = np.where(garment > 127)
-        if len(xs) > 0:
-            jx0, jx1 = int(xs.min()), int(xs.max())
-            jy0, jy1 = int(ys.min()), int(ys.max())
-            jw = jx1 - jx0
-
-            order = np.argsort(xs)
-            xs_sorted, ys_sorted = xs[order], ys[order]
-            uniq_x, first_idx = np.unique(xs_sorted, return_index=True)
-            top_y_per_x = np.minimum.reduceat(ys_sorted, first_idx)
-
-            cx_lo, cx_hi = jx0 + int(jw * 0.25), jx0 + int(jw * 0.75)
-            central = (uniq_x >= cx_lo) & (uniq_x <= cx_hi)
-            if central.any():
-                cand_x, cand_y = uniq_x[central], top_y_per_x[central]
-                notch_idx = int(np.argmax(cand_y))  # deepest dip = notch
-                jcx, neck_y = int(cand_x[notch_idx]), int(cand_y[notch_idx])
-            else:
-                jcx, neck_y = (jx0 + jx1) // 2, jy0
-            jh = jy1 - neck_y
-
-            # media is a private container -- needs the authenticated SDK
-            # client, not a bare httpx GET (confirmed via an actual failed
-            # run: PIL.UnidentifiedImageError, the anonymous fetch got an
-            # XML access-denied body back instead of image bytes).
-            crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
-            crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
-
-            # 0.54 -> 0.32 of shoulder-to-shoulder width -- Brandon's call
-            # 2026-08-25: the crest was dominating half the chest instead
-            # of reading as a normal jersey logo, and its size (not the
-            # centering math, which was already correct) is what made it
-            # look off-center -- a logo this big has less room either side
-            # of the true centerline before it visibly overruns one edge.
-            target_w = max(1, int(jw * 0.32))
-            scale = target_w / crest.width
-            target_h = max(1, int(crest.height * scale))
-            crest_resized = crest.resize((target_w, target_h), Image.LANCZOS)
-            # Full opacity -- this used to carry a 0.92 alpha blend that
-            # made the crest top out around RGB 236 instead of true white
-            # (255), confirmed by direct pixel sampling. Brandon's call:
-            # he wants it whiter, not softened into the jersey.
-
-            left = jcx - target_w // 2
-            # Margin bumped 0.13 -> 0.18 of the (now correctly-measured
-            # collar-to-hem) height, as a deliberate small safety buffer
-            # on top of the structural fix above -- better a touch more
-            # gap between collar and crest than risk it still touching
-            # neck skin on a different subject's slightly different neckline.
-            top = neck_y + int(jh * 0.18)
-            out_img.alpha_composite(crest_resized, (left, top))
 
     buf = __import__("io").BytesIO()
     out_img.save(buf, format="PNG")
