@@ -19,10 +19,7 @@ Crop marks sit outside the block. Six cards per letter sheet.
 
 import argparse
 import csv
-import hashlib
-import math
 import os
-import random
 import sys
 
 from reportlab.lib.pagesizes import letter
@@ -292,76 +289,15 @@ def draw_placeholder_figure(c, x, y, w, h, ink_color):
 
 # -------------------------------------------------------------- card faces ---
 
-def _seed(serial):
-    """Deterministic RNG from the scoot serial, so a card's background is
-    unique to the member and reproduces identically on every reprint."""
-    h = hashlib.sha256(serial.encode("utf-8")).hexdigest()[:12]
-    return random.Random(int(h, 16))
-
-
-def draw_manga_bg(c, x, y, serial):
-    """Speed lines and a screentone wedge, black on white, seeded by serial.
-
-    The chrome is only ever black and white. Colour belongs to the
-    illustration and to the tier rule, never to the background.
-    """
-    rng = _seed(serial)
-    c.saveState()
-    clip = c.beginPath()
-    clip.rect(x + BAND, y + BAND, ART_W, ART_H)
-    c.clipPath(clip, stroke=0, fill=0)
-
-    # screentone wedge, anchored to a bottom corner
-    c.setFillColor(HexColor("#1A1A18"))
-    left = rng.random() < 0.5
-    wx = ART_W * rng.uniform(0.68, 0.92)
-    wy = ART_H * rng.uniform(0.34, 0.48)
-    step, rad = 6.0, 1.5
-    x0, y0 = x + BAND, y + BAND
-    n_cols = int(ART_W / step) + 1
-    n_rows = int(ART_H / step) + 1
-    for i in range(n_cols):
-        for j in range(n_rows):
-            px, py = x0 + i * step, y0 + j * step
-            # Inset from the anchor edge so the wedge never crowds the chip
-            # band -- at the true edge (u=0) it used to read as broken/
-            # misaligned stripes rather than a deliberate corner accent.
-            edge_gap = 16.0
-            if (left and (px - x0) < edge_gap) or \
-               (not left and (x0 + ART_W - px) < edge_gap):
-                continue
-            u = (px - x0) / ART_W if left else 1.0 - (px - x0) / ART_W
-            if u > wx / ART_W:
-                continue
-            if (py - y0) > wy * (1.0 - u / (wx / ART_W)):
-                continue
-            c.circle(px, py, rad, stroke=0, fill=1)
-
-    # radiating speed lines from behind the figure
-    cx = x + TRIM_W * rng.uniform(0.44, 0.56)
-    cy = y + TRIM_H * rng.uniform(0.56, 0.70)
-    n = rng.choice([15, 17, 19])
-    a0 = rng.uniform(0.0, 360.0)
-    r0, r1 = TRIM_H * 0.21, TRIM_H * 1.5
-    c.setStrokeColor(HexColor("#1A1A18"))
-    for i in range(n):
-        ang = math.radians(a0 + i * 360.0 / n + rng.uniform(-3.5, 3.5))
-        c.setLineWidth(rng.choice([0.7, 1.4, 2.2, 3.2]))
-        ca, sa = math.cos(ang), math.sin(ang)
-        c.line(cx + r0 * ca, cy + r0 * sa, cx + r1 * ca, cy + r1 * sa)
-    c.restoreState()
-
-
 def draw_front(c, x, y, row, art_dir):
     field, on_field = tier_colors(row.get("tier"))
     serial = row.get("serial", "").strip()
 
     draw_band(c, x, y, INK, PAPER)
 
-    # white field, then the drawn manga background
+    # blank white field behind the figure
     c.setFillColor(PAPER)
     c.rect(x + BAND, y + BAND, ART_W, ART_H, stroke=0, fill=1)
-    draw_manga_bg(c, x, y, serial)
 
     # silhouette
     art = player_art(serial, art_dir, "dark", "front")
