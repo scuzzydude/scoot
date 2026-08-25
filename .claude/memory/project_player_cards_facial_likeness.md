@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-24T21:30:50.762Z
+  modified: 2026-08-24T23:50:38.844Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -968,6 +968,72 @@ more untouched photo folders exist under `~/Nick/work/people/` --
 Brandon confirmed this is the complete set (told him so directly and
 he agreed). Any future new roster member would need fresh video
 sourcing, not something sitting unused in existing material.
+
+**Kevin's remaining hair bug found and fixed, 2026-08-24 (round 3).**
+Brandon asked to see Kevin's original photo + attempts on a fresh
+review page (`likeness-review-3`, plain image files not base64 --
+`likeness-review-2` had grown to 66MB from base64 accumulation).
+Inspecting attempt 2's embedded ComfyUI prompt metadata (PNG tEXt
+chunk, readable via PIL's `im.info['prompt']`) found the actual bug:
+the prompt text explicitly said Kevin has "short, closely-cropped
+salt-and-pepper gray hair (not bald)" -- wrong, he's bald with a shaved
+head in every source frame. That's why attempt 2 still rendered hair
+despite the skin-tone fix landing -- not a model resistance issue like
+Chef's eyes, an actual wrong fact fed to the model. Ran 4 corrected
+attempts (`run_kevin3.py`, scratchpad, not committed) via
+`modal.Cls.from_name("scoot34-kontext-pulid-test", "PulidKontextGenerator")`
+against the already-deployed app (no rebuild needed), changing one
+lever at a time from a common corrected-hair base: (A) fix alone same
+seed/identity photo, (B) + tight face-only identity crop, (C) + PuLID
+weight 1.0->1.2, (D) + fresh seed. **A/B/C all fixed the bald head
+correctly and read near-identical** -- identity-crop tightness and the
+weight bump made negligible visible difference at this seed. **D (new
+seed) regressed to a lighter, more outline-only render style with much
+less black shadow on the face** -- reads less convincingly dark-skinned
+purely from a style/shading shift, not a reintroduced ethnicity bug;
+flags that seed also drives noir shading *intensity*, not just
+framing/scale (see the earlier framing-drift finding same day). Not
+yet Brandon-approved which (if any) V3 attempt to lock as Kevin's
+final. Source images (subject photo, face crop, all figure PNGs) live
+in Azure blob `stevearchive10723/media/card-art/kontext-test/` under
+`kevin_*` / `34-ROSTER-PULID-KEVIN*` -- SAS URLs generated ad hoc per
+session (account key via `az storage account keys list`), not
+persisted anywhere.
+
+**First full front-card batch through the new PuLID pipeline, 2026-08-24.**
+Brandon: "let's try the first 6 cards (front)" -- first time the
+PuLID+Kontext noir art (not the old BADASS/comic-graphic art) has been
+run through the complete card-assembly chain: `modal_app_jersey.py`'s
+`composite_jersey()` (crest + mesh texture, already-deployed app, no
+redeploy needed) -> `finalize_card.py` (rembg `isnet-anime` cutout,
+already installed locally) -> a new crop-to-art-slot step (not
+committed, scratch `crop_to_slot.py`: crop to the figure's alpha bbox
+with 12%/6%/10% margin, letterbox-pad to the 168x240pt/0.7 aspect
+instead of stretching, resize to 700x1000) -> `build_cards.py` with a
+placeholder roster CSV (tier="OG" for all six just so the accent
+stripe shows; real tier/stats still not assigned). Used the 6 people in
+folder order (01_CLEO..06_KENNY_KIWI/Kiwi), each already had a
+`34-ROSTER-PULID-{NAME}_figure.png` from the 2026-08-24 full-roster
+PuLID batch.
+
+Published `fairchildlabs.org/card-review-1/` (full 6-up sheet +
+individual card crops, plain image files). **Real bug confirmed, not
+new:** Shipp's card still has "SHIPP" caption text baked into the
+generated art plus a garbled artifact behind his shoulder -- this is
+the exact caption-bleed issue flagged (but not fixed) on the
+full-roster PuLID batch earlier the same day. Needs a cleaner source
+frame or stronger "remove all text/background" prompt before Shipp's
+card is usable. Also chased down and ruled OUT a suspected bug: a
+white rectangular patch on Cleo's upper arm turned out to be the
+correct sleeveless-jersey armhole gap (confirmed identical in the
+un-composited raw noir figure), not a jersey-compositing defect.
+Other 5 cards (Cleo, Rufus, E-Dub, Anthony, Kiwi) read clean.
+Local pipeline scripts for this pass live in
+`/tmp/.../scratchpad/cards6/` (session-specific tmp, not persisted) --
+`crop_to_slot.py` is the one piece worth promoting into
+`tools/player-cards/` if this full-pipeline pass is repeated for more
+of the roster, since `finalize_card.py`'s rembg-cutout output has no
+existing committed step that crops/pads it to the art slot aspect.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
