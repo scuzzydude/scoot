@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-25T15:25:21.330Z
+  modified: 2026-08-25T16:54:36.331Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1113,14 +1113,49 @@ Verified against the real deployed function end-to-end (not just local
 iteration), reproduced the same clean result. Committed `3d76b14`.
 Published as "Round 5" on card-review-1.
 
+**Round 6, same day -- Brandon caught round 5's real flaw and it led
+to the actual fix.** His reads: "you keep overwriting the torso or
+arms with dark jersey... the jersey sticker isn't the shape of a
+jersey... the original (pre fonde/mesh) jerseys fitted well, it start
+to get messed up after you add the other stuff." Correct diagnosis:
+round 5's sticker borrowed ONE subject's (Cleo's) garment shape and
+stretched it to fit each new subject's detected bbox -- exactly what
+was distorting the fit, since a stretched foreign shape can't match a
+different photo's actual pose/proportions.
+
+**The fix stops touching the shape at all.** The AI always renders the
+jersey as literal pure black -- confirmed repeatedly across this whole
+project -- so a plain darkness threshold + largest connected component
+in the lower ~58% of the frame finds THIS subject's own jersey outline
+directly, every time, matching exactly what the model actually drew.
+No borrowed shape, no stretch, no distortion possible. Mesh + crest now
+apply directly onto that real per-subject shape instead of a separate
+overlay. Caught and fixed a real bug from the sticker version in the
+same pass: multiplying the AI's literal (0,0,0) black jersey pixels by
+a mesh brightness factor is a no-op (0 * anything = 0) -- that's why
+round 5's mesh was invisible. Fixed by filling the true base hex color
+first (a flat replace, not a luminance blend -- the source has zero
+internal shading to preserve, confirmed early in this project), then
+multiplying mesh onto that non-zero color.
+
+`modal_app_jersey.py` rewritten again (segformer removal from round 5
+stands; the sticker-shape asset/generator from round 5 is now also
+removed) -- verified against the real deployed function, reproduced
+the same clean result. Committed `4d7dabf`.
+
+**Brandon also asked for a new review page each round from here on**
+(`card-review-2`, `card-review-3`, ...) instead of appending
+indefinitely to `card-review-1` -- published this round as
+`fairchildlabs.org/card-review-2/`.
+
 **Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
 E-Dub, Anthony, Kiwi) through this fixed pipeline -- Brandon scoped
-every round of this fix (2 through 5) to Cleo only so far. Note the
-darkness-threshold torso detector was only tuned/tested on Cleo's
-photo -- worth watching for subjects with notably different lighting,
-hair color (a subject with very dark/black hair extending low on the
-frame could confuse the "exclude top 42%" heuristic), or pose when
-this runs on the rest of the roster.
+every round of this fix (2 through 6) to Cleo only so far. Note the
+darkness-threshold torso/jersey detector was only tuned/tested on
+Cleo's photo -- worth watching for subjects with notably different
+lighting, hair color (very dark/black hair extending low on the frame
+could confuse the "exclude top 42%" heuristic), or pose when this runs
+on the rest of the roster.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
