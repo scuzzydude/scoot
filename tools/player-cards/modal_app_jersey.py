@@ -244,16 +244,30 @@ def composite_jersey(payload: dict) -> dict:
 
     out_img = Image.fromarray(a.astype(np.uint8), "RGBA")
 
-    # Crest -- horizontally centered under the CHIN (the head/hair
-    # region's own center), not the jersey mask's bbox center. Still
-    # anchored to the mask's own bottom edge vertically.
+    # Crest horizontal center: a 50/50 blend of the head/hair region's
+    # own center and the jersey mask's own bbox center. 2026-08-27,
+    # Brandon flagged position as off on Donnie/E-Dub/Mike MP3 -- turns
+    # out neither single signal works for everyone. Pure head_cx (chin-
+    # centered) was confirmed "perfect" on Cleo, but on subjects with a
+    # more 3/4-turned pose (Donnie especially -- his near shoulder reads
+    # visibly wider/closer than the far one) it reads as off-center
+    # relative to the shirt's own asymmetric silhouette, even though
+    # it's correctly centered on the face. Pure jersey-bbox-center
+    # fixed Donnie/E-Dub/Mike MP3 but visibly overshot on Cleo (whose
+    # own head_cx-vs-jersey-center gap is actually the LARGEST in the
+    # roster at 44px, yet his face-centered version is the one Brandon
+    # approved). The 50/50 blend reads acceptably close to correct on
+    # both ends -- no single geometric signal tested does better on the
+    # whole roster at once.
     ys, xs = np.where(mask_bool)
     x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
     bw, bh = x1 - x0, y1 - y0
+    jersey_cx = x0 + bw / 2.0
 
     head_cx = _find_head_center_x(fig)
     if head_cx is None:
-        head_cx = x0 + bw / 2.0
+        head_cx = jersey_cx
+    head_cx = 0.5 * head_cx + 0.5 * jersey_cx
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
