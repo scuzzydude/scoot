@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T18:30:12.341Z
+  modified: 2026-08-26T18:50:17.030Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1531,7 +1531,35 @@ stays "Mike MP3" for reference).
 
 Published on `card-review-12`.
 
-**Card-review page count: 1 through 12 now** (see the naming-convention
+**Round 17, same day -- Anthony's real bug (rembg, not jersey
+compositing) + Donnie's slight nudge.** Brandon: "Anthorny is messed
+up. The Nightmare FONDE needs to move slight to right."
+
+**Anthony:** a visible gray gradient smudge on his arm, present in
+the FINAL card but confirmed absent from the raw jersey-composited
+image (pre-rembg) -- isolated to `finalize_card.py`'s rembg cutout
+step. The default `isnet-anime` model hallucinated a translucent
+"ghost" shape on that arm; reproducible identically on rerun (not
+transient noise). Tested `u2net` (clean, acceptable edge quality) and
+`isnet-general-use` (also clean on the arm, but ate a hole in the
+wordmark text instead -- worse). Added `MODEL_OVERRIDE` dict in
+`finalize_card.py` keyed by serial -- Anthony (`34-DRAFT-05`) now uses
+`u2net`, everyone else keeps `isnet-anime` (still the better default
+generally, chosen because the source is comic art not a real photo).
+
+**Donnie:** added `CREST_CX_NUDGE` dict in `modal_app_jersey.py`
+(+20px for `34-DRAFT-10`) on top of round 16's 50/50 blend rule -- a
+"slight" one-card adjustment Brandon asked for, not a signal the
+general rule is wrong (no other subject flagged this round). Both
+mechanisms are the same pattern: small per-serial override dicts,
+default/absent = no change, for exactly this class of "the general
+rule is right for everyone else, this one subject needs a small
+manual tweak" feedback.
+
+Verified against the real deployed pipeline for all 11. Committed
+`b37089f`. Published on `card-review-13`.
+
+**Card-review page count: 1 through 13 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
 roster members done, all on the current wordmark pipeline** (Cleo,
 Rufus, E-Dub, Anthony, Kiwi, Mike MP3, Black, Brandon, Donnie, Bo,
