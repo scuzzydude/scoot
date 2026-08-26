@@ -69,25 +69,30 @@ CREST_ASSET_BLOB = "card-art/assets/fonde_wordmark_white.png"
 MESH_TEXTURE_BLOB = "card-art/assets/mesh_texture_mult.png"
 
 MESH_STRENGTH = 0.10
-# 0.30 -> 0.40 and top-anchored -> bottom-anchored, 2026-08-25:
-# Brandon's call after card-review-2 -- bigger, and the crest's bottom
-# edge should line up with the bottom of the visible frame rather than
-# floating mid-chest. The mask's bottom edge is always the AI render's
-# own photo-frame cutoff (there's no real garment hem), consistent
-# across the roster's locked framing, so anchoring to it (margin 0)
-# works without per-subject tuning.
-#
-# CREST_W_FRAC is a fraction of the whole IMAGE's width, not the jersey
-# mask's own bbox width -- the roster shares a locked framing (every
-# raw render is the same pixel dimensions), so the image width is a
-# reliable scale reference, unlike the mask's bbox width (confirmed on
-# Kiwi with the old circular badge: chin-shadow stippling touching the
-# jersey with no gap inflated the detected bbox width, and a size
-# derived from that came out oversized). 0.30 -> 0.25, 2026-08-26:
-# 0.30 (tuned against Cleo/Kiwi only) ran into the arms on narrower-
-# torso subjects (Donnie, Kobe, E-Dub all showed a letter crowded by
-# or behind the arm) once tested against the full roster.
-CREST_W_FRAC = 0.25
+
+# CREST_W_FRAC is a fraction of the JERSEY MASK's own bbox width, not
+# the whole image's width -- 2026-08-26, Brandon's explicit call after
+# the fixed-image-width version (0.30, then 0.25) still read
+# inconsistently sized across the roster: "you need some kind of
+# scaling rule for Fonde... keep the same scaling of fonde size to the
+# jersey width." The old circular badge avoided bbox-relative sizing
+# because segformer/darkness-threshold classification errors (e.g.
+# Kiwi's chin-shadow stippling touching the jersey with no gap)
+# inflated the detected bbox width -- but the current `_find_jersey_mask`
+# is the same one already used for the mesh/recolor itself and has
+# proven stable enough per-subject; 0.42 chosen empirically against
+# the full 11-subject roster (auto-scales down for narrow-torso
+# subjects like Donnie/Mike MP3/E-Dub that were previously "too wide"
+# at a fixed absolute size).
+CREST_W_FRAC = 0.42
+
+# Vertical position: a FIXED gap below the true collar line, not
+# centered in the available chest space. Centering pushed subjects
+# with a lot of visible chest (shallow collar -- Bo, Kobe, Mike MP3)
+# too far down, since centering in a bigger available range puts the
+# midpoint further from the collar. 145px calibrated directly from
+# Cleo's confirmed-"perfect" render (collar=366, wordmark top=511).
+CREST_GAP_FROM_COLLAR = 145
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -252,29 +257,19 @@ def composite_jersey(payload: dict) -> dict:
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
-    cw = int(W * CREST_W_FRAC)
+    cw = int(bw * CREST_W_FRAC)
     scale = cw / crest.width
     ch = int(crest.height * scale)
 
-    # Vertically CENTERED in the available chest space (collar to
-    # bottom) -- 2026-08-26, switched from the old circular badge's
-    # bottom-anchored placement now that it's a short single text line
-    # rather than a tall multi-line badge, so there's no need to anchor
-    # to the bottom edge to guarantee it fits. Confirmed on Cleo
-    # ("perfect" per Brandon) and Kiwi (deepest collar in the roster --
-    # centers cleanly in his much smaller available space, though
-    # Brandon flagged his specific source photo doesn't show enough
-    # torso below the collar for the result to read naturally low on
-    # his chest; that's a source-framing issue for a future regen, not
-    # a placement bug here).
     true_collar_y = _find_true_collar_y(mask_bool, x0, x1, y0, y1)
-    available_top = true_collar_y + int(0.05 * bh)
-    available_bot = y1 - int(0.05 * bh)
-
-    crest_r = crest.resize((cw, ch), Image.LANCZOS)
     cx = int(head_cx - cw / 2.0)
-    cy = int(available_top + (available_bot - available_top - ch) / 2.0)
-    out_img.alpha_composite(crest_r, (cx, cy))
+    cy = int(true_collar_y + CREST_GAP_FROM_COLLAR)
+    # Never push fully off-canvas on a very deep collar (Kiwi) -- his
+    # source photo doesn't show enough torso for the fixed gap to fit;
+    # that needs a source-art regen (flagged separately), this is just
+    # a safety floor so the wordmark still shows rather than vanishing.
+    cy = min(cy, y1 - ch - int(0.03 * bh))
+    out_img.alpha_composite(crest.resize((cw, ch), Image.LANCZOS), (cx, cy))
 
     buf = __import__("io").BytesIO()
     out_img.save(buf, format="PNG")
