@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T15:29:59.170Z
+  modified: 2026-08-26T16:09:04.919Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1326,15 +1326,84 @@ underneath shows through), not a detection or positioning bug. Everyone
 else landed clean on the first pass. Published on `card-review-7`
 (also shows the E-Dub/Anthony fix results).
 
-**Card-review page count: 1 through 7 now** (see the naming-convention
+**Round 12, 2026-08-26 -- head-to-glyph alignment (structural fix),
+Bo's baldness fixed, FONDE wordmark demoed.** Brandon: "have all the
+heads vertically aligned with the bottom of the scoot logo... Bo is
+completely bald... If I change from Fonde Basketball logo to just
+'FONDE' lettering... will you be able to align it right on the
+torsos?"
+
+**Head-to-glyph alignment (the real structural fix):** the old crop
+math derived headroom as a SIDE EFFECT of forcing the card's 0.7
+aspect ratio from a wide arm-span bbox -- headroom landed wherever
+that happened to compute to, which is why narrower-bbox subjects
+(Donnie, Mike, Bo, Kobe) already looked right while others didn't, per
+Brandon's own read. Replaced with direct math: the scoot glyph disc
+build_cards.py draws in the card's corner sits at a fixed
+`GLYPH_BOTTOM_FRAC = 0.15` down the art slot (derived from that
+script's own geometry constants -- recompute if those change). Crop
+height/position now solve directly for putting each subject's own
+head-top (the rembg alpha bbox's y0 -- robust for BOTH bald and hairy
+subjects, unlike a darkness-threshold hair-blob detector which would
+have nothing to find on a bald head) at that exact line, with the
+bottom margin solved simultaneously to still clear the nameplate zone.
+Drops the old arm-margin ("natural_w") sizing entirely -- width is now
+purely derived from required height, so a wide arm span may get
+cropped tighter rather than dictating extra headroom. Verified across
+all 11 subjects processed so far -- heads land at a visually identical
+line regardless of pose/arm-span variation. Committed `4d34507`.
+
+**Bo's baldness fixed:** confirmed bald in his own source photo
+(`bo_subject.jpg`) -- the earlier render invented hair, same
+model-bias class as Kevin's earlier bald-hair bug this project.
+Fixed identically: swapped the prompt's generic "preserve his real
+hairstyle (or lack of hair)" for an explicit "he is BALD with a smooth
+shaved head -- NO hair at all," regenerated via
+`scoot34-kontext-pulid-test`'s already-deployed `generate()` off the
+same source/identity photo and seed (552011). Note for reruns: the
+embedded `identity`/`subject` PNG filenames in a prior render's own
+metadata are ComfyUI's internal input-dir names, NOT persisted Blob
+paths (a direct fetch 404s) -- always reuse the ORIGINAL source photo
+blob (e.g. `bo_subject.jpg`) instead.
+
+**FONDE wordmark-only option demoed, not yet committed to the
+roster.** Extracted just the "FONDE" text (cropping out the ball
+outline + "REC CENTER"/"SENIOR BASKETBALL" lines) from the existing
+crest photo via connected-component analysis (excluding components
+touching the arc/seam corners) -- new asset
+`assets/fonde_wordmark_white.png`, committed but NOT wired into
+`modal_app_jersey.py`'s `CREST_ASSET_BLOB` (still the circular badge
+in production). Demoed via a scratch stamp script on Cleo and on Kiwi
+(deepest collar in the roster, the subject that gave the circular logo
+the most trouble) -- both landed clean on the first try, centered
+vertically in the available chest space (collar to bottom) rather
+than bottom-anchored like the taller multi-line badge needed. **A
+single wide text line is genuinely easier to align uniformly than the
+circular badge was** -- confirms Brandon's suspicion. Waiting on his
+go-ahead before switching the whole roster/production pipeline over.
+
+**BigMo "switch mode" (impersonation) researched, found NOT
+implemented.** Brandon described a feature (SMS-based, tell BigMo to
+temporarily act as another user, 1hr timeout, every message tagged
+like "[rocketman(as)bo]") he recalled discussing. Thorough repo search
+(SMS command dispatcher `ri/src/server/sms/commands.ts`, bot routing,
+all `arch/*.md` docs, full git log) found zero trace -- no code, no
+stub, no test, no design doc. It exists only as a prior verbal
+discussion, never written down or built. Flagged to Brandon as a
+from-scratch feature if he wants it, unrelated to the card-art work
+this session.
+
+**Card-review page count: 1 through 8 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
-roster members now done** (Cleo, Rufus, E-Dub, Anthony, Kiwi, Mike MP3,
+roster members done** (Cleo, Rufus, E-Dub, Anthony, Kiwi, Mike MP3,
 Black, Brandon, Donnie, Bo, Kobe), Shipp still blocked (needs fresh
 PuLID source art), 13 roster members not yet attempted at all (KennyG,
 Reggie, McGhee, John, Rick, Frank, Chef, Zelle, Sheldon, Rodney, Nick,
 Jen, and Kevin who's roster member #25 outside the original 01-23
 numbered folders). E-Dub's minor mesh-seam-at-collar cosmetic issue
-(flagged round 9) is still open, unrelated to these rounds' fixes.
+(flagged round 9) is still open. **If the wordmark switch is
+confirmed, all 11 done subjects need re-running** (crest swap changes
+every card's art, not additive).
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
