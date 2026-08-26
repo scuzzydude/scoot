@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T16:09:04.919Z
+  modified: 2026-08-26T16:33:17.295Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1393,17 +1393,50 @@ discussion, never written down or built. Flagged to Brandon as a
 from-scratch feature if he wants it, unrelated to the card-art work
 this session.
 
-**Card-review page count: 1 through 8 now** (see the naming-convention
+**Round 13, same day -- wordmark confirmed and wired into production
+for the whole roster.** Brandon: "Switch the whole roster to the FONDE
+wordmark. Cleo is perfect (FOnde midpoint aligned with the bottom of
+the shoulder deltoid muscle). Kiwi needs to drop down (so maybe Kiwi
+needs a bit more torso drawn)." Wired `fonde_wordmark_white.png` into
+`CREST_ASSET_BLOB`, switched crest vertical placement from
+bottom-anchored (needed for the old tall multi-line badge) to
+vertically CENTERED in the available chest space (`true_collar_y` to
+`y1`) -- this is what made Cleo read as "perfect."
+
+Running the full 11-subject batch through it surfaced one more real
+sizing bug: `CREST_W_FRAC` tuned at 0.30 against Cleo/Kiwi only ran a
+letter into the arm on narrower-torso subjects -- confirmed on Donnie,
+Kobe, and E-Dub (visually looked like clipping past the card edge at
+first glance, but precise pixel measurement showed the text WAS
+correctly centered on head_cx and within the canvas -- the real issue
+was the jersey's own visible width being narrower than the wordmark
+for these subjects, so a letter ran into/behind the arm). Narrowed to
+0.25 -- clean across all 11. Verified against the real deployed
+pipeline. Committed `41f4ed0`.
+
+**Kiwi's "needs to drop down" diagnosed as confirmed source-framing
+limitation, not a placement bug** -- same class of issue as Bo's
+baldness (needs a regen, not a compositing fix). His collar is the
+deepest in the roster, so his visible chest space (collar to frame-
+bottom) is smaller than everyone else's; the wordmark centers
+correctly within that space, it just doesn't have much room. Not yet
+fixed -- would need a source-art regen showing more torso in frame,
+not attempted this round.
+
+Published on `card-review-9`.
+
+**Card-review page count: 1 through 9 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
-roster members done** (Cleo, Rufus, E-Dub, Anthony, Kiwi, Mike MP3,
-Black, Brandon, Donnie, Bo, Kobe), Shipp still blocked (needs fresh
-PuLID source art), 13 roster members not yet attempted at all (KennyG,
-Reggie, McGhee, John, Rick, Frank, Chef, Zelle, Sheldon, Rodney, Nick,
-Jen, and Kevin who's roster member #25 outside the original 01-23
-numbered folders). E-Dub's minor mesh-seam-at-collar cosmetic issue
-(flagged round 9) is still open. **If the wordmark switch is
-confirmed, all 11 done subjects need re-running** (crest swap changes
-every card's art, not additive).
+roster members done, all on the current wordmark pipeline** (Cleo,
+Rufus, E-Dub, Anthony, Kiwi, Mike MP3, Black, Brandon, Donnie, Bo,
+Kobe), Shipp still blocked (needs fresh PuLID source art), 13 roster
+members not yet attempted at all (KennyG, Reggie, McGhee, John, Rick,
+Frank, Chef, Zelle, Sheldon, Rodney, Nick, Jen, and Kevin who's roster
+member #25 outside the original 01-23 numbered folders). Two open
+cosmetic/framing items, neither blocking: E-Dub's minor mesh-seam-at-
+collar (flagged round 9), Kiwi's wordmark reading high on his chest
+due to his own source photo's shallow torso framing (flagged round 13,
+needs a source-art regen to actually fix).
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
