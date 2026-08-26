@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T18:00:36.086Z
+  modified: 2026-08-26T18:30:12.341Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1490,7 +1490,48 @@ revisiting if more long handles come up.
 
 Published on `card-review-11`.
 
-**Card-review page count: 1 through 11 now** (see the naming-convention
+**Round 16, same day -- horizontal position genuinely fixed, Anthony's
+baldness fixed, MP3 handle shortened.** Brandon: "the postiion isn't
+that great on The Nightmare, Edub, or MP3" + (mid-turn) "Anthoney
+doesn't have hair, he's shaved head" + "remove 'mike' just mp3."
+
+**Position root cause, precisely isolated this time (not just
+eyeballed):** pixel-measured that pure head_cx (chin) centering WAS
+mathematically correct in every case checked -- confirmed via redline
+overlays and exact text-bbox measurement, not visual impression alone
+(which had misled once already this session, on E-Dub). The real issue
+is pose-dependent: on a more 3/4-turned pose (Donnie especially -- his
+near shoulder reads visibly wider/foreshortened-closer than the far
+one), a face-centered wordmark looks off-center relative to the SHIRT's
+own asymmetric silhouette even though it's correctly centered on the
+face. Tested pure jersey-bbox-center as the alternative -- fixed
+Donnie/E-Dub/Mike MP3 cleanly, but visibly overshot on Cleo, whose own
+head_cx-vs-jersey-center gap (44px) is actually the LARGEST in the
+roster, yet his face-centered card is the one Brandon already called
+"perfect." Neither single geometric signal works for the whole roster.
+**Settled on a 50/50 blend of head_cx and jersey-bbox-center** -- reads
+acceptably close to correct on both extremes tested. This blended value
+is still what gets returned/shared via the head_cx sidecar mechanism
+(round 11), so crop centering and crest centering remain in agreement.
+Verified against the real deployed pipeline for all 11. Committed
+`db9a275`.
+
+**Anthony's baldness fixed** -- confirmed bald with a full white/gray
+beard in his own source photo (`anthony_subject.jpg`), same bug class
+as Bo and Kevin earlier (generic "preserve his real hairstyle"
+language not reliable, needs an explicit "he is BALD" override).
+Regenerated via the same `scoot34-kontext-pulid-test` pattern, same
+seed/guidance. One residual, not fixed: his real beard is fuller than
+what rendered (same "stubborn attribute resistance" pattern as
+Kevin/Rufus's hair-color fights earlier in the project) -- bald head
+itself is solid, beard fullness is a minor follow-up if wanted.
+
+**Mike MP3's handle shortened to "MP3"** in the roster CSV (name field
+stays "Mike MP3" for reference).
+
+Published on `card-review-12`.
+
+**Card-review page count: 1 through 12 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
 roster members done, all on the current wordmark pipeline** (Cleo,
 Rufus, E-Dub, Anthony, Kiwi, Mike MP3, Black, Brandon, Donnie, Bo,
