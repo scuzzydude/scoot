@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T18:50:17.030Z
+  modified: 2026-08-26T19:02:25.636Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1606,3 +1606,61 @@ untouched: Cleo (01), Kenny/Kiwi already done — remaining are 01_CLEO
 (likely fine as-is per Brandon's earlier "not Cleo" comment on the old
 full-roster pass, but not yet run through this new likeness-first
 flow), 14_MCGHEE, 15_JOHN, 17_FRANK, 19_ZELLE, 20_SHELDON, 21_RODNEY.
+
+**Round 18, 2026-08-26 — the rest of the roster, 13 members batch-run
+through the front-card pipeline, zero code changes needed.** Brandon:
+"GIVE ME THE REST OF THE PLAYERS." Serials 34-DRAFT-13 through
+34-DRAFT-25 assigned to KennyG, Reggie, McGhee, John, Rick, Frank,
+Chef, Zelle, Sheldon, Rodney, Nick, Jen, Kevin — all had an existing
+`34-ROSTER-PULID-{NAME}_figure.png` source blob already in Azure
+(Kevin used the V3C correction pass from the earlier bald-hair fix
+round; not yet Brandon-confirmed as his final pick among A/B/C, which
+read near-identical). Ran the full deployed pipeline unchanged
+(`composite_jersey` → `finalize_card.py` → `crop_to_slot.py` →
+`build_cards.py`) — 11 of 13 landed clean with no manual intervention,
+same "generalizes cleanly" result as the previous zero-intervention
+batch (round 11's "next 6").
+
+**Real bug found and fixed: Jen's source blob was stale.** Her
+figure came out with the full busy room background (lockers, doors,
+table/chairs) baked in — the background-compliance fix documented
+earlier in this project (round 2, 2026-08-24, "CRITICAL: completely
+plain, solid, empty background" language) was never re-saved under the
+blob name the roster-batch script actually points at
+(`34-ROSTER-PULID-JEN_figure.png`). Caught via a real signal, not just
+visual impression: her composited jersey-mask width came back 360px,
+anomalously narrow vs. the rest of the roster's 490-900px range —
+background clutter was confusing the darkness-threshold jersey
+detector. Found the actual corrected render already sitting in blob
+storage under the same recovery-naming pattern used for Kiwi's earlier
+fix (`34-ROSTERFIX-JEN_figure.png`) — swapped it in, reran her through
+the full pipeline, mask width came back 502px (in line with everyone
+else), background clean. **Lesson: when a documented fix's blob name
+isn't explicitly recorded, check for a `*-ROSTERFIX-{NAME}` blob before
+assuming the fix needs to be redone from scratch** — this is the second
+time this exact pattern (Kiwi, now Jen) has saved a full regeneration.
+
+**Sheldon flagged, not fixed — same pose-clash class as Kobe's.** His
+raised hand/fist sits directly in front of the FONDE wordmark,
+partially obscuring it. Same root cause as Kobe's hand-near-crest issue
+from round 11 (a specific source photo's pose overlapping the crest
+region, not a detection/placement bug) — same call: leave as-is.
+
+**Chef's long-standing closed-eyes issue not present on this render.**
+The old BADASS/comic-graphic-era renders had it (documented extensively
+above, PuLID identity conditioning pulling his eyes-closed mid-laugh
+expression through even against direct text instruction, never
+resolved). This round's PuLID+noir source photo is evidently a
+different frame from his reference folder — eyes read open/alert. Not
+something this round's pipeline fixed on purpose; worth confirming with
+Brandon it holds up, not chasing further unless he flags it again.
+
+**Status: 24 of 25 roster members now have a finished front card** on
+the current wordmark pipeline (only Shipp remains blocked, needs a
+fresh PuLID source generation with a clean caption-free frame — no
+`*-ROSTERFIX-SHIPP` blob exists the way Kiwi/Jen's did). Published
+`fairchildlabs.org/card-review-14/`. No commits this round — the fix
+was a source-asset swap (existing blob → existing blob), not a code
+change; `roster24.csv`/`art_all24` outputs live in this session's
+scratchpad only, not the repo (matches this project's existing
+convention of keeping roster CSVs as scratch/test data, not committed).
