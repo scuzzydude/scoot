@@ -103,6 +103,14 @@ CREST_CX_NUDGE = {
     "34-DRAFT-10": 20,  # Donnie/"The Nightmare" -- "needs to move slight to right"
 }
 
+# 2026-08-27, Brandon's call after round 18: dropped the crest entirely --
+# "I'm frustrated with the FONDE position... let's just remove it and
+# have black jerseys." Every other round-18 defect traced to a real bug
+# (stale Jen blob) or a pre-existing pose clash (Sheldon/Kobe's hand),
+# but per-subject crest positioning had been the recurring friction point
+# across ~8 rounds. Plain black jersey (base color + mesh only) instead.
+APPLY_CREST = False
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
@@ -221,6 +229,21 @@ def composite_jersey(payload: dict) -> dict:
     if mask_bool is None:
         raise RuntimeError(f"{serial}: no jersey found (darkness threshold found nothing)")
 
+    # Clip the mask to below the true collar line before ANY recolor/mesh
+    # fill runs -- 2026-08-27, found on Sheldon/Chef/John: a dark beard/
+    # goatee that touches the jersey with no gap in the source art (same
+    # class of contamination as Kiwi's chin-shadow, round 9) gets swept
+    # into the jersey's connected component and painted with jersey
+    # color+mesh, reading as a "shadow" eating into the chin/mouth. This
+    # is the same fix already proven for the old segformer-based mask
+    # (commit bc63da7, "clip the garment mask to below the collar's
+    # V-notch... before recolor/texture ever runs") -- reapplied here
+    # since the mask is darkness-threshold-based now, not segformer.
+    ys, xs = np.where(mask_bool)
+    _x0, _x1, _y0, _y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
+    _true_collar_y = _find_true_collar_y(mask_bool, _x0, _x1, _y0, _y1)
+    mask_bool[:_true_collar_y, :] = False
+
     mask_img = Image.fromarray((mask_bool * 255).astype(np.uint8), "L")
     mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=2))
     m = (np.array(mask_img).astype(np.float32) / 255.0)[..., None]
@@ -253,21 +276,6 @@ def composite_jersey(payload: dict) -> dict:
 
     out_img = Image.fromarray(a.astype(np.uint8), "RGBA")
 
-    # Crest horizontal center: a 50/50 blend of the head/hair region's
-    # own center and the jersey mask's own bbox center. 2026-08-27,
-    # Brandon flagged position as off on Donnie/E-Dub/Mike MP3 -- turns
-    # out neither single signal works for everyone. Pure head_cx (chin-
-    # centered) was confirmed "perfect" on Cleo, but on subjects with a
-    # more 3/4-turned pose (Donnie especially -- his near shoulder reads
-    # visibly wider/closer than the far one) it reads as off-center
-    # relative to the shirt's own asymmetric silhouette, even though
-    # it's correctly centered on the face. Pure jersey-bbox-center
-    # fixed Donnie/E-Dub/Mike MP3 but visibly overshot on Cleo (whose
-    # own head_cx-vs-jersey-center gap is actually the LARGEST in the
-    # roster at 44px, yet his face-centered version is the one Brandon
-    # approved). The 50/50 blend reads acceptably close to correct on
-    # both ends -- no single geometric signal tested does better on the
-    # whole roster at once.
     ys, xs = np.where(mask_bool)
     x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
     bw, bh = x1 - x0, y1 - y0
@@ -277,6 +285,37 @@ def composite_jersey(payload: dict) -> dict:
     if head_cx is None:
         head_cx = jersey_cx
     head_cx = 0.5 * head_cx + 0.5 * jersey_cx + CREST_CX_NUDGE.get(serial, 0)
+
+    if not APPLY_CREST:
+        buf = __import__("io").BytesIO()
+        out_img.save(buf, format="PNG")
+
+        figure_blob = f"{AZURE_OUTPUT_PREFIX}/{serial}_jersey_figure.png"
+        container.upload_blob(figure_blob, buf.getvalue(), overwrite=True)
+
+        mask_buf = __import__("io").BytesIO()
+        mask_img.save(mask_buf, format="PNG")
+        mask_blob = f"{AZURE_OUTPUT_PREFIX}/{serial}_jersey_mask.png"
+        container.upload_blob(mask_blob, mask_buf.getvalue(), overwrite=True)
+
+        return {"serial": serial, "figure_path": f"{AZURE_CONTAINER}/{figure_blob}",
+                "mask_path": f"{AZURE_CONTAINER}/{mask_blob}", "head_cx": head_cx}
+
+    # Crest horizontal center: a 50/50 blend of the head/hair region's
+    # own center and the jersey mask's own bbox center (computed above,
+    # before the APPLY_CREST early-return). 2026-08-27, Brandon flagged
+    # position as off on Donnie/E-Dub/Mike MP3 -- turns out neither
+    # single signal works for everyone. Pure head_cx (chin-centered) was
+    # confirmed "perfect" on Cleo, but on subjects with a more 3/4-turned
+    # pose (Donnie especially -- his near shoulder reads visibly wider/
+    # closer than the far one) it reads as off-center relative to the
+    # shirt's own asymmetric silhouette, even though it's correctly
+    # centered on the face. Pure jersey-bbox-center fixed Donnie/E-Dub/
+    # Mike MP3 but visibly overshot on Cleo (whose own head_cx-vs-jersey-
+    # center gap is actually the LARGEST in the roster at 44px, yet his
+    # face-centered version is the one Brandon approved). The 50/50 blend
+    # reads acceptably close to correct on both ends -- no single
+    # geometric signal tested does better on the whole roster at once.
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
