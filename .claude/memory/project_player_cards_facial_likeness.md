@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T12:41:05.864Z
+  modified: 2026-08-26T13:04:23.849Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1180,14 +1180,62 @@ iteration, superseded), card-review-2 (round 6, the true-mask fix),
 card-review-3 (round 7, crest size/position), card-review-4 (round 8,
 crest horizontal centering under the chin).
 
-**Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
-E-Dub, Anthony, Kiwi) through this fixed pipeline -- Brandon scoped
-every round of this fix (2 through 7) to Cleo only so far. Note the
-darkness-threshold torso/jersey detector was only tuned/tested on
-Cleo's photo -- worth watching for subjects with notably different
-lighting, hair color (very dark/black hair extending low on the frame
-could confuse the "exclude top 42%" heuristic), or pose when this runs
-on the rest of the roster.
+**Round 9, 2026-08-26 -- ran the other 5 (Rufus, E-Dub, Anthony, Kiwi,
++ Cleo re-confirmed), first time off Cleo-only.** Exactly the
+generalization risk flagged above materialized, on Kiwi specifically:
+- **Crest badly oversized, overlapping his face.** Root cause: crest
+  size was `bw * CREST_W_FRAC` (jersey mask's own detected width).
+  Kiwi's dense chin-shadow stippling touches the jersey with literally
+  no gap in the source art -- confirmed true even with the
+  morphological closing step disabled entirely, so it's a property of
+  the artwork, not a bridging artifact. That inflated his detected
+  mask width, which (crest being bottom-anchored) pushed the resulting
+  oversized crest's top edge up into his face. **Fix:** size the crest
+  off the whole IMAGE's width instead (`CREST_W_FRAC` now 0.204 of
+  image width, equivalent to Cleo's old 0.40-of-bbox result) -- the
+  roster shares a locked framing/identical pixel dimensions every
+  render, so image width is a reliable scale reference the per-subject
+  mask isn't.
+- **Kiwi's collar is also genuinely much deeper** (more exposed chest)
+  than Cleo's -- even the corrected fixed-size crest didn't fit above
+  his true collar. Added `_find_true_collar_y()`: scans the mask's
+  row-width profile upward from the bottom (least likely contaminated)
+  for the transition from "narrow neck" to "wide torso" width, and
+  shrinks the crest proportionally when the fixed size would overflow
+  above that line. Verified no regression on Cleo (shrink never
+  triggers for him) while fixing Kiwi (crest now visibly smaller on
+  his card, correctly).
+- Also swapped Kiwi's source from the full-roster batch render (still
+  had "KENNY" caption text baked in) to the already-fixed
+  `34-ROSTERFIX-KIWI` blob (clean, from the earlier likeness-review-2
+  round) -- the roster-batch composite_jersey call had been using the
+  wrong/stale source.
+
+Verified against the real deployed pipeline for all 5. Committed
+`09a7cd6`. Published on `card-review-5` (full sheet + individual
+crops).
+
+**Remaining open item, not fixed this round:** E-Dub has a faint mesh
+seam at the collar (a thin strip of untextured flat black where his
+beard/collar meet) -- traced to the *other* direction of the same
+class of bug: his true collar sits slightly ABOVE the fixed "exclude
+top 42%" line used for the jersey/mesh mask (not the crest, a separate
+mask), so that sliver never gets mesh applied. Cosmetic only, visible
+at zoom, not blocking. Would need the same kind of per-subject-relative
+fix (row-width-profile-based head/torso boundary) applied to the mesh
+mask's own top cutoff, not just the crest's positioning -- flagged for
+a future round if Brandon wants it addressed.
+
+**Shipp still excluded/blocked** -- his likeness art itself (not the
+jersey pipeline) has the pre-existing "SHIPP" caption-text + garbled-
+artifact bug, unlike Kiwi has no already-fixed source render sitting in
+Blob to swap in. Needs a fresh PuLID generation pass with a cleaner
+source frame -- separate task from jersey compositing.
+
+**Card-review page count: 1 through 5 now** (see the naming-convention
+note above). Roster status for the front-card pipeline: 5 of 6 tested
+subjects clean (Cleo, Rufus, E-Dub*, Anthony, Kiwi), Shipp blocked, 19
+roster members not yet run through this pipeline at all.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
