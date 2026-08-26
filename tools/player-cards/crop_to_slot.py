@@ -56,9 +56,21 @@ def crop_one(serial, art_in, art_out):
     x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
     w, h = x1 - x0, y1 - y0
 
-    head_y1 = y0 + int(h * 0.40)
-    hys, hxs = np.where(alpha[y0:head_y1, :] > 10)
-    head_cx = (int(hxs.min()) + int(hxs.max())) / 2.0 if len(hxs) else (x0 + x1) / 2.0
+    # Prefer the EXACT head_cx composite_jersey used to center the
+    # crest (returned in its result dict, written here as a sidecar by
+    # the calling script) over recomputing our own from the rembg
+    # cutout's alpha -- 2026-08-26: even though both methods measure
+    # "the same thing," they run on different image versions (raw vs.
+    # post-cutout) and can disagree by ~10px, enough for the crest to
+    # visibly drift off the crop's own center. Reusing the identical
+    # value guarantees crest and crop agree exactly.
+    head_cx_path = os.path.join(art_in, f"{serial}_head_cx.txt")
+    if os.path.exists(head_cx_path):
+        head_cx = float(open(head_cx_path).read().strip())
+    else:
+        head_y1 = y0 + int(h * 0.40)
+        hys, hxs = np.where(alpha[y0:head_y1, :] > 10)
+        head_cx = (int(hxs.min()) + int(hxs.max())) / 2.0 if len(hxs) else (x0 + x1) / 2.0
 
     mx = int(w * 0.08)
     my_top_min = int(h * 0.02)   # minimum headroom above the head

@@ -259,7 +259,12 @@ def composite_jersey(payload: dict) -> dict:
     # if a deep collar means it runs past the frame, let it clip there
     # rather than shrinking it smaller than everyone else's).
     true_collar_y = _find_true_collar_y(mask_bool, x0, x1, y0, y1)
-    top_margin = int(0.03 * bh)
+    # 0.03 -> 0.10, 2026-08-26: Brandon's read on Anthony -- his crest
+    # is governed by this collar clamp (not the bottom anchor, which
+    # only applies when the collar is shallow), and the small margin
+    # kept it floating high on his chest instead of sitting naturally
+    # lower, clipping under the nameplate more like everyone else's.
+    top_margin = int(0.10 * bh)
     bottom_margin = int(bh * CREST_BOTTOM_MARGIN_FRAC)
 
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
@@ -281,4 +286,4 @@ def composite_jersey(payload: dict) -> dict:
     container.upload_blob(mask_blob, mask_buf.getvalue(), overwrite=True)
 
     return {"serial": serial, "figure_path": f"{AZURE_CONTAINER}/{figure_blob}",
-            "mask_path": f"{AZURE_CONTAINER}/{mask_blob}"}
+            "mask_path": f"{AZURE_CONTAINER}/{mask_blob}", "head_cx": head_cx}
