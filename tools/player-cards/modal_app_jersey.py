@@ -72,7 +72,19 @@ MESH_STRENGTH = 0.10
 # own photo-frame cutoff (there's no real garment hem), consistent
 # across the roster's locked framing, so anchoring to it (margin 0)
 # works without per-subject tuning.
-CREST_W_FRAC = 0.40
+#
+# CREST_W_FRAC switched 2026-08-26 from "fraction of the jersey mask's
+# own bbox width" to "fraction of the whole image's width" -- the
+# roster shares a locked framing (every raw render is the same pixel
+# dimensions), so the image width is a reliable scale reference, unlike
+# the mask's bbox width. Confirmed on Kiwi: dense chin-shadow stippling
+# touches the jersey with literally no gap in the source art (true even
+# with NO morphological closing at all), inflating the detected mask's
+# bbox width -- which, sized off that inflated bw and bottom-anchored,
+# pushed the resulting oversized crest's top edge up into his face.
+# 0.40 of Cleo's own bbox width (709px, in a 1392px-wide image) is
+# 0.40*709/1392 = 0.204.
+CREST_W_FRAC = 0.204
 CREST_BOTTOM_MARGIN_FRAC = 0.04  # 0.0 clipped "SENIOR BASKETBALL" by a couple px on Cleo
 
 image = (
@@ -140,6 +152,30 @@ def _find_head_center_x(raw_img):
         return None
     ys, xs = np.where(head)
     return (int(xs.min()) + int(xs.max())) / 2.0
+
+
+def _find_true_collar_y(mask_bool, x0, x1, y0, y1):
+    """The jersey mask's own y0 can be contaminated by dark neck-shadow
+    stippling that touches the jersey with no gap in the source art
+    (confirmed on Kiwi -- see CREST_W_FRAC's comment). The true collar
+    is where the mask's row width transitions from "narrow neck" to
+    "wide torso": scan upward from the bottom (least likely to be
+    contaminated) and stop at the first row whose width drops below
+    half the torso's own typical width."""
+    import numpy as np
+
+    row_counts = mask_bool[:, x0:x1 + 1].sum(axis=1)
+    bh = y1 - y0
+    torso_rows = row_counts[y0 + int(bh * 0.7): y1 + 1]
+    if len(torso_rows) == 0 or torso_rows.max() == 0:
+        return y0
+    threshold = torso_rows.max() * 0.5
+    true_y0 = y0
+    for y in range(y1, y0 - 1, -1):
+        if row_counts[y] < threshold:
+            true_y0 = y
+            break
+    return true_y0
 
 
 @app.function(timeout=120, secrets=[modal.Secret.from_name("azure-blob-creds")])
@@ -214,12 +250,28 @@ def composite_jersey(payload: dict) -> dict:
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
-    cw = int(bw * CREST_W_FRAC)
+    cw = int(W * CREST_W_FRAC)
     scale = cw / crest.width
     ch = int(crest.height * scale)
+
+    # If the subject's collar is deep (a lot of exposed chest/neck --
+    # confirmed on Kiwi), the fixed image-relative size may not fit
+    # between the true collar and the bottom anchor. Shrink to fit
+    # rather than overflow past the frame or overlap the neck.
+    true_collar_y = _find_true_collar_y(mask_bool, x0, x1, y0, y1)
+    top_margin = int(0.03 * bh)
+    bottom_margin = int(bh * CREST_BOTTOM_MARGIN_FRAC)
+    available_h = (y1 - bottom_margin) - (true_collar_y + top_margin)
+    if ch > available_h > 0:
+        shrink = available_h / ch
+        cw = int(cw * shrink)
+        ch = int(ch * shrink)
+
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
     cx = int(head_cx - cw / 2.0)
-    cy = y1 - ch - int(bh * CREST_BOTTOM_MARGIN_FRAC)
+    cy_bottom_anchored = y1 - ch - bottom_margin
+    cy_min = true_collar_y + top_margin
+    cy = max(cy_bottom_anchored, cy_min)
     out_img.alpha_composite(crest_r, (cx, cy))
 
     buf = __import__("io").BytesIO()
