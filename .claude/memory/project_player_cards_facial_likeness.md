@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T16:56:11.925Z
+  modified: 2026-08-26T18:00:36.086Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1454,7 +1454,43 @@ jersey-width-relative sizing). Committed `0f66200`. Published on
 `card-review-10`. Kiwi's issue is unchanged (safety-floor-clamped, not
 actually fixed) -- still needs the source-art regen.
 
-**Card-review page count: 1 through 10 now** (see the naming-convention
+**Round 15, same day -- rendered "FONDE" from real type instead of a
+photo extraction, plus handle names.** Brandon caught a real defect:
+"There is a white horizontal artifact just under the 'f' that shows
+up. Just writing 'Fonde' in white on top the jersey would be better."
+The old wordmark (cropped out of the real jersey crest photo,
+2026-08-26 earlier round) had a stray white speck under the F, a relic
+of the ball-outline/seam crop that never fully isolated the letters.
+
+**Fix: guess the font, render it clean, no photo extraction at all.**
+Compared candidates against the extracted original's distinctive
+flared-serif slab style -- Bevan (Google Fonts, OFL license) matched
+closely (same "feet," same bold weight/proportions), clearly better
+than Alfa Slab One (tried, too heavy/blocky) or the system's own
+installed fonts (DejaVu/Liberation/FreeFont -- none have this athletic
+block-serif look at all). New `make_fonde_wordmark.py` renders "FONDE"
+directly with Bevan at large size then crops tight to content -- no
+distress texture (Brandon's "just writing... in white" reads as
+preferring clean over trying to replicate the worn-ink look further).
+Committed the font file + its OFL license text alongside the script
+(`assets/Bevan-Regular.ttf`, `assets/Bevan-OFL.txt`).
+
+Regenerated `assets/fonde_wordmark_white.png` from this and
+re-uploaded to Blob at the same `CREST_ASSET_BLOB` path -- no code
+change needed in `modal_app_jersey.py` itself, just the asset swap.
+Re-ran all 11 subjects through the full pipeline to pick up the new
+asset. Committed `beb6d2d`.
+
+**Handle names set:** Brandon -> "Rocket Man", Donnie -> "The
+Nightmare" (both roster CSV `handle` column, shown as the big
+nameplate text). Minor cosmetic flag, not fixed: "The Nightmare" is
+long enough to crowd the tier label in the nameplate's corner --
+`build_cards.py`'s nameplate text isn't dynamically sized, worth
+revisiting if more long handles come up.
+
+Published on `card-review-11`.
+
+**Card-review page count: 1 through 11 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
 roster members done, all on the current wordmark pipeline** (Cleo,
 Rufus, E-Dub, Anthony, Kiwi, Mike MP3, Black, Brandon, Donnie, Bo,
