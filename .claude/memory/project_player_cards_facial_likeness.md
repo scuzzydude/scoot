@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-25T17:23:02.845Z
+  modified: 2026-08-26T12:41:05.864Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1160,12 +1160,25 @@ buffer (`CREST_BOTTOM_MARGIN_FRAC = 0.04`, 4% of jersey height).
 Verified against the real deployed pipeline. Committed `c5528a8`.
 Published on **`card-review-3`**.
 
+**Round 8, 2026-08-26 -- crest horizontal centering.** Brandon: "the
+center of it (the N in FoNde) needs to be aligned with the players
+chin, so in Cleo's case you need to shift it to the left slightly."
+Root cause: crest was centered on the jersey mask's own bbox, which
+drifts off-true whenever shoulders/arms aren't symmetric in the pose --
+confirmed on Cleo, jersey-bbox center sat ~46px right of his actual
+chin. Fixed with a new `_find_head_center_x()`: horizontal center of
+the largest dark blob in the top 42% of the frame (the hair/head
+region) -- reliably sits above the chin for a front-facing subject,
+independent of shoulder pose. Verified against the real deployed
+pipeline. Committed `07fda5c`. Published on `card-review-4`.
+
 **Naming convention going forward, per Brandon 2026-08-25: a fresh
 `card-review-N` page each round** (not appended indefinitely to
 `card-review-1` the way the likeness-review pages grew to 40-60MB+).
 Rounds so far: card-review-1 (rounds 1-5, background/mesh/sticker
 iteration, superseded), card-review-2 (round 6, the true-mask fix),
-card-review-3 (round 7, crest size/position).
+card-review-3 (round 7, crest size/position), card-review-4 (round 8,
+crest horizontal centering under the chin).
 
 **Not yet done:** re-running the other 5 roster members (Shipp, Rufus,
 E-Dub, Anthony, Kiwi) through this fixed pipeline -- Brandon scoped
