@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T19:20:39.843Z
+  modified: 2026-08-26T19:38:15.248Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1724,3 +1724,47 @@ per-subject placement problem to solve. Remaining open items: Sheldon's
 baked-in neck shading (needs regen, not a priority unless Brandon asks),
 Rodney's minor V-neck notch, Kevin's V3 pick still not locked, Shipp's
 source-art block.
+
+**Round 20, 2026-08-27 — nameplate font-fit + first real tier/handle
+data.** Brandon: "Nick's nickname is Trey-Up (but track by first name,
+we will put first name on back of cards). The only OGs are Frank and
+Cleo and McGhee (in this batch). Reduce the Font size whent he name
+extends into the [tier label]" (message cut off; his next reply, "55+",
+answered a separate in-flight question about what tier the other 21
+should carry — see the standing-preference note below on how that
+exchange went).
+
+**Real bug fixed in `build_cards.py`:** the nameplate handle was drawn
+at a fixed font size (19pt front / 13pt back) regardless of string
+length — "The Nightmare" was already flagged (round 15/16) as crowding
+the tier label sharing the same bar, never fixed until now. Added
+`fit_font_size()`: measures the tier label's own width at its actual
+font (varies per tier string, not a constant), reserves that plus a
+10pt gap on the nameplate's right side, and scales the handle font down
+by the exact ratio needed to fit the remaining space (one
+`stringWidth` measurement suffices since it scales linearly with size —
+no iterative search). Applied to both the front nameplate and the back
+header (same crowding risk, same fix). Verified "The Nightmare" now
+sits clear of "55+" with real spacing.
+
+**First real tier data entered**, replacing the "OG" placeholder used
+for the whole roster since round 1: Cleo, Frank, McGhee = OG (amber
+accent); everyone else in the 24-person batch = 55+ (new tier added to
+`TIERS` — same bone color the untracked default already rendered, now
+explicit since it's real data rather than a fallback). Nick's card
+`handle` changed to his actual nickname "Trey-Up"; the `name` field
+stays "Nick" (his first name) per Brandon's instruction to track him by
+first name — that field is what the not-yet-built back-of-card design
+will surface.
+
+Rebuilt and verified all 24 cards. Committed `a14a02d`. Published
+`fairchildlabs.org/card-review-16/`.
+
+**Standing workflow note: this session, `AskUserQuestion` was rejected
+mid-flow (2026-08-27) and Brandon just typed a one-word answer ("55+")
+directly in chat instead.** In this fast-iteration art-director
+workflow — rapid rounds of "show me / here's what's wrong / fix it" —
+prefer asking clarifying questions as plain chat text over the
+structured multi-choice tool; it seems to break his flow. Doesn't
+necessarily generalize to other projects/sessions, but worth defaulting
+to plain-text questions for the rest of this player-cards track.
