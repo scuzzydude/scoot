@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T19:38:15.248Z
+  modified: 2026-08-26T19:43:41.988Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1759,6 +1759,20 @@ will surface.
 
 Rebuilt and verified all 24 cards. Committed `a14a02d`. Published
 `fairchildlabs.org/card-review-16/`.
+
+**Immediate follow-up, same round.** First publish of card-review-16
+had a real bug: the 14-19 sheet (which has Frank and McGhee on it) was
+uploaded to the server but never actually referenced in the page's own
+HTML, so it was invisible — Brandon's "what happen to Frank and
+McGhee?" was a fair catch of a real publishing mistake, not a rendering
+bug (both cards were correct all along). Fixed by linking the sheet.
+Then Brandon added a 4th OG: **Reggie is also OG** (was 55+) — updated
+`roster24.csv`, rebuilt, verified the amber accent shows on his card,
+republished. Tier tally after this round: **OG = Cleo, Frank, McGhee,
+Reggie; 55+ = the other 20.** `roster24.csv` remains scratchpad-only,
+not committed (matches this project's existing convention for roster
+CSVs) — if this session ends, the tier assignments above are the
+source of truth to reconstruct it from, not a committed file.
 
 **Standing workflow note: this session, `AskUserQuestion` was rejected
 mid-flow (2026-08-27) and Brandon just typed a one-word answer ("55+")
