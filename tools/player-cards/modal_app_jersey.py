@@ -254,18 +254,13 @@ def composite_jersey(payload: dict) -> dict:
     scale = cw / crest.width
     ch = int(crest.height * scale)
 
-    # If the subject's collar is deep (a lot of exposed chest/neck --
-    # confirmed on Kiwi), the fixed image-relative size may not fit
-    # between the true collar and the bottom anchor. Shrink to fit
-    # rather than overflow past the frame or overlap the neck.
+    # Size stays FIXED across every subject (Brandon's call 2026-08-26:
+    # uniform logo size matters more than always showing it in full --
+    # if a deep collar means it runs past the frame, let it clip there
+    # rather than shrinking it smaller than everyone else's).
     true_collar_y = _find_true_collar_y(mask_bool, x0, x1, y0, y1)
     top_margin = int(0.03 * bh)
     bottom_margin = int(bh * CREST_BOTTOM_MARGIN_FRAC)
-    available_h = (y1 - bottom_margin) - (true_collar_y + top_margin)
-    if ch > available_h > 0:
-        shrink = available_h / ch
-        cw = int(cw * shrink)
-        ch = int(ch * shrink)
 
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
     cx = int(head_cx - cw / 2.0)
