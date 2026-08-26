@@ -51,11 +51,15 @@ AZURE_OUTPUT_PREFIX = "card-art/jersey-test"
 
 JERSEY_DARK_BASE = (0x2E, 0x2E, 0x2A)
 
-# Real Fonde crest (basketball + "FONDE REC CENTER SENIOR BASKETBALL" +
-# stars), extracted from photos of the actual jersey Brandon provided
-# 2026-08-19 -- white ink isolated from the mesh fabric via brightness
-# threshold + morphological cleanup.
-CREST_ASSET_BLOB = "card-art/assets/fonde_crest_white.png"
+# "FONDE" wordmark-only asset -- cropped down from the original circular
+# crest (basketball + "REC CENTER"/"SENIOR BASKETBALL" + stars, extracted
+# from real jersey photos 2026-08-19) to just the "FONDE" lettering,
+# 2026-08-26. Brandon's call after the circular badge kept fighting size/
+# position across the roster: a single wide text line is much easier to
+# align uniformly than a tall multi-line circular badge, confirmed on
+# Cleo and Kiwi (deepest collar in the roster) before committing the
+# whole roster to it.
+CREST_ASSET_BLOB = "card-art/assets/fonde_wordmark_white.png"
 
 # Mesh weave texture, extracted from a plain (no ink) patch of the same
 # real jersey photo, 2026-08-20 -- a grayscale MULTIPLIER map (128 =
@@ -73,19 +77,17 @@ MESH_STRENGTH = 0.10
 # across the roster's locked framing, so anchoring to it (margin 0)
 # works without per-subject tuning.
 #
-# CREST_W_FRAC switched 2026-08-26 from "fraction of the jersey mask's
-# own bbox width" to "fraction of the whole image's width" -- the
-# roster shares a locked framing (every raw render is the same pixel
-# dimensions), so the image width is a reliable scale reference, unlike
-# the mask's bbox width. Confirmed on Kiwi: dense chin-shadow stippling
-# touches the jersey with literally no gap in the source art (true even
-# with NO morphological closing at all), inflating the detected mask's
-# bbox width -- which, sized off that inflated bw and bottom-anchored,
-# pushed the resulting oversized crest's top edge up into his face.
-# 0.40 of Cleo's own bbox width (709px, in a 1392px-wide image) is
-# 0.40*709/1392 = 0.204.
-CREST_W_FRAC = 0.204
-CREST_BOTTOM_MARGIN_FRAC = 0.04  # 0.0 clipped "SENIOR BASKETBALL" by a couple px on Cleo
+# CREST_W_FRAC is a fraction of the whole IMAGE's width, not the jersey
+# mask's own bbox width -- the roster shares a locked framing (every
+# raw render is the same pixel dimensions), so the image width is a
+# reliable scale reference, unlike the mask's bbox width (confirmed on
+# Kiwi with the old circular badge: chin-shadow stippling touching the
+# jersey with no gap inflated the detected bbox width, and a size
+# derived from that came out oversized). 0.30 -> 0.25, 2026-08-26:
+# 0.30 (tuned against Cleo/Kiwi only) ran into the arms on narrower-
+# torso subjects (Donnie, Kobe, E-Dub all showed a letter crowded by
+# or behind the arm) once tested against the full roster.
+CREST_W_FRAC = 0.25
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -254,24 +256,24 @@ def composite_jersey(payload: dict) -> dict:
     scale = cw / crest.width
     ch = int(crest.height * scale)
 
-    # Size stays FIXED across every subject (Brandon's call 2026-08-26:
-    # uniform logo size matters more than always showing it in full --
-    # if a deep collar means it runs past the frame, let it clip there
-    # rather than shrinking it smaller than everyone else's).
+    # Vertically CENTERED in the available chest space (collar to
+    # bottom) -- 2026-08-26, switched from the old circular badge's
+    # bottom-anchored placement now that it's a short single text line
+    # rather than a tall multi-line badge, so there's no need to anchor
+    # to the bottom edge to guarantee it fits. Confirmed on Cleo
+    # ("perfect" per Brandon) and Kiwi (deepest collar in the roster --
+    # centers cleanly in his much smaller available space, though
+    # Brandon flagged his specific source photo doesn't show enough
+    # torso below the collar for the result to read naturally low on
+    # his chest; that's a source-framing issue for a future regen, not
+    # a placement bug here).
     true_collar_y = _find_true_collar_y(mask_bool, x0, x1, y0, y1)
-    # 0.03 -> 0.10, 2026-08-26: Brandon's read on Anthony -- his crest
-    # is governed by this collar clamp (not the bottom anchor, which
-    # only applies when the collar is shallow), and the small margin
-    # kept it floating high on his chest instead of sitting naturally
-    # lower, clipping under the nameplate more like everyone else's.
-    top_margin = int(0.10 * bh)
-    bottom_margin = int(bh * CREST_BOTTOM_MARGIN_FRAC)
+    available_top = true_collar_y + int(0.05 * bh)
+    available_bot = y1 - int(0.05 * bh)
 
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
     cx = int(head_cx - cw / 2.0)
-    cy_bottom_anchored = y1 - ch - bottom_margin
-    cy_min = true_collar_y + top_margin
-    cy = max(cy_bottom_anchored, cy_min)
+    cy = int(available_top + (available_bot - available_top - ch) / 2.0)
     out_img.alpha_composite(crest_r, (cx, cy))
 
     buf = __import__("io").BytesIO()
