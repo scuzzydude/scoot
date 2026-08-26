@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T14:35:15.730Z
+  modified: 2026-08-26T15:29:59.170Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1287,12 +1287,54 @@ subject's jersey shape -- splitting "real per-subject jersey shape" from
 needing to re-warp a combined asset per subject (which is what
 distorted the logo into an oval back in round 5).
 
-**Card-review page count: 1 through 6 now** (see the naming-convention
-note above). Roster status for the front-card pipeline: 5 of 6 tested
-subjects clean (Cleo, Rufus, E-Dub, Anthony, Kiwi), Shipp blocked, 19
-roster members not yet run through this pipeline at all. E-Dub's minor
-mesh-seam-at-collar cosmetic issue (flagged round 9) is still open,
-unrelated to this round's fixes.
+**Round 11, 2026-08-26 -- two more precision fixes + first clean
+6-person batch with zero manual intervention.** Brandon: "edub it
+still not centered but better. Antohny logo need to go down. Go ahead
+and fix up those and then give me the next 6."
+- **E-Dub root cause, finally isolated:** `composite_jersey`
+  (raw-image darkness threshold) and `crop_to_slot.py` (post-rembg
+  alpha analysis) were each computing "head center" independently and
+  disagreed by ~10px (712.5 vs ~708-ish) -- small in absolute terms,
+  but enough for the crest to visibly drift off the crop's own center
+  once resized. Fixed by having `composite_jersey` return `head_cx` in
+  its result dict; the calling pipeline now writes it as a
+  `{serial}_head_cx.txt` sidecar next to the finalized figure/mask, and
+  `crop_to_slot.py` reads that exact value when present instead of
+  recomputing its own -- guarantees crest and crop agree exactly,
+  can't just get closer.
+- **Anthony:** his crest position was governed by the "stay clear of
+  the neck" collar clamp (`top_margin`), not the bottom anchor (which
+  only kicks in for a shallow collar) -- the clamp's small margin
+  (0.03 of jersey height) kept his crest floating high on his chest.
+  Bumped to 0.10 -- pushes it down to sit naturally, clipping more
+  under the nameplate like the rest of the roster already does, per
+  Brandon's standing "if cut off by frame, that's fine" call.
+
+Both verified against the real deployed pipeline for all 5 subjects.
+Committed `bccc74a`.
+
+**Next 6 run immediately after, first batch needing zero manual
+per-subject fixes:** Mike MP3 (34-DRAFT-07), Black (08), Brandon (09,
+the user's own likeness), Donnie (10), Bo (11), Kobe (12) -- sourced
+from the existing `34-ROSTER-PULID-{NAME}_figure.png` full-roster-batch
+blobs (all present, no missing/broken sources this time). One cosmetic
+note, not fixed: **Kobe's source pose has his hand raised near his
+chest**, so his fingers visually overlap part of the crest -- a
+pose/compositing clash specific to that one photo (the crest has a lot
+of transparent gaps between its outline/text strokes, so whatever's
+underneath shows through), not a detection or positioning bug. Everyone
+else landed clean on the first pass. Published on `card-review-7`
+(also shows the E-Dub/Anthony fix results).
+
+**Card-review page count: 1 through 7 now** (see the naming-convention
+note above). Roster status for the front-card pipeline: **11 of 25
+roster members now done** (Cleo, Rufus, E-Dub, Anthony, Kiwi, Mike MP3,
+Black, Brandon, Donnie, Bo, Kobe), Shipp still blocked (needs fresh
+PuLID source art), 13 roster members not yet attempted at all (KennyG,
+Reggie, McGhee, John, Rick, Frank, Chef, Zelle, Sheldon, Rodney, Nick,
+Jen, and Kevin who's roster member #25 outside the original 01-23
+numbered folders). E-Dub's minor mesh-seam-at-collar cosmetic issue
+(flagged round 9) is still open, unrelated to these rounds' fixes.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
