@@ -55,6 +55,7 @@ HAIR = HexColor("#D3D1C7")
 TIERS = {
     # Fields stay light enough that a solid black silhouette always reads.
     "Rookie":     ("#E3DFD2", "#1A1A18"),   # bone
+    "55+":        ("#E3DFD2", "#1A1A18"),   # bone -- general roster age tier
     "Brother":    ("#79C2AE", "#1A1A18"),   # teal
     "Sister":     ("#79C2AE", "#1A1A18"),
     "OG":         ("#EF9F27", "#1A1A18"),   # amber
@@ -69,6 +70,21 @@ DEFAULT_TIER = ("#E3DFD2", "#1A1A18")
 def tier_colors(tier):
     field, on_field = TIERS.get((tier or "").strip(), DEFAULT_TIER)
     return HexColor(field), HexColor(on_field)
+
+
+def fit_font_size(text, font, max_size, max_width, min_size=11):
+    """Largest size <= max_size at which `text` fits `max_width` in `font`,
+    never going below min_size. 2026-08-27: the nameplate handle was drawn
+    at a fixed size regardless of length -- a long handle ("The Nightmare")
+    runs into the tier label sharing the same bar. stringWidth scales
+    linearly with font size, so one measurement at max_size gives the exact
+    scale factor needed, no search loop required."""
+    if not text:
+        return max_size
+    w = pdfmetrics.stringWidth(text, font, max_size)
+    if w <= max_width:
+        return max_size
+    return max(min_size, max_width / w * max_size)
 
 
 def tint(hex_color, amount=0.12):
@@ -315,14 +331,21 @@ def draw_front(c, x, y, row, art_dir):
     c.setFillColor(field)
     c.rect(x + BAND, y + BAND + bar_h - 1.6, ART_W, 1.6, stroke=0, fill=1)
 
+    handle = row.get("handle", "").strip()
+    tier_text = row.get("tier", "").strip()
+    tier_x = x + TRIM_W - BAND - 8
+    tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 7.5) if tier_text else 0
+    handle_x = x + BAND + 8
+    handle_avail = (tier_x - tier_w - 10) - handle_x
+    handle_size = fit_font_size(handle, "CondBold", 19, handle_avail)
+
     c.setFillColor(PAPER)
-    c.setFont("CondBold", 19)
-    c.drawString(x + BAND + 8, y + BAND + 14, row.get("handle", "").strip())
+    c.setFont("CondBold", handle_size)
+    c.drawString(handle_x, y + BAND + 14, handle)
 
     c.setFillColor(field)
     c.setFont("Cond", 7.5)
-    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 19,
-                      row.get("tier", "").strip())
+    c.drawRightString(tier_x, y + BAND + 19, tier_text)
     c.setFillColor(MUTED)
     c.setFont("Mono", 6)
     c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 8, serial)
@@ -366,12 +389,18 @@ def draw_back(c, x, y, row, art_dir):
     hdr_h = 22.0
     c.setFillColor(INK)
     c.rect(ix, top - hdr_h, ART_W, hdr_h, stroke=0, fill=1)
+    handle = row.get("handle", "").strip()
+    tier_text = row.get("tier", "").strip()
+    tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 8) if tier_text else 0
+    handle_avail = (R - tier_w - 10) - L
+    handle_size = fit_font_size(handle, "CondBold", 13, handle_avail, min_size=8)
+
     c.setFillColor(PAPER)
-    c.setFont("CondBold", 13)
-    c.drawString(L, top - hdr_h + 7, row.get("handle", "").strip())
+    c.setFont("CondBold", handle_size)
+    c.drawString(L, top - hdr_h + 7, handle)
     c.setFillColor(field)
     c.setFont("Cond", 8)
-    c.drawRightString(R, top - hdr_h + 7.5, row.get("tier", "").strip())
+    c.drawRightString(R, top - hdr_h + 7.5, tier_text)
 
     # vitals
     c.setFillColor(SUBTLE)
