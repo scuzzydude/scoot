@@ -25,14 +25,26 @@ from rembg import remove, new_session
 from PIL import Image
 import numpy as np
 
-_session = None
+_sessions = {}
+
+# Per-serial rembg model override -- 2026-08-27, found on Anthony: the
+# default isnet-anime model (chosen because the source is comic
+# illustration, not a real photo) hallucinated a translucent gray
+# "ghost" smudge on his arm that survives the hard alpha threshold as
+# an opaque gray patch, reproducible (same artifact every rerun, not
+# noise). u2net doesn't have it on this image and its edges are close
+# enough for a comic-line-art cutout. Keyed by serial; falls back to
+# isnet-anime if absent, since that's still the better default for the
+# roster generally.
+MODEL_OVERRIDE = {
+    "34-DRAFT-05": "u2net",  # Anthony
+}
 
 
-def get_session():
-    global _session
-    if _session is None:
-        _session = new_session("isnet-anime")
-    return _session
+def get_session(model="isnet-anime"):
+    if model not in _sessions:
+        _sessions[model] = new_session(model)
+    return _sessions[model]
 
 
 def verify_rgba(img: Image.Image, label: str) -> None:
@@ -47,10 +59,11 @@ def verify_rgba(img: Image.Image, label: str) -> None:
         )
 
 
-def finalize_figure(raw_path: str, out_path: str) -> None:
+def finalize_figure(raw_path: str, out_path: str, serial: str = "") -> None:
     with open(raw_path, "rb") as f:
         input_bytes = f.read()
-    result = remove(input_bytes, session=get_session())
+    model = MODEL_OVERRIDE.get(serial, "isnet-anime")
+    result = remove(input_bytes, session=get_session(model))
 
     img = Image.open(__import__("io").BytesIO(result)).convert("RGBA")
     arr = np.array(img)
@@ -82,7 +95,7 @@ if __name__ == "__main__":
     figure_out = os.path.join(out_dir, f"{serial}_figure.png")
     mask_out = os.path.join(out_dir, f"{serial}_jersey_mask.png")
 
-    finalize_figure(raw_figure, figure_out)
+    finalize_figure(raw_figure, figure_out, serial=serial)
     fig_size = Image.open(figure_out).size
     finalize_jersey_mask(raw_mask, fig_size, mask_out)
 

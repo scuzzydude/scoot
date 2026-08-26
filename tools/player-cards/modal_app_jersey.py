@@ -94,6 +94,15 @@ CREST_W_FRAC = 0.42
 # Cleo's confirmed-"perfect" render (collar=366, wordmark top=511).
 CREST_GAP_FROM_COLLAR = 145
 
+# Small per-subject manual nudges (pixels, raw 1392-wide image space) on
+# top of the general 50/50 blend rule -- for cases like Donnie where
+# Brandon asked for a "slight" adjustment on that one card specifically,
+# not a global rule change (the blend already reads right on everyone
+# else tested). Keyed by serial; 0 if absent.
+CREST_CX_NUDGE = {
+    "34-DRAFT-10": 20,  # Donnie/"The Nightmare" -- "needs to move slight to right"
+}
+
 image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
@@ -267,7 +276,7 @@ def composite_jersey(payload: dict) -> dict:
     head_cx = _find_head_center_x(fig)
     if head_cx is None:
         head_cx = jersey_cx
-    head_cx = 0.5 * head_cx + 0.5 * jersey_cx
+    head_cx = 0.5 * head_cx + 0.5 * jersey_cx + CREST_CX_NUDGE.get(serial, 0)
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
