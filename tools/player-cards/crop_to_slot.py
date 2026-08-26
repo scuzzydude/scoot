@@ -25,6 +25,23 @@ agree. (2) anchoring the crop's BOTTOM at the figure's own bottom edge
 reach the target aspect, instead of padding both directions -- keeps
 the figure's bottom (and therefore its apparent scale) consistent
 across subjects.
+
+Rewritten again 2026-08-26 (same day): Brandon wanted every subject's
+own head-top vertically aligned to the same reference line -- the
+BOTTOM EDGE of the scoot glyph disc build_cards.py draws in the card's
+top-left corner (a fixed position, independent of the art). That disc
+sits at 15% down the art slot (see GLYPH_BOTTOM_FRAC below, derived
+directly from build_cards.py's own geometry constants). The old
+"extend upward until the aspect ratio is satisfied" approach gave each
+subject WHATEVER headroom the math happened to produce (varies with
+how wide their arm span is relative to their content height), which is
+why some subjects (Donnie, Mike, Bo, Kobe -- narrower content bboxes)
+already looked right while wider-armed subjects didn't. Now the crop's
+vertical placement is solved directly from the target line instead of
+being a side effect of the aspect fit -- see the head-top math below.
+This also drops the "natural_w" arm-margin sizing entirely: width is
+now purely derived from the required height, centered on head_cx, so
+a wide arm span may get cropped rather than dictating extra headroom.
 """
 import sys
 import os
@@ -42,6 +59,14 @@ OUT_W, OUT_H = 700, 1000
 # near the figure's own bottom edge -- see modal_app_jersey.py's
 # CREST_BOTTOM_MARGIN_FRAC) ends up hidden under the bar.
 NAMEPLATE_FRAC = 34.0 / 240.0
+
+# The scoot glyph disc's bottom edge, as a fraction down the art slot --
+# draw_glyph(x+BAND+22, y+TRIM_H-BAND-22, r=14) in build_cards.py, so:
+#   art_top = BAND + ART_H (top of the art slot, in points from the card's own bottom)
+#   glyph_bottom = (TRIM_H - BAND - 22) - 14
+#   GLYPH_BOTTOM_FRAC = (art_top - glyph_bottom) / ART_H
+# Recompute this if build_cards.py's glyph geometry constants change.
+GLYPH_BOTTOM_FRAC = 0.15
 
 
 def crop_one(serial, art_in, art_out):
@@ -72,37 +97,19 @@ def crop_one(serial, art_in, art_out):
         hys, hxs = np.where(alpha[y0:head_y1, :] > 10)
         head_cx = (int(hxs.min()) + int(hxs.max())) / 2.0 if len(hxs) else (x0 + x1) / 2.0
 
-    mx = int(w * 0.08)
-    my_top_min = int(h * 0.02)   # minimum headroom above the head
-
-    # In practice the content bbox (torso+arms) is always much WIDER,
-    # relative to its own height, than TARGET_ASPECT allows (a portrait
-    # card slot), so hitting the target aspect always means extending
-    # well above the head -- the "respect minimum headroom" branch
-    # below dominates every subject tested. Given that, final canvas
-    # height comes out to approximately h + my_top_min + my_bot, so
-    # solve directly for the my_bot that gives the bottom margin its
-    # required NAMEPLATE_FRAC share of that final height, rather than
-    # estimating from a pre-headroom-branch height that the branch then
-    # invalidates (confirmed: using the pre-branch estimate under-
-    # padded the bottom, and the crest ended up hidden under the bar).
-    my_bot = int(NAMEPLATE_FRAC * (h + my_top_min) / (1.0 - NAMEPLATE_FRAC))
-
-    natural_w = (x1 + mx) - (x0 - mx)
-    cx0, cx1 = head_cx - natural_w / 2.0, head_cx + natural_w / 2.0
-    cy1 = y1 + my_bot
-
-    cw = natural_w
-    ch = cw / TARGET_ASPECT
+    # Solve directly for the crop that puts head-top (y0) at
+    # GLYPH_BOTTOM_FRAC down the output AND gives the bottom margin its
+    # required NAMEPLATE_FRAC share, simultaneously:
+    #   cy0 = head_top - GLYPH_BOTTOM_FRAC * ch        (head-top target)
+    #   cy1 = y1 + NAMEPLATE_FRAC * ch                  (bottom margin target)
+    #   ch  = cy1 - cy0
+    # Substituting and solving for ch directly:
+    head_top = y0
+    ch = (y1 - head_top) / (1.0 - NAMEPLATE_FRAC - GLYPH_BOTTOM_FRAC)
+    cy1 = y1 + NAMEPLATE_FRAC * ch
     cy0 = cy1 - ch
-
-    # Respect the minimum headroom -- if the aspect-driven height
-    # doesn't reach it, extend further upward (bottom stays anchored).
-    if cy0 > y0 - my_top_min:
-        cy0 = y0 - my_top_min
-        ch = cy1 - cy0
-        cw = ch * TARGET_ASPECT
-        cx0, cx1 = head_cx - cw / 2.0, head_cx + cw / 2.0
+    cw = ch * TARGET_ASPECT
+    cx0, cx1 = head_cx - cw / 2.0, head_cx + cw / 2.0
 
     # PIL's crop() fills any out-of-bounds region with transparent (RGBA)
     # / zero (L) automatically, so the box can extend past the source
