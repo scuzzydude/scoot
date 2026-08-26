@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T13:04:23.849Z
+  modified: 2026-08-26T14:35:15.730Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1232,10 +1232,67 @@ artifact bug, unlike Kiwi has no already-fixed source render sitting in
 Blob to swap in. Needs a fresh PuLID generation pass with a cleaner
 source frame -- separate task from jersey compositing.
 
-**Card-review page count: 1 through 5 now** (see the naming-convention
+**Round 10, 2026-08-26 -- Brandon's direct follow-up on the round-9
+batch, three real fixes.** "Make Cleo's jersey the reference, make the
+fonde logo the same size across pictures... If cut off by frame, it's
+not necessary to show the whole logo... Edub off center, too low...
+Anthony need to extend torso and move logo down."
+1. **Uniform logo size, no shrink-to-fit.** Reverted round 9's
+   shrink-to-fit-a-deep-collar behavior entirely -- crest size is now
+   always fixed (image-width-relative), same physical size every
+   subject. Kiwi's deep collar means his crest now clips at the bottom
+   of the frame instead of reading smaller than everyone else's, which
+   is what Brandon explicitly asked for.
+2. **E-Dub "off center" root cause:** `crop_to_slot.py` (previously
+   scratch-only, promoted to a committed tool this round) centered the
+   final card crop on the FULL alpha-content bbox (arms included),
+   which drifts off the true head/chin line whenever the pose isn't
+   symmetric -- even though the crest itself was already correctly
+   centered on his chin by `composite_jersey`. Fixed by centering the
+   crop on the head region's own center instead (same signal
+   `_find_head_center_x` already uses), so crop and crest agree.
+3. **Anthony "logo too high / torso not extended" root cause:** the
+   old crop, needing extra height to reach the card's 0.7 portrait
+   aspect (torso+arms content is inherently much wider than that
+   aspect allows, true for every subject, confirmed by direct
+   calculation), added that extra padding SYMMETRICALLY above and
+   below the figure -- diluting how much of the frame a wider-posed
+   subject's figure fills, and pushing the crest higher up within the
+   visible frame. Fixed by anchoring the crop's bottom at the figure's
+   own bottom edge and extending upward only, keeping apparent scale
+   and logo vertical position consistent across subjects regardless of
+   how much total padding a given pose needs.
+   - Hit a real secondary bug while implementing this: the bottom
+     margin needs to clear `build_cards.py`'s nameplate bar, which
+     covers the bottom 14.2% of the art slot as an OVERLAY (not a
+     separate crop region) -- an initial version estimated the margin
+     from a pre-adjustment height that the headroom-extension step
+     then invalidated, under-padding the bottom and hiding the crest
+     under the bar. Fixed by solving directly for the margin that
+     gives the nameplate zone its required share of the FINAL crop
+     height.
+   - Also simplified: PIL's `Image.crop()` auto-fills out-of-bounds
+     regions with transparent/zero, so the manual letterbox-padding
+     step from earlier rounds was unnecessary complexity (and had its
+     own bug -- silently re-centering padding symmetrically after
+     clamping, discarding the intended bottom-anchor).
+
+Verified against the real deployed pipeline (both `composite_jersey`
+and `crop_to_slot.py`) for all 5 subjects. Committed `01c3d4d`.
+Published on `card-review-6`, which also answers Brandon's standing
+question ("why not build jersey+logo as one unit") directly: the logo
+already IS a separate fixed-size overlay now, independent of each
+subject's jersey shape -- splitting "real per-subject jersey shape" from
+"fixed-size logo stamped on top" gets uniform logo sizing without
+needing to re-warp a combined asset per subject (which is what
+distorted the logo into an oval back in round 5).
+
+**Card-review page count: 1 through 6 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: 5 of 6 tested
-subjects clean (Cleo, Rufus, E-Dub*, Anthony, Kiwi), Shipp blocked, 19
-roster members not yet run through this pipeline at all.
+subjects clean (Cleo, Rufus, E-Dub, Anthony, Kiwi), Shipp blocked, 19
+roster members not yet run through this pipeline at all. E-Dub's minor
+mesh-seam-at-collar cosmetic issue (flagged round 9) is still open,
+unrelated to this round's fixes.
 
 **MMS spec handed to the other (BigMo/email) session, 2026-08-24.**
 Brandon asked whether BigMo could eventually text him his lineup pic on
