@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T16:33:17.295Z
+  modified: 2026-08-26T16:56:11.925Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1425,7 +1425,36 @@ not attempted this round.
 
 Published on `card-review-9`.
 
-**Card-review page count: 1 through 9 now** (see the naming-convention
+**Round 14, same day -- the real scaling rule.** Brandon: "you need
+some kind of scaling rule for Fonde. Edcub, mp3, donnie, too wide. Bo,
+Kobe, mp3, too low... keep the same scaling of fonde size to the
+jersey width." Two root causes, both fixed:
+1. **Size:** switched `CREST_W_FRAC` from a fraction of the whole
+   IMAGE's width (fixed absolute size for everyone) to a fraction of
+   the JERSEY MASK's own bbox width per subject (0.42) -- auto-shrinks
+   for narrow-torso subjects instead of needing per-subject overrides.
+   Measured `bw` (jersey width) across all 11: Cleo 709, Rufus 721,
+   E-Dub 514, Anthony 756, Kiwi 825, Mike MP3 492, Black 731, Brandon
+   668, Donnie 566, Bo 492, Kobe 537 -- confirms the "too wide" trio
+   (E-Dub/MP3/Donnie) were genuinely among the narrowest.
+2. **Vertical position:** switched from "centered in the available
+   chest space (collar to bottom)" to a FIXED 145px gap below the true
+   collar line, calibrated directly from Cleo's confirmed-perfect
+   render (collar=366, wordmark top=511). Centering had been pushing
+   subjects with a lot of visible chest -- shallow collar, e.g. Bo/
+   Kobe/Mike MP3 all have collar_y≈315-331, among the shallowest --
+   too far down, since centering in a bigger available range puts the
+   midpoint further from the collar regardless of what actually reads
+   right. Kept a safety floor (`cy = min(cy, y1-ch-0.03*bh)`) so Kiwi's
+   deep collar doesn't push the wordmark fully off-canvas.
+
+Verified against the real deployed pipeline for all 11 subjects,
+including Cleo (confirmed still looks right after switching to
+jersey-width-relative sizing). Committed `0f66200`. Published on
+`card-review-10`. Kiwi's issue is unchanged (safety-floor-clamped, not
+actually fixed) -- still needs the source-art regen.
+
+**Card-review page count: 1 through 10 now** (see the naming-convention
 note above). Roster status for the front-card pipeline: **11 of 25
 roster members done, all on the current wordmark pipeline** (Cleo,
 Rufus, E-Dub, Anthony, Kiwi, Mike MP3, Black, Brandon, Donnie, Bo,
