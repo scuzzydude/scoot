@@ -85,12 +85,24 @@ image = (
 app = modal.App(name="scoot34-jersey-test", image=image)
 
 
+def _largest_dark_region(dark):
+    import cv2
+    import numpy as np
+
+    kernel = np.ones((9, 9), np.uint8)
+    closed = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, kernel)
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(closed, connectivity=8)
+    if n <= 1:
+        return None
+    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    return labels == largest
+
+
 def _find_jersey_mask(raw_img):
     """Boolean mask of THIS subject's own jersey -- largest solid-black
     connected region in the lower part of the frame. Traces whatever
     shape the AI actually drew, so it always matches (no distortion,
     no borrowed shape)."""
-    import cv2
     import numpy as np
 
     arr = np.array(raw_img.convert("RGB"))
@@ -103,13 +115,31 @@ def _find_jersey_mask(raw_img):
     H = dark.shape[0]
     dark[: int(H * 0.42), :] = 0
 
-    kernel = np.ones((9, 9), np.uint8)
-    closed = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, kernel)
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(closed, connectivity=8)
-    if n <= 1:
+    return _largest_dark_region(dark)
+
+
+def _find_head_center_x(raw_img):
+    """Horizontal center of the hair/head region (largest dark blob in
+    the top 42% of the frame) -- used to center the crest under the
+    chin. 2026-08-26: Brandon caught that centering on the jersey
+    mask's own bbox drifts off the true chin line on an asymmetric
+    shoulder/arm pose (confirmed on Cleo -- the jersey bbox center sat
+    ~46px right of where his chin actually is); the head/hair blob's
+    own center is a much more reliable proxy for a front-facing subject."""
+    import numpy as np
+
+    arr = np.array(raw_img.convert("RGB"))
+    lum = 0.299 * arr[..., 0] + 0.587 * arr[..., 1] + 0.114 * arr[..., 2]
+    dark = (lum < 60).astype(np.uint8) * 255
+
+    H = dark.shape[0]
+    dark[int(H * 0.42):, :] = 0
+
+    head = _largest_dark_region(dark)
+    if head is None:
         return None
-    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    return labels == largest
+    ys, xs = np.where(head)
+    return (int(xs.min()) + int(xs.max())) / 2.0
 
 
 @app.function(timeout=120, secrets=[modal.Secret.from_name("azure-blob-creds")])
@@ -171,10 +201,16 @@ def composite_jersey(payload: dict) -> dict:
 
     out_img = Image.fromarray(a.astype(np.uint8), "RGBA")
 
-    # Crest, centered on the mask's own bbox.
+    # Crest -- horizontally centered under the CHIN (the head/hair
+    # region's own center), not the jersey mask's bbox center. Still
+    # anchored to the mask's own bottom edge vertically.
     ys, xs = np.where(mask_bool)
     x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
     bw, bh = x1 - x0, y1 - y0
+
+    head_cx = _find_head_center_x(fig)
+    if head_cx is None:
+        head_cx = x0 + bw / 2.0
 
     crest_bytes = container.download_blob(CREST_ASSET_BLOB).readall()
     crest = Image.open(__import__("io").BytesIO(crest_bytes)).convert("RGBA")
@@ -182,7 +218,7 @@ def composite_jersey(payload: dict) -> dict:
     scale = cw / crest.width
     ch = int(crest.height * scale)
     crest_r = crest.resize((cw, ch), Image.LANCZOS)
-    cx = x0 + (bw - cw) // 2
+    cx = int(head_cx - cw / 2.0)
     cy = y1 - ch - int(bh * CREST_BOTTOM_MARGIN_FRAC)
     out_img.alpha_composite(crest_r, (cx, cy))
 
