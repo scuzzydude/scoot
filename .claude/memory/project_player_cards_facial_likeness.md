@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T19:02:25.636Z
+  modified: 2026-08-26T19:20:39.843Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1664,3 +1664,63 @@ was a source-asset swap (existing blob → existing blob), not a code
 change; `roster24.csv`/`art_all24` outputs live in this session's
 scratchpad only, not the repo (matches this project's existing
 convention of keeping roster CSVs as scratch/test data, not committed).
+
+**Round 19, 2026-08-27 — FONDE crest dropped entirely (plain black
+jerseys), plus a real fill-contamination bug fixed.** Brandon, visibly
+frustrated after ~8 rounds of crest-position tuning: "I'm frustrated
+with the FONDE position, I'm leaning toward just removing it and have
+black jerseys... before the faces got messed up the only problem was
+the Fonde logo." Added `APPLY_CREST = False` in `modal_app_jersey.py`
+— short-circuits before the crest-compositing block and returns the
+base-color+mesh jersey with no wordmark. The crest-placement code
+itself (bbox/collar/head_cx math) is kept, not deleted, in case it's
+wanted again later — just dormant behind the flag.
+
+**Second complaint, same message: "shadow effect on Sheldon, Rodney,
+Chef, John around chin/beards."** Investigated each individually rather
+than assuming one cause:
+- **Chef and John: real, confirmed bug.** A dark beard/goatee touching
+  the jersey with no gap in the source art gets swept into the jersey's
+  own largest-connected-dark-region (the same mask `_find_jersey_mask`
+  uses for the fill), so the base-color+mesh fill painted directly onto
+  the beard — reading as a gray shadow eating into the chin/mouth. Same
+  contamination class as Kiwi's chin-shadow bug from round 9, but this
+  time it corrupts the actual pixel fill, not just a crest-size
+  calculation. **Fix: this exact problem was already solved once before
+  in this project**, on the old segformer-based mask version (commit
+  `bc63da7`, "clip the garment mask to below the collar's V-notch...
+  before recolor/texture ever runs") — reapplied the identical pattern
+  to the current darkness-threshold mask: call the already-existing
+  `_find_true_collar_y()` (previously only used for crest vertical
+  placement) right after `_find_jersey_mask()` returns, and zero out
+  `mask_bool` above that line before the blur/matte/fill pipeline ever
+  touches it. Verified clean on Chef and John (before/after crops
+  published).
+- **Rodney: turned out already clean** on inspection — no beard-bleed
+  present even before the fix (his beard has enough separation from the
+  jersey). The collar-clip fix left a small cosmetic dark notch artifact
+  at the base of his V-neck, not chased further this round.
+- **Sheldon: confirmed NOT a compositing bug at all.** Checked his
+  original AI-generated portrait (`34-ROSTER-PULID-SHELDON_figure.png`)
+  before any jersey compositing runs — the dark gradient under his
+  chin/neck is already there, baked in as the model's own dramatic
+  chiaroscuro shading (same style choice used roster-wide, just
+  extending further down his neck than most other subjects). The
+  collar-clip fix can't touch this since it's not jersey-mask
+  contamination, it's neck/skin shading in the source image itself.
+  Flagged as needing a source-art regen if Brandon wants it addressed,
+  not attempted this round.
+
+Reran the ENTIRE 24-person roster (not just the 4 flagged) through the
+updated pipeline in one batch to confirm both fixes hold roster-wide
+with no regressions — zero manual per-subject intervention needed,
+confirmed clean across all 24 cards. Committed `1acc6a5`. Published
+`fairchildlabs.org/card-review-15/`.
+
+**Status unchanged on roster completeness:** 24 of 25 have a finished
+front card (Shipp still blocked). The crest-position friction that
+drove ~8 tuning rounds is now moot — plain black jerseys have no
+per-subject placement problem to solve. Remaining open items: Sheldon's
+baked-in neck shading (needs regen, not a priority unless Brandon asks),
+Rodney's minor V-neck notch, Kevin's V3 pick still not locked, Shipp's
+source-art block.
