@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T13:22:33.058Z
+  modified: 2026-08-27T14:03:25.884Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1907,6 +1907,41 @@ changes on reprint. Applied to both front and back's serial-display
 spot; the internal `serial` variable (art filenames, `short_code()`
 input) is untouched. Committed `27214a3`, published
 `fairchildlabs.org/card-review-21/`.
+
+**Round 26, same day — Shipp unblocked, 25/25 roster complete.** Brandon:
+"Shipp fix." Root cause (documented since round 14): every usable frame
+in Shipp's source folder (`~/Nick/work/people/02_SHIPP/`) that had been
+tried before had a burned-in red "SHIPP" caption baked into the video,
+rendering straight through into every generation attempt. Re-inspected
+all 17 raw frames in that folder directly rather than reusing an old
+subject photo — `f_0017.jpg` is clean (no caption), camera-facing,
+waist-up. Ran him through the exact locked pipeline the rest of the
+roster uses: `modal_app_kontext_pulid.py`'s `PulidKontextGenerator`
+(seed 552011, `STYLE_NOIR` + `FRAMING_MALE` + `EXPRESSION_SERIOUS`
+prompts recovered from the round-18-era session transcript since they'd
+never been promoted out of scratch scripts), then
+`modal_app_jersey.py`'s `composite_jersey` → `finalize_card.py` →
+`crop_to_slot.py` → `build_cards.py`. **Zero code changes needed** —
+first-attempt clean generation, no caption, good likeness; the current
+pipeline (erosion-based beard fix, collar-seam fix, QR/hash mark,
+edition label) just worked on a new subject unchanged.
+
+Assigned serial `34-DRAFT-02` — the gap that's been sitting in the
+`34-DRAFT-NN` sequence since round 1 (Cleo=01, next real card=03) was
+always Shipp's reserved slot, matching his `02_SHIPP` source-folder
+number. Added to `roster24.csv` (55+ tier, Guard — no stronger signal
+available on those fields for him yet). No `fairchildlabs.org/card-
+review-*` round or memory before this one ever actually closed his
+case despite being flagged repeatedly (rounds 14, 18) — always check
+the subject's raw source folder directly for a caption-free frame
+before assuming a fresh photo shoot is needed.
+
+Published `fairchildlabs.org/card-review-22/` — **first review page
+covering all 25 roster members** (previous rounds were always 24,
+Shipp missing). Front card work is now genuinely complete across the
+whole roster. Next: the back of the card (see round 24's note above —
+stats/vitals still placeholder, side-pose light-jersey art never
+generated, no back card reviewed yet).
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
