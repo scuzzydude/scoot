@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T13:18:54.182Z
+  modified: 2026-08-27T13:22:33.058Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1894,6 +1894,19 @@ hasn't reviewed a single back card yet, unlike the front's many review
 rounds. `feedback_prefer_server_hosting` was also reinforced this round
 (2026-08-27) — see [[feedback_prefer_server_hosting]] — always publish
 a link, even for a one-image spot check, never send a raw file.
+
+**Round 25, same day — printed serial replaced with edition label.**
+Brandon caught a real gap in round 24's own design intent: the card's
+small-print text still showed the real `34-DRAFT-NN` serial, which
+defeats the entire point of hashing the serial for the QR (anyone
+holding one card could read the next card's serial straight off the
+face, no scanning needed). New `edition_label(row)` prints
+`34-<edition>` (from the CSV's already-existing `edition` column) in
+that spot instead — identical on every card in a print run, only
+changes on reprint. Applied to both front and back's serial-display
+spot; the internal `serial` variable (art filenames, `short_code()`
+input) is untouched. Committed `27214a3`, published
+`fairchildlabs.org/card-review-21/`.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
