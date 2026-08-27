@@ -163,6 +163,13 @@ JERSEY = {
 }
 _JERSEY_CACHE = {}
 
+# Full display name for the back card's vitals line -- "home" in the
+# roster CSV is the short gym key ("Fonde", "Judson"), not what gets
+# printed.
+HOME_LABELS = {
+    "Fonde": "Fonde Rec Center",
+}
+
 
 def _hex_rgb(h):
     h = h.lstrip("#")
@@ -234,6 +241,57 @@ def player_art(serial, art_dir, side, legacy_suffix):
         return v
     legacy = os.path.join(art_dir, f"{serial}_{legacy_suffix}.png")
     return legacy if os.path.exists(legacy) else None
+
+
+_HEAD_CROP_CACHE = {}
+
+
+def head_crop(serial, art_dir, side, panel_w, panel_h):
+    """Tight head-and-shoulders crop of the jersey_variant art, for the
+    back card's small side panel -- headshot framing with the jersey
+    just visible at the shoulders, not the same waist-up front pose
+    shrunk down. Crops relative to the figure's own alpha-content bbox
+    (not fixed pixels) so it generalizes across the roster's real,
+    if small, per-subject scale variation."""
+    src = jersey_variant(serial, art_dir, side)
+    if not src:
+        return None
+    key = (serial, side, panel_w, panel_h)
+    if key in _HEAD_CROP_CACHE:
+        return _HEAD_CROP_CACHE[key]
+
+    from PIL import Image
+    import numpy as np
+
+    im = Image.open(src).convert("RGBA")
+    alpha = np.array(im)[..., 3]
+    ys, xs = np.where(alpha > 10)
+    if len(ys) == 0:
+        _HEAD_CROP_CACHE[key] = None
+        return None
+    y0, y1 = int(ys.min()), int(ys.max())
+    content_h = y1 - y0
+
+    # head_cx from just the top band (head only, not the wider
+    # shoulders/arms below) -- more reliable than the full-figure
+    # bbox center on an asymmetric pose.
+    head_band_bottom = y0 + int(content_h * 0.35)
+    band_xs = np.where(alpha[y0:head_band_bottom].max(axis=0) > 10)[0]
+    head_cx = (band_xs.min() + band_xs.max()) / 2.0 if len(band_xs) else im.width / 2.0
+
+    crop_top = max(0, y0 - int(content_h * 0.02))
+    crop_bottom = min(im.height, y0 + int(content_h * 0.50))
+    crop_h = crop_bottom - crop_top
+    crop_w = crop_h * (panel_w / panel_h)
+    x0 = int(round(head_cx - crop_w / 2.0))
+    x1 = int(round(head_cx + crop_w / 2.0))
+
+    out_dir = os.path.join(art_dir, ".variants")
+    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, f"{serial}_{side}_head.png")
+    im.crop((x0, crop_top, x1, crop_bottom)).save(out)
+    _HEAD_CROP_CACHE[key] = out
+    return out
 
 
 ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
@@ -473,25 +531,23 @@ def draw_back(c, x, y, row, art_dir):
     c.setFont("Cond", 8)
     c.drawRightString(R, top - hdr_h + 7.5, tier_text)
 
-    # vitals
+    # vitals -- just the home gym for now (position data isn't real yet,
+    # and the handle/name is already up in the header)
     c.setFillColor(SUBTLE)
     c.setFont("Cond", 7)
-    vitals = " · ".join(v for v in [row.get("name", "").strip(),
-                                    row.get("position", "").strip(),
-                                    row.get("home", "").strip()] if v)
+    vitals = HOME_LABELS.get(row.get("home", "").strip(), row.get("home", "").strip())
     c.drawString(L, top - hdr_h - 12, vitals)
 
-    # side-pose panel
+    # side-pose panel -- headshot crop, jersey just visible at the
+    # shoulders, no black fill behind it (2026-08-27 feedback)
     pw, ph = 52.0, 62.0
     px, py = L, top - hdr_h - 20 - ph
-    c.setFillColor(INK)
-    c.rect(px, py, pw, ph, stroke=0, fill=1)
-    side = player_art(serial, art_dir, "light", "back")
+    side = head_crop(serial, art_dir, "light", pw, ph)
     if side:
         c.drawImage(side, px, py, width=pw, height=ph,
                     mask="auto", preserveAspectRatio=False, anchor="c")
     else:
-        draw_placeholder_figure(c, px, py, pw, ph, PAPER)
+        draw_placeholder_figure(c, px, py, pw, ph, INK)
     c.setStrokeColor(INK); c.setLineWidth(1.2)
     c.rect(px, py, pw, ph, stroke=1, fill=0)
 
