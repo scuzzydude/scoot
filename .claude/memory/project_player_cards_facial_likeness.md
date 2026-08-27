@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T14:03:25.884Z
+  modified: 2026-08-27T15:04:04.829Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1942,6 +1942,81 @@ Shipp missing). Front card work is now genuinely complete across the
 whole roster. Next: the back of the card (see round 24's note above —
 stats/vitals still placeholder, side-pose light-jersey art never
 generated, no back card reviewed yet).
+
+**Round 27, 2026-08-27 — new source video (`NickFondeBrothers_v3.mp4`), 7
+new roster members found and shipped, 25→32 total.** Brandon copied a new
+v3 video ("superset of v2"), asked to archive it and run the breakdown
+on it, skipping existing roster members, generating cards for anyone
+new. Explicitly said not to block on per-player Q&A while he was away.
+
+**v3 is NOT v2 + appended footage — it's substantially re-edited.**
+Verified directly: spot-checked timestamps matching v2's original
+`roster.md` windows (e.g. Rick @402s, Frank @424s) and found completely
+different people there in v3. The old timing map was useless; redid the
+breakdown from scratch — 1fps frame extraction (615 frames) across the
+whole 10:15 runtime, contact-sheet visual scan (far faster and more
+reliable than tesseract OCR, which was slow — ~40min projected for the
+full pass — and noisy on busy gym-crowd backgrounds; OCR results cross-
+checked afterward as a safety net, confirmed no missed names). Everyone
+from ~365s onward matched existing roster captions exactly (Brandon,
+Donnie, Bo, KennyG, Reggie, Kevin, McGhee, John, Rick, Chef, Zelle,
+Sheldon, Rodney) — new material was concentrated entirely in the first
+~170s, before the footage settles into already-known names (Anthony,
+Cleo, Shipp, Rufus, EDub).
+
+**7 new people found: Jennifer, AJ, Ray, Jerry, Debra, Tim, Marko.**
+Confirmed each is genuinely new, not a rename/duplicate — specifically
+checked "Jennifer" against the existing roster's "Jen" (34-DRAFT-24):
+completely different woman, different hair, different video source
+entirely (Jen's source photo carries a "TEXAS HISTORIAL RECORD" watermark
+from an unrelated shoot). Assigned continuing serials 34-DRAFT-26
+through 32, tier 55+ (no stronger data available), position alternated
+Guard/Forward arbitrarily.
+
+**New extraction technique: pillarbox cropping instead of frame-hunting.**
+Unlike the rest of the video (brief drop-in captions with clean gaps
+between them, e.g. Shipp's fix), these 7 people's clips are individually-
+shot vertical phone video, pillarboxed into the 16:9 frame, with a
+PERSISTENT name caption for the entire clip — every single 1fps sample
+across each person's whole window had the caption, no gap existed to
+exploit. But the caption sat entirely within the black pillarbox bars
+(auto-detected via column-brightness scan, identical `[656:1263]` px
+window on all 7 clips, zero overlap with actual footage) — cropped to
+just the real content instead of hunting for a clean frame. Generalizes:
+if a future subject has a fully-persistent caption, check whether it's
+sitting in unused letterbox/pillarbox space before assuming no fix
+exists.
+
+**Pipeline ran unchanged, zero code changes needed** — same PuLID+noir
+generation (seed 552011, FRAMING_MALE/FRAMING_FEMALE, EXPRESSION_SERIOUS
+recovered from the round-18-era transcript), same jersey/collar-seam
+fix, same QR/edition-label front card. One wrinkle: the cropped identity
+photos are narrower/taller (608×1080 portrait) than the rest of the
+roster's source photos, so Kontext's output aspect followed suit
+(752×1392 vs the usual ~1400×2000-ish) — `crop_to_slot.py`'s math
+produced large negative-coordinate crops to reach the target aspect,
+which looked alarming in the log output but rendered correctly (source
+PNGs have transparent margins, so the "out of bounds" crop is just extra
+whitespace, not corruption). Confirmed visually on all 7, no fix needed.
+
+**Real open issue, flagged not fixed: Tim (34-DRAFT-31) has a speckle/
+noise artifact** on his shoulder from the `rembg` cutout step. Tried the
+same fix that worked for Anthony (`MODEL_OVERRIDE` → `u2net`) — made it
+dramatically worse (lost his entire torso, kept only a floating head),
+reverted immediately. Left as a known cosmetic defect, not a broken
+card — his face/likeness reads fine. Worth a fresh look in a later round
+with more time, not urgent.
+
+Published **`fairchildlabs.org/card-review-23/`** — current shipped
+state, 32-card roster. `v3` video itself archived to Azure blob storage
+at `stevearchive10723/media/source-video/NickFondeBrothers_v3.mp4`
+(Google Drive copy explicitly deferred by Brandon — "not hooked up
+yet"). All new-people scratch files (clean-cropped identity photos, SAS
+URL lists, generation scripts) live in this session's own scratchpad
+(`cd96f0f9-30dc-43a1-9570-e939a94424ad`) under `v3_breakdown/` and
+`new_people*` — not the repo, matching this project's existing
+convention that roster CSVs/scratch generation scripts stay out of
+version control.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
