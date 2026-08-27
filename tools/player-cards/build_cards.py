@@ -52,6 +52,7 @@ GHOST_RULE = HexColor("#E8E4D8")
 MUTED = HexColor("#8A8880")
 SUBTLE = HexColor("#5F5E5A")
 HAIR = HexColor("#D3D1C7")
+SLATE = HexColor("#6B6960")
 
 # tier -> (field colour, ink-on-field colour)
 TIERS = {
@@ -213,16 +214,12 @@ def jersey_variant(serial, art_dir, side):
     a = np.array(im).astype(np.float32)
     m = (np.array(mk).astype(np.float32) / 255.0)[..., None]
 
-    lum = (0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]) / 255.0
-    lo, hi = np.percentile(lum[m[..., 0] > 0.5], [10, 90]) if (m > 0.5).any() \
-        else (0.0, 1.0)
-    t = np.clip((lum - lo) / max(hi - lo, 1e-3), 0.0, 1.0)[..., None]
-
+    # Flat fill, no luminance-based shading -- 2026-08-27 feedback: the
+    # mesh/shading blend doesn't read at the back panel's small size,
+    # just a flat light jersey with the figure's own ink linework
+    # providing the only shading.
     base = np.array(_hex_rgb(JERSEY[side][0]), np.float32)
-    shade = np.array(_hex_rgb(JERSEY[side][1]), np.float32)
-    recol = shade + (base - shade) * t
-
-    a[..., 0:3] = a[..., 0:3] * (1 - m) + recol * m
+    a[..., 0:3] = a[..., 0:3] * (1 - m) + base[None, None, :] * m
 
     out_dir = os.path.join(art_dir, ".variants")
     os.makedirs(out_dir, exist_ok=True)
@@ -531,30 +528,38 @@ def draw_back(c, x, y, row, art_dir):
     c.setFont("Cond", 8)
     c.drawRightString(R, top - hdr_h + 7.5, tier_text)
 
-    # vitals -- just the home gym for now (position data isn't real yet,
-    # and the handle/name is already up in the header)
+    # vitals -- real first name + home gym (position data isn't real
+    # yet, and the handle's already up in the header)
     c.setFillColor(SUBTLE)
     c.setFont("Cond", 7)
-    vitals = HOME_LABELS.get(row.get("home", "").strip(), row.get("home", "").strip())
+    home_label = HOME_LABELS.get(row.get("home", "").strip(), row.get("home", "").strip())
+    vitals = " · ".join(v for v in [row.get("name", "").strip(), home_label] if v)
     c.drawString(L, top - hdr_h - 12, vitals)
 
     # side-pose panel -- headshot crop, jersey just visible at the
-    # shoulders, no black fill behind it (2026-08-27 feedback)
+    # shoulders. Slate background (not black, not white) so the flat
+    # light jersey/ink linework actually has contrast to read against
+    # (2026-08-27 feedback -- plain white let it disappear).
     pw, ph = 52.0, 62.0
     px, py = L, top - hdr_h - 20 - ph
+    c.setFillColor(SLATE)
+    c.rect(px, py, pw, ph, stroke=0, fill=1)
     side = head_crop(serial, art_dir, "light", pw, ph)
     if side:
         c.drawImage(side, px, py, width=pw, height=ph,
                     mask="auto", preserveAspectRatio=False, anchor="c")
     else:
-        draw_placeholder_figure(c, px, py, pw, ph, INK)
+        draw_placeholder_figure(c, px, py, pw, ph, PAPER)
     c.setStrokeColor(INK); c.setLineWidth(1.2)
     c.rect(px, py, pw, ph, stroke=1, fill=0)
 
-    # detail rows beside the panel
+    # detail rows beside the panel -- "aka" replaces "signature" (not
+    # used); blank for most people, populated for anyone with a real
+    # known nickname beyond their card handle (e.g. KennyG -> "The
+    # Snake", Black -> "B1").
     dx = px + pw + 10
     dy = top - hdr_h - 28
-    for label, value in (("Signature", row.get("signature", "")),
+    for label, value in (("Aka", row.get("aka", "")),
                          ("Joined", row.get("joined", ""))):
         c.setFillColor(MUTED); c.setFont("Cond", 6.5)
         c.drawString(dx, dy, label.lower())
