@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T19:42:09.058Z
+  modified: 2026-08-27T19:46:18.717Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2178,6 +2178,13 @@ each time" — see [[feedback_increment_card_reviews]]. Rounds 30-32 had
 all republished `card-review-26` in place across 3 iterations; this
 round published as a fresh `card-review-27` instead, and every round
 from here on should do the same regardless of how small the fix is.
+
+**Round 34, same day — stat table background to gray.** Brandon: make
+the stat area background gray. Was `#E3DFD2` (tan/bone — coincidentally
+the same hex as the front card's tier accent field color), changed to
+neutral `#D8D7D3`. Committed `969abc6`, published
+`fairchildlabs.org/card-review-28/` (new number per the round-33
+convention).
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
