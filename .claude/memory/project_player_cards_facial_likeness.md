@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T18:06:58.850Z
+  modified: 2026-08-27T19:33:13.035Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2122,6 +2122,37 @@ CSV's short `home` key ("Fonde") to the full display string ("Fonde Rec
 Center") for the vitals line. Committed `f5fb235`, republished
 `fairchildlabs.org/card-review-26/` in place (same URL, updated
 content).
+
+**Round 32, same day — back panel round 2: slate bg, flat jersey, aka
+field, real names back in vitals.** Brandon: the shaded jersey coloring
+doesn't work at the headshot's small size (should be flat, just
+outlined in black), add a slate gray panel background; drop
+"signature" entirely; add "aka" and show the real first name for
+people whose card handle is a persona nickname (examples given:
+Brandon/Rocket Man, Donnie/Nightmare, KennyG whose aka is "The Snake";
+also Black whose aka is "B1"); explicit disambiguation that Kiwi's real
+first name is *also* "Kenny" — two different real people named Kenny
+on this roster (Kiwi and KennyG), not a duplicate/typo.
+
+**Fixes:** `jersey_variant()`'s "light" side now flat-fills
+(`JERSEY["light"][0]` only, no luminance-percentile shading blend) —
+the shading was tuned for full front-card size and just muddied the
+small back panel. New `SLATE` palette constant (`#6B6960`) fills the
+side-panel background so the flat white jersey/ink linework has
+contrast against something other than plain white paper. `roster24.csv`
+gained an `aka` column (replacing the always-blank `signature` column
+in place) — populated `34-DRAFT-13` (KennyG) → "The Snake",
+`34-DRAFT-08` (Black) → "B1", blank elsewhere. Cleaned up `name` field
+for Kiwi (`34-DRAFT-06`) and KennyG (`34-DRAFT-13`) to both read plain
+"Kenny" (was messy "Kenny (Kiwi)" / "KennyG (Snake)" parenthetical
+strings). Vitals line now reads `{name} · {home_label}` (e.g. "Kenny ·
+Fonde Rec Center", "Brandon · Fonde Rec Center") instead of just the
+home gym alone.
+
+Committed `07abb4a`, republished `fairchildlabs.org/card-review-26/`
+in place (same URL). Verified KennyG and Black's aka values render
+correctly, and that Kiwi/KennyG's shared real first name doesn't read
+as a mistake on either card.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
