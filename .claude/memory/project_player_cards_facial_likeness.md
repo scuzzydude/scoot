@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-26T19:43:41.988Z
+  modified: 2026-08-27T11:57:13.233Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1782,3 +1782,54 @@ prefer asking clarifying questions as plain chat text over the
 structured multi-choice tool; it seems to break his flow. Doesn't
 necessarily generalize to other projects/sessions, but worth defaulting
 to plain-text questions for the rest of this player-cards track.
+
+**Round 22 (informal numbering — scratch scripts call it "r22"),
+2026-08-26/27 — session got OOM-killed mid-batch, resumed and completed
+2026-08-27.** Continuing past round 20/21 (nameplate font-fit + tier
+data, both already committed), the same session started replacing round
+19's collar-clip beard/mesh-bleed fix with a different technique in
+`modal_app_jersey.py`: `_largest_dark_region()` gained an `open_kernel`
+param that erodes first to sever thin/moderate bridges (beard touching
+jersey with no real gap), picks the largest surviving connected
+component, then dilates back within the ORIGINAL dark pixels to restore
+true jersey edges without shape loss — applied at mask-detection time
+(`open_kernel=17`) rather than as a post-hoc clip. Validated clean on 5
+test cases, then launched the full 24-person regeneration. **This exact
+batch is what triggered the OOM crash described in
+[[infra_dreamlab_oom_reboot_2026_08_24]]** — the finalize step
+launched all 24 `finalize_card.py` calls concurrently, which killed the
+Claude Code session itself partway through (only 6/24 finalized:
+01/Cleo, 11/Bo, 13/KennyG, 15/McGhee, 17/Rick, 20/Zelle).
+
+**Resumed cleanly the next day, 2026-08-27, from surviving scratch state**
+(raw jersey composites for all 24 had already made it to Azure blob +
+local scratch before the kill — only the finalize/crop/build steps were
+incomplete). Finished the remaining 18 `finalize_card.py` calls
+**sequentially this time** (~8s/card, zero memory pressure), ran
+`crop_to_slot.py` and `build_cards.py` for the full 24 against
+`roster24.csv` (already had the final tier/handle data from round 20/21:
+OG = Cleo/Frank/McGhee/Reggie, 55+ = the other 20, Nick's handle
+Trey-Up). Spot-checked Chef/John/Rodney (the round-19 beard-bleed test
+cases) — clean on all three, no seam or shadow contamination, erosion
+approach appears to hold as well as or better than the collar-clip
+version it replaces (no sign of Rodney's old "small cosmetic dark notch"
+artifact at this resolution, not yet pixel-verified). Front sheets sent
+to Brandon for review via SendUserFile (not yet published to
+fairchildlabs.org, not yet committed — `modal_app_jersey.py`'s
+`open_kernel` change is still uncommitted in the working tree pending
+his verdict).
+
+**Shipped 2026-08-27:** Brandon confirmed (noted review-16 "still has the
+shadows") and asked for a new review page. Committed the `open_kernel`
+erosion fix (`8e36b23`) and published **`fairchildlabs.org/card-review-17/`**
+(sheets renamed to the established `sheet_{first}-{last}.png` convention:
+01-07, 08-13, 14-19, 20-25; www-data ownership). Round 22/review-17 is
+now the current shipped state — supersedes card-review-16 (which still
+had the beard/shadow bug on Chef/John). PDF/sheets/scratch files live in
+`/tmp/claude-1000/-home-brandon-scoot/5e56fcf2-315e-4fe3-9a33-8b836065384a/scratchpad/cards6/`
+(`cards_r22.pdf`, `sheet_r22-*.png`, `art_r22/`, `art_r22_crop/`,
+`raw_r22/`) — that's a different session's scratchpad than whatever
+session continues this work next, so if picking this up in a fresh
+session, don't assume the default scratchpad has these files; the path
+above is the one that matters until this round ships and gets cleaned
+up.

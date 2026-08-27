@@ -21,8 +21,8 @@
 - [Prod DB migrations — never db:push](infra_prod_db_migrations.md) — db:push wants to DROP the connect-pg-simple session table; use ALTER TABLE in the postgres container. Prod DB on host :5433; app bind-mounts repo + tsx watch (code live, no rebuild)
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
-- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 25-person roster, 24 done via PuLID-FLUX+Kontext; first 6 full front-cards built (card-review-1), Shipp caption-text bug still open
+- [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 24/25 roster shipped, card-review-17 current (erosion-based beard/shadow fix, supersedes -16); Shipp caption-text bug still open
 - [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
 - [BigMo search now via scoot-pmp](bigmo_search_scoot_pmp.md) — self-hosted SearXNG+LLM synthesis replaces dead Perplexity/Tavily/Gemini; systemd unit + shim, both on dreamlab
-- [dreamlab OOM reboot 2026-08-24](infra_dreamlab_oom_reboot_2026_08_24.md) — 3.8GB box, no swap, 162MB session transcript; SSH hung, manual Azure restart; no data lost
+- [dreamlab OOM — reboot 08-24, recurred 08-27](infra_dreamlab_oom_reboot_2026_08_24.md) — 3.8GB box; 08-27 OOM-killed `claude` directly + searxng crash-loop; fixed via mem_limit/oom_score_adj on searxng container
