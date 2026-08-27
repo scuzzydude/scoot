@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T19:33:13.035Z
+  modified: 2026-08-27T19:42:09.058Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2153,6 +2153,31 @@ Committed `07abb4a`, republished `fairchildlabs.org/card-review-26/`
 in place (same URL). Verified KennyG and Black's aka values render
 correctly, and that Kiwi/KennyG's shared real first name doesn't read
 as a mistake on either card.
+
+**Round 33, same day — vitals/aka split corrected, Chef's headshot zoom
+fixed, review-page numbering convention established.** Brandon corrected
+round 32's placement: the real first name doesn't belong in the vitals
+line above the picture — vitals reverts to just "Fonde Rec Center", and
+the real name goes in the "aka" row instead, for every handle that's a
+persona nickname (Rocket Man→"Brandon", Nightmare→"Donnie", Kiwi→"Kenny",
+alongside the existing KennyG→"The Snake" and Black→"B1"). Also flagged
+Chef's headshot as too zoomed in (forehead clipped) — root cause: his
+FRONT card crop was already unusually tight on his face (the same
+raised-hand-near-chin pose issue flagged much earlier in this project,
+round with the original crest-placement work), so `head_crop()`'s
+relative-fraction default overshot on top of an already-tight source.
+Fixed with a new `HEAD_CROP_SCALE` override dict (Chef: 1.5×, scales the
+crop box around its own center rather than just extending it, so the
+head stays centered) — same per-serial-override pattern already
+established for `MODEL_OVERRIDE` (Anthony's rembg fix) and
+`CREST_CX_NUDGE`. Committed `455b4f1`.
+
+**New convention: increment the review page number every round, never
+overwrite in place.** Brandon: "you should increment the card review-xx
+each time" — see [[feedback_increment_card_reviews]]. Rounds 30-32 had
+all republished `card-review-26` in place across 3 iterations; this
+round published as a fresh `card-review-27` instead, and every round
+from here on should do the same regardless of how small the fix is.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
