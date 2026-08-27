@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T11:57:13.233Z
+  modified: 2026-08-27T12:18:56.529Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1821,11 +1821,50 @@ his verdict).
 
 **Shipped 2026-08-27:** Brandon confirmed (noted review-16 "still has the
 shadows") and asked for a new review page. Committed the `open_kernel`
-erosion fix (`8e36b23`) and published **`fairchildlabs.org/card-review-17/`**
+erosion fix (`8e36b23`) and published `fairchildlabs.org/card-review-17/`
 (sheets renamed to the established `sheet_{first}-{last}.png` convention:
-01-07, 08-13, 14-19, 20-25; www-data ownership). Round 22/review-17 is
-now the current shipped state — supersedes card-review-16 (which still
-had the beard/shadow bug on Chef/John). PDF/sheets/scratch files live in
+01-07, 08-13, 14-19, 20-25; www-data ownership). Round 22/review-17
+superseded card-review-16 (which still had the beard/shadow bug on
+Chef/John).
+
+**Round 23, same day — second real bug found on review-17: rectangular
+shadow band around the torso/collar, "most visible and regular on
+Bo/Kobe/KennyG."** Root cause: `_find_jersey_mask()` zeroed out the top
+42% of the frame OUTRIGHT (`dark[: int(H*0.42), :] = 0`) before searching
+for the jersey region, to keep hair/head out of the darkness search —
+this predates both round 19 and round 22, and is a DIFFERENT code path
+than the row-clip round 19's own docstring already warned about
+("unlike a blanket row-clip which cuts real jersey area too... left a
+visible rectangular seam on every subject" — that warning was about a
+different, already-reverted attempt, but the exact same failure mode
+was still live here). Any subject whose real jersey/shoulder extended
+above that fixed line had it silently discarded, leaving the AI's own
+unprocessed (differently shaded) art showing above a hard, dead-straight
+boundary — worst on subjects whose true collar sits right at that line.
+
+**Fixed:** `_largest_dark_region()` gained `min_centroid_y` — filters
+which CONNECTED COMPONENT is eligible to be picked as "the jersey" (still
+keeps hair/head from winning) instead of deleting pixels first, so a
+real jersey's full extent survives once its component is selected.
+Verified via a targeted 6-person test (Bo/Kobe/KennyG for the seam,
+Chef/John for beard-bleed regression, Cleo as a general check) before
+committing to the full batch — Kobe's collar in particular went from a
+visibly banded seam to reading seamlessly into the mesh. Full 24-person
+re-run confirmed clean, no regression on the beard-bleed fix. Committed
+`96a74c4`, published **`fairchildlabs.org/card-review-18/`** — current
+shipped state, supersedes review-17.
+
+**Note for future rounds:** the old SAS-token blob URLs
+(`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
+fresh ones from the storage account key rather than assuming a prior
+session's URLs still work. Special-cased blob names to remember (not the
+default `34-ROSTER-PULID-{NAME}_figure.png` pattern): Kiwi and Jen use
+`34-ROSTERFIX-{NAME}_figure.png`, Kevin uses
+`34-ROSTER-PULID-KEVIN-V3C_figure.png`, Anthony uses
+`34-ROSTER-PULID-ANTHONY-BALDFIX_figure.png`. PDF/sheets/scratch files
+for round 23 live in this session's own scratchpad
+(`cd96f0f9-30dc-43a1-9570-e939a94424ad`), not the OOM-killed session's —
+different session, different scratchpad path. Round 22's files live in
 `/tmp/claude-1000/-home-brandon-scoot/5e56fcf2-315e-4fe3-9a33-8b836065384a/scratchpad/cards6/`
 (`cards_r22.pdf`, `sheet_r22-*.png`, `art_r22/`, `art_r22_crop/`,
 `raw_r22/`) — that's a different session's scratchpad than whatever
