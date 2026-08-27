@@ -590,7 +590,7 @@ def draw_back(c, x, y, row, art_dir):
     # season table
     ty = py - 12
     th = 40.0
-    c.setFillColor(HexColor("#E3DFD2"))
+    c.setFillColor(HexColor("#D8D7D3"))
     c.rect(ix, ty - th, ART_W, th, stroke=0, fill=1)
     cols = [L, ix + ART_W * 0.50, ix + ART_W * 0.68, ix + ART_W * 0.86]
     heads = ["season", "g", "win %", "+/-"]
