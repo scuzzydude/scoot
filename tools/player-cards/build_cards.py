@@ -19,6 +19,8 @@ Crop marks sit outside the block. Six cards per letter sheet.
 
 import argparse
 import csv
+import hashlib
+import io
 import os
 import sys
 
@@ -104,6 +106,7 @@ FONTS = {
     "Cond":     "DejaVuSansCondensed.ttf",
     "CondBold": "DejaVuSansCondensed-Bold.ttf",
     "Mono":     "DejaVuSansMono.ttf",
+    "MonoBold": "DejaVuSansMono-Bold.ttf",
 }
 
 
@@ -239,6 +242,24 @@ GLYPH_WHITE_PNG = os.path.join(ASSETS, "scoot_glyph_white_transparent.png")
 GHOST_PNG = os.path.join(ASSETS, "scoot_glyph_ghost.png")
 GLYPH_ASPECT = 0.5337                 # w/h of the official mark
 
+# ---------------------------------------------------------- card lookup code ---
+# Short, typeable code for the QR/manual-entry corner mark. Not the serial
+# itself -- the serial's sequential 34-DRAFT-NN pattern would let anyone who
+# sees one card guess the rest. Derived, not stored: with a fixed ~25-member
+# roster, resolving a code back to its player is just checking it against
+# every known serial's own derived code (no separate mapping table needed).
+# Placeholder resolver URL -- no /c/<code> route exists yet, see PLACEHOLDER
+# note in draw_front().
+CARD_CODE_SECRET = "scoot34-card-v1"     # not a real secret -- obfuscation only
+CARD_CODE_BASE_URL = "https://thedreamlaboratory.org/c/"
+
+
+def short_code(serial):
+    """6-char uppercase hex code, deterministic per serial. Hex avoids the
+    0/O/1/I ambiguity a human has to resolve when typing a code by hand."""
+    digest = hashlib.sha256(f"{serial}{CARD_CODE_SECRET}".encode()).hexdigest()
+    return digest[:6].upper()
+
 
 def draw_glyph(c, cx, cy, r, disc_color, ink_color, invert=False):
     """The scoot token mark, inside a disc.
@@ -279,6 +300,33 @@ def draw_glyph(c, cx, cy, r, disc_color, ink_color, invert=False):
     c.circle(-7, -12, 2.2, stroke=0, fill=1)                 # wheels
     c.circle(3, -12, 2.2, stroke=0, fill=1)
     c.restoreState()
+
+
+_qr_cache = {}
+
+
+def draw_qr(c, right_x, top_y, size, url, ink_color):
+    """QR code with its top-right corner pinned at (right_x, top_y) --
+    mirrors draw_glyph's top-left placement. Cached per URL since the
+    same 24-person roster is rendered front+back, twice (fronts, then
+    mirrored backs) per build."""
+    import qrcode
+    from reportlab.lib.utils import ImageReader
+
+    if url not in _qr_cache:
+        qr = qrcode.QRCode(border=1, error_correction=qrcode.constants.ERROR_CORRECT_M)
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="#%02x%02x%02x" % (
+            int(ink_color.red * 255), int(ink_color.green * 255), int(ink_color.blue * 255)),
+            back_color="white").convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        _qr_cache[url] = ImageReader(buf)
+
+    c.drawImage(_qr_cache[url], right_x - size, top_y - size,
+                width=size, height=size)
 
 
 def draw_placeholder_figure(c, x, y, w, h, ink_color):
@@ -353,6 +401,19 @@ def draw_front(c, x, y, row, art_dir):
     # token mark
     draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22, 14, INK, PAPER,
                invert=True)
+
+    # lookup QR, mirrored top-right of the glyph -- PLACEHOLDER: encodes
+    # https://thedreamlaboratory.org/c/<code>, no /c/<code> resolver route
+    # exists yet. Code is also printed as text so it can be typed into a
+    # screen if scanning isn't practical (small print size, bad lighting).
+    code = short_code(serial)
+    qr_right = x + TRIM_W - BAND - 8
+    qr_top = y + TRIM_H - BAND - 8
+    qr_size = 28.0
+    draw_qr(c, qr_right, qr_top, qr_size, CARD_CODE_BASE_URL + code, INK)
+    c.setFillColor(INK)
+    c.setFont("MonoBold", 5.5)
+    c.drawRightString(qr_right, qr_top - qr_size - 7, code)
 
 
 def draw_back(c, x, y, row, art_dir):
