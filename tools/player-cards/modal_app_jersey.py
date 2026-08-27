@@ -121,12 +121,35 @@ image = (
 app = modal.App(name="scoot34-jersey-test", image=image)
 
 
-def _largest_dark_region(dark):
+def _largest_dark_region(dark, open_kernel=None):
+    """open_kernel: when set, erode first to sever thin/moderate bridges
+    (a beard/goatee touching the jersey with no real gap -- Chef/John/
+    Sheldon, round 19) before picking the largest connected component,
+    then restore that component's true edges by dilating it back out
+    within the ORIGINAL (pre-erode) dark pixels only. A severed bridge
+    stays severed (erosion broke the connectivity that made it "largest"
+    in the first place); the jersey's own true edges, which were never
+    touching anything, come back exactly as detected -- no shape loss,
+    unlike a blanket row-clip which cuts real jersey area too (round
+    19's first attempt at this fix, reverted -- it left a visible
+    rectangular seam on every subject, not just the contaminated ones)."""
     import cv2
     import numpy as np
 
     kernel = np.ones((9, 9), np.uint8)
     closed = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, kernel)
+
+    if open_kernel:
+        ok = np.ones((open_kernel, open_kernel), np.uint8)
+        severed = cv2.erode(closed, ok)
+        n, labels, stats, _ = cv2.connectedComponentsWithStats(severed, connectivity=8)
+        if n <= 1:
+            return None
+        largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        component = (labels == largest).astype(np.uint8) * 255
+        restored = cv2.dilate(component, ok)
+        return (restored > 0) & (closed > 0)
+
     n, labels, stats, _ = cv2.connectedComponentsWithStats(closed, connectivity=8)
     if n <= 1:
         return None
@@ -151,7 +174,7 @@ def _find_jersey_mask(raw_img):
     H = dark.shape[0]
     dark[: int(H * 0.42), :] = 0
 
-    return _largest_dark_region(dark)
+    return _largest_dark_region(dark, open_kernel=17)
 
 
 def _find_head_center_x(raw_img):
@@ -228,21 +251,6 @@ def composite_jersey(payload: dict) -> dict:
     mask_bool = _find_jersey_mask(fig)
     if mask_bool is None:
         raise RuntimeError(f"{serial}: no jersey found (darkness threshold found nothing)")
-
-    # Clip the mask to below the true collar line before ANY recolor/mesh
-    # fill runs -- 2026-08-27, found on Sheldon/Chef/John: a dark beard/
-    # goatee that touches the jersey with no gap in the source art (same
-    # class of contamination as Kiwi's chin-shadow, round 9) gets swept
-    # into the jersey's connected component and painted with jersey
-    # color+mesh, reading as a "shadow" eating into the chin/mouth. This
-    # is the same fix already proven for the old segformer-based mask
-    # (commit bc63da7, "clip the garment mask to below the collar's
-    # V-notch... before recolor/texture ever runs") -- reapplied here
-    # since the mask is darkness-threshold-based now, not segformer.
-    ys, xs = np.where(mask_bool)
-    _x0, _x1, _y0, _y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
-    _true_collar_y = _find_true_collar_y(mask_bool, _x0, _x1, _y0, _y1)
-    mask_bool[:_true_collar_y, :] = False
 
     mask_img = Image.fromarray((mask_bool * 255).astype(np.uint8), "L")
     mask_img = mask_img.filter(ImageFilter.GaussianBlur(radius=2))
