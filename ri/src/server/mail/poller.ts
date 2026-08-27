@@ -47,6 +47,13 @@ export async function checkMailOnce(): Promise<void> {
   let client: ImapFlow | null = null;
   try {
     client = new ImapFlow(config);
+    // ImapFlow emits 'error' as a standalone EventEmitter event (e.g. a
+    // socket EPIPE after a connection already dropped), separate from the
+    // promise chain below -- with no listener, Node's default behavior is
+    // to throw and crash the whole process, bypassing this try/catch
+    // entirely. A real incident: a transient DNS failure against the IMAP
+    // host took down the entire app this way, 2026-08-26.
+    client.on("error", (err) => log.error({ err, mailbox: MAILBOX }, "mail poller: client error event"));
     await client.connect();
     const box = await client.mailboxOpen(MAILBOX, { readOnly: true });
 
