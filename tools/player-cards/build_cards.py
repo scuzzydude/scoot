@@ -242,6 +242,13 @@ def player_art(serial, art_dir, side, legacy_suffix):
 
 _HEAD_CROP_CACHE = {}
 
+HEAD_CROP_SCALE = {
+    "34-DRAFT-19": 1.5,  # Chef -- raised-hand-near-chin pose already
+                         # zoomed his front crop in tighter than everyone
+                         # else's, so the default fraction clipped his
+                         # forehead. See head_crop() for how this is used.
+}
+
 
 def head_crop(serial, art_dir, side, panel_w, panel_h):
     """Tight head-and-shoulders crop of the jersey_variant art, for the
@@ -278,6 +285,20 @@ def head_crop(serial, art_dir, side, panel_w, panel_h):
 
     crop_top = max(0, y0 - int(content_h * 0.02))
     crop_bottom = min(im.height, y0 + int(content_h * 0.50))
+
+    # Per-serial zoom-out override -- for a subject whose FRONT crop is
+    # already unusually tight on the face (a pose that confused
+    # crop_to_slot's own framing, e.g. Chef's raised hand near his chin),
+    # the same relative fraction overshoots and clips the forehead.
+    # Scales the crop box around its own center rather than just
+    # extending downward, so the head stays centered in the panel.
+    scale = HEAD_CROP_SCALE.get(serial, 1.0)
+    if scale != 1.0:
+        center_y = (crop_top + crop_bottom) / 2.0
+        half_h = (crop_bottom - crop_top) * scale / 2.0
+        crop_top = max(0, int(round(center_y - half_h)))
+        crop_bottom = min(im.height, int(round(center_y + half_h)))
+
     crop_h = crop_bottom - crop_top
     crop_w = crop_h * (panel_w / panel_h)
     x0 = int(round(head_cx - crop_w / 2.0))
@@ -528,12 +549,11 @@ def draw_back(c, x, y, row, art_dir):
     c.setFont("Cond", 8)
     c.drawRightString(R, top - hdr_h + 7.5, tier_text)
 
-    # vitals -- real first name + home gym (position data isn't real
-    # yet, and the handle's already up in the header)
+    # vitals -- just the home gym (real first name lives in the "aka"
+    # row below instead, not here)
     c.setFillColor(SUBTLE)
     c.setFont("Cond", 7)
-    home_label = HOME_LABELS.get(row.get("home", "").strip(), row.get("home", "").strip())
-    vitals = " · ".join(v for v in [row.get("name", "").strip(), home_label] if v)
+    vitals = HOME_LABELS.get(row.get("home", "").strip(), row.get("home", "").strip())
     c.drawString(L, top - hdr_h - 12, vitals)
 
     # side-pose panel -- headshot crop, jersey just visible at the
