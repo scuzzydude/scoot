@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T15:58:49.154Z
+  modified: 2026-08-27T17:33:23.900Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2071,6 +2071,17 @@ Jennifer + Debra (reverted) side by side. Roster CSV/serials unchanged
 from round 27 (32 people) — this round was pure art iteration on 3
 existing slots, no new roster members, no code changes to the
 pipeline itself.
+
+**Round 29, same day — final decisions applied, 31-person roster.**
+Brandon: Nick v1 (original card, keep as-is), drop Debra entirely
+(whitewashing bug from round 28 never got fixed, not worth shipping a
+card that doesn't read as her), keep both Jen and Jennifer unchanged.
+Removed Debra's row from `roster24.csv`, rebuilt the full set —
+**31 people, down from 32.** Published `fairchildlabs.org/card-review-25/`
+— current shipped state. Debra can be revisited later via the masked
+ReferenceLatent correction technique (see round 28) if Brandon wants
+her added back; not attempted again here per his explicit call to drop
+her rather than keep iterating.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
