@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T17:48:39.895Z
+  modified: 2026-08-27T18:06:58.850Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2105,6 +2105,23 @@ season/career stats per person, real 3-line profile bio text (spec:
 side-pose panel should get a real second photo/angle eventually or
 stay as the same front pose just recolored. None of that is fabricatable
 — needs his input or real data, not more pipeline work.
+
+**Round 31, same day — back panel polish: headshot crop, no black bg,
+simplified vitals.** Brandon: drop the black background on the side
+panel, make it more of a headshot with the white jersey just visible at
+the shoulders (not the same waist-up front pose shrunk down), and
+simplify the vitals line to just "Fonde Rec Center" (was
+handle·position·home — position isn't real data yet, handle's already
+in the header). New `head_crop()` in `build_cards.py`: derives a tight
+head-and-shoulders crop from the light-jersey art's own alpha-content
+bbox (not fixed pixel coordinates), so it generalizes across the
+roster's real per-subject scale variation — verified clean on the full
+31-person set on the first attempt, including long hair (Jennifer),
+beanies (Kiwi), beards (Tim). New `HOME_LABELS` dict maps the roster
+CSV's short `home` key ("Fonde") to the full display string ("Fonde Rec
+Center") for the vitals line. Committed `f5fb235`, republished
+`fairchildlabs.org/card-review-26/` in place (same URL, updated
+content).
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
