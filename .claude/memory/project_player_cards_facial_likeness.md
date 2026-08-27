@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T12:18:56.529Z
+  modified: 2026-08-27T13:18:54.182Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -1853,6 +1853,47 @@ visibly banded seam to reading seamlessly into the mesh. Full 24-person
 re-run confirmed clean, no regression on the beard-bleed fix. Committed
 `96a74c4`, published **`fairchildlabs.org/card-review-18/`** — current
 shipped state, supersedes review-17.
+
+**Round 24, 2026-08-27 — QR/hash lookup mark added to the front, front
+considered feature-complete.** Brandon: tiny QR in the top-right
+whitespace, mirrored from the glyph disc's top-left placement, plus a
+short typeable hash as a fallback (paper printout may need to be typed
+into a screen, not scanned). Design: 6-char uppercase hex, deterministic
+`sha256(serial + secret)[:6]` — not the serial itself, since the
+sequential `34-DRAFT-NN` pattern would let one card leak how to guess
+the rest of the roster. No stored mapping table needed: with a fixed
+~25-person roster, resolving a code back to a player just means
+checking it against every known serial's own derived code at
+lookup time. QR encodes `https://thedreamlaboratory.org/c/<code>` —
+**placeholder, that route doesn't exist yet**, nothing wired to the
+Scoot app; purely print-ready art for now.
+
+Iterated on size/weight with a single-card spot check first
+(`card-review-19`) before running the full batch — first pass (34pt QR,
+thin gray code) got "the right part looks cut off, make the QR
+slightly smaller, hash bold." The "cut off" read turned out to be a bad
+crop in the screenshot sent for review, not a real clipping bug (full
+sheet render confirmed card edges intact) — worth remembering: crop
+narrowly for a close-up and it can misread as a defect. Shrunk to 28pt,
+switched the code to `MonoBold` (registered `DejaVuSansMono-Bold.ttf`,
+new font key) in full ink black instead of muted gray. Verified via
+`cv2.QRCodeDetector` that it decodes to the exact expected URL at both
+sizes before ever showing Brandon anything. Approved second pass
+("placement and style" good). Committed `950786b`, full 24-person
+rebuild published `fairchildlabs.org/card-review-20/`.
+
+**Front card status: considered feature-complete** pending Shipp's
+still-blocked source art (needs a fresh PuLID generation with a
+caption-free frame) and any further polish Brandon flags. **Next up:
+the back of the card** — comparatively unstarted. `roster24.csv`'s
+stats/vitals columns (`g`, `winpct`, `plusminus`, `profile_1/2/3`, etc.)
+are still all placeholder `—`; the light-jersey headshot art for
+`draw_back()`'s side-pose panel (`composite_jersey(side="light")`
+exists in the pipeline but has never actually been run); and Brandon
+hasn't reviewed a single back card yet, unlike the front's many review
+rounds. `feedback_prefer_server_hosting` was also reinforced this round
+(2026-08-27) — see [[feedback_prefer_server_hosting]] — always publish
+a link, even for a one-image spot check, never send a raw file.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
