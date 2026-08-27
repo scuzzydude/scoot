@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e915d70f-d9db-403c-8d29-6a6e5004097b
-  modified: 2026-08-24T00:00:00.000Z
+  modified: 2026-08-27T11:59:25.848Z
 ---
 
 Built 2026-08-21. Brandon: "I want to wire in thedreamlaboratory.org
@@ -68,6 +68,31 @@ deleted, replaced by `ri/src/server/email/smtp.ts` (nodemailer,
 account, so no new secret). Full send→reply→poll→SMS loop tested live
 (sent test mail, replied from scuzzydude@hotmail.com, forced a poll,
 got a real text back).
+
+**2026-08-27: took down the entire app, root-caused and fixed.** During
+the severe overnight OOM event ([[infra_dreamlab_oom_reboot_2026_08_24]]),
+the poller hit repeated `getaddrinfo EAI_AGAIN` DNS failures (first
+`imappro.zoho.com`, then even the internal `postgres` service name —
+Docker's embedded DNS was itself disrupted by the memory pressure), then
+an `EPIPE` write error on the stale IMAP socket. `ImapFlow` emits
+`'error'` as a standalone `EventEmitter` event, separate from the
+`connect()`/`fetch()` promise chain the existing `try/catch` covers —
+with no listener, Node's default behavior is to throw and crash the
+**whole process**, not just the poller. The file's own comment ("Never
+throws — a transient hiccup can't take down the poller") was wrong in
+practice for exactly this failure mode. App was down (chat/wallet/bot
+all unreachable) until manually restarted the next day — not caught
+automatically, no alerting exists yet.
+
+**Fixed:** `client.on("error", (err) => log.error(...))` registered
+right after `new ImapFlow(config)`, before `.connect()` — commit
+`a85ce14`. Verified via `tsx watch`'s hot-reload restart + a live smoke
+test (`Scoot smoke test`, the repo's pre-push hook) all passing. **General
+lesson for any other EventEmitter-based client library used here
+(anything beyond plain promise-returning APIs): check whether it has its
+own `'error'` event separate from its promises, and always attach a
+listener** — an unhandled one is a process-crash waiting to happen,
+invisible until it fires.
 
 **Gotcha worth remembering:** `docker compose restart app` does NOT
 reread `env_file` — it restarts the container with whatever env it

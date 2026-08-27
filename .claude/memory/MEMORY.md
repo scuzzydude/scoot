@@ -1,7 +1,7 @@
 # Memory Index
 
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
-- [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP+SMTP both live on Zoho (SendGrid dropped, 0-credit dead plan); `docker compose restart` doesn't reread .env, use `up -d`
+- [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP+SMTP on Zoho; 08-27 crashed the whole app via unhandled ImapFlow 'error' event, fixed `a85ce14`
 - [BigMo MMS capability — proven, unwired](bigmo_mms_capability.md) — mediaUrl now threaded through SMSProvider.send(); test MMS delivered successfully; no "send me my card" trigger built yet
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
 - [SMS build resume — §8 complete + Phase 4 staking complete](project_sms_build_resume.md) — full SMS⇄Rooms + staking ritual/trust graph/revocation/self-stake history; superseded by [[scoot_currency_ledger]] for what's next
