@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T15:04:04.829Z
+  modified: 2026-08-27T15:58:49.154Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2017,6 +2017,60 @@ URL lists, generation scripts) live in this session's own scratchpad
 `new_people*` — not the repo, matching this project's existing
 convention that roster CSVs/scratch generation scripts stay out of
 version control.
+
+**Round 28, same day — Debra whitewashing bug (real, unresolved), Nick
+2nd option, Jen/Jennifer kept as two cards.** Brandon: Debra needs to be
+"more flattering" (her original card's `EXPRESSION_SERIOUS` read as
+sunken/tired, not a game-face), keep both Jen and Jennifer for the real
+Jen to pick between, and build a second Nick card option from his other
+video set.
+
+**Debra: 4 regeneration attempts, all failed the same way.** (1) Warm
+smile expression — whitewashed her (light skin, blonde hair, unrecognizable).
+(2) Same + explicit "she is Black with medium-dark brown skin, do not
+lighten it, do not change her ethnicity" lock plus real hair color
+("dark brown with auburn tones") — still whitewashed, no better. (3)
+Toned the expression language down further + lowered guidance 2.5→2.0
+to lean harder on the reference photo — still whitewashed. (4) Much
+more conservative "calm, pleasant, eyes soft, mouth relaxed" wording,
+close to the original's structure, guidance back to 2.5 — **still
+whitewashed.** All four kept identical seed/style/framing/PuLID
+settings, changing only the expression text (and once, guidance). This
+is a stronger, more reproducible version of the "ANIME whitewashing"
+pattern already documented earlier in this project — here it recurred
+on the noir+PuLID pipeline that had otherwise been reliable on skin
+tone across the whole roster, specifically triggered by pushing toward
+a smiling/warm expression. Reverted her blob back to the original
+(correct skin tone) generation rather than ship something that doesn't
+read as her. **Real fix likely needs the masked ReferenceLatent
+technique already proven in this project (KennyG's skin/hair correction,
+Rufus's hair fix)** — mask her face, condition on a real crop of her
+own photo — not another round of text-prompt tuning. Flagged to
+Brandon, not silently resolved.
+
+**Nick's second card option, sourced from his OTHER video set.** Memory
+already noted Nick has two source video sets: "getwell shoot" (used for
+the current card, `f_0515.jpg`) and "hallway shoot" (`nick.MP4`, 4K,
+never used for a generation). Neither video was still local — restored
+`nick.MP4` (3.3GB) from the `azarchive` cold-storage rclone remote
+(`azarchive:media/nick-getwell/source/`, alongside `NickFondeBrothers_v2.mp4`
+itself — worth remembering both original source videos live there, not
+just extracted frames). Picked a clean, direct-facing frame at 2:30,
+ran through the identical pipeline (serial `34-DRAFT-23-V2`, doesn't
+overwrite the real `34-DRAFT-23`), zero code changes, zero whitewashing
+issue (v1/v2 both read correctly). Deleted the local video copy after
+use (already safe in cold archive, no need to keep 3.3GB locally) — see
+[[feedback_archive_share_after_use]] for the same pattern.
+
+**Jen (34-DRAFT-24) and Jennifer (34-DRAFT-26) both stay** — no merge,
+no dedup. Brandon's call: let the real Jen choose which card she wants
+once this reaches her.
+
+Published **`fairchildlabs.org/card-review-24/`** — Nick v1/v2 + Jen/
+Jennifer + Debra (reverted) side by side. Roster CSV/serials unchanged
+from round 27 (32 people) — this round was pure art iteration on 3
+existing slots, no new roster members, no code changes to the
+pipeline itself.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
