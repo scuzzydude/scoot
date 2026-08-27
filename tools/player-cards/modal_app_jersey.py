@@ -121,7 +121,7 @@ image = (
 app = modal.App(name="scoot34-jersey-test", image=image)
 
 
-def _largest_dark_region(dark, open_kernel=None):
+def _largest_dark_region(dark, open_kernel=None, min_centroid_y=None):
     """open_kernel: when set, erode first to sever thin/moderate bridges
     (a beard/goatee touching the jersey with no real gap -- Chef/John/
     Sheldon, round 19) before picking the largest connected component,
@@ -132,28 +132,53 @@ def _largest_dark_region(dark, open_kernel=None):
     touching anything, come back exactly as detected -- no shape loss,
     unlike a blanket row-clip which cuts real jersey area too (round
     19's first attempt at this fix, reverted -- it left a visible
-    rectangular seam on every subject, not just the contaminated ones)."""
+    rectangular seam on every subject, not just the contaminated ones).
+
+    min_centroid_y: when set, only components whose centroid row is at
+    or below this value are eligible to be picked as "the jersey" --
+    keeps hair/head from being selected without deleting any pixels.
+    Round 22's caller used to zero out rows above a fixed height
+    fraction on the INPUT before this function ever ran, which has the
+    identical seam problem as the row-clip above: a subject whose real
+    jersey/shoulder extends above that fixed line gets it silently
+    discarded, leaving the AI's own unprocessed (differently shaded)
+    pixels showing above a hard, dead-straight boundary -- most visible
+    on Bo/Kobe/KennyG, round 23. Filtering candidate COMPONENTS by
+    position instead of deleting pixels keeps a real jersey's full
+    extent intact once it's selected."""
     import cv2
     import numpy as np
 
     kernel = np.ones((9, 9), np.uint8)
     closed = cv2.morphologyEx(dark, cv2.MORPH_CLOSE, kernel)
 
+    def _pick(labels, stats, centroids):
+        candidates = range(1, stats.shape[0])
+        if min_centroid_y is not None:
+            candidates = [i for i in candidates if centroids[i][1] >= min_centroid_y]
+        if not candidates:
+            return None
+        return max(candidates, key=lambda i: stats[i, cv2.CC_STAT_AREA])
+
     if open_kernel:
         ok = np.ones((open_kernel, open_kernel), np.uint8)
         severed = cv2.erode(closed, ok)
-        n, labels, stats, _ = cv2.connectedComponentsWithStats(severed, connectivity=8)
+        n, labels, stats, centroids = cv2.connectedComponentsWithStats(severed, connectivity=8)
         if n <= 1:
             return None
-        largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+        largest = _pick(labels, stats, centroids)
+        if largest is None:
+            return None
         component = (labels == largest).astype(np.uint8) * 255
         restored = cv2.dilate(component, ok)
         return (restored > 0) & (closed > 0)
 
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(closed, connectivity=8)
+    n, labels, stats, centroids = cv2.connectedComponentsWithStats(closed, connectivity=8)
     if n <= 1:
         return None
-    largest = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+    largest = _pick(labels, stats, centroids)
+    if largest is None:
+        return None
     return labels == largest
 
 
@@ -168,13 +193,17 @@ def _find_jersey_mask(raw_img):
     lum = 0.299 * arr[..., 0] + 0.587 * arr[..., 1] + 0.114 * arr[..., 2]
     dark = (lum < 60).astype(np.uint8) * 255
 
-    # Restrict to the lower 58% of the frame so hair/eyebrows/pupils
-    # (also near-black) can't be picked up as "the jersey" -- tuned
-    # against the roster's consistent waist-up framing.
+    # Only components centered in the lower 58% of the frame are
+    # eligible to be picked as "the jersey", so hair/eyebrows/pupils
+    # (also near-black) can't win -- tuned against the roster's
+    # consistent waist-up framing. This filters CANDIDATES, it doesn't
+    # delete pixels first: a subject whose real jersey/shoulder extends
+    # above that line keeps its full true extent once selected, instead
+    # of a hard seam at a fixed row (round 23 bug, most visible on
+    # Bo/Kobe/KennyG).
     H = dark.shape[0]
-    dark[: int(H * 0.42), :] = 0
 
-    return _largest_dark_region(dark, open_kernel=17)
+    return _largest_dark_region(dark, open_kernel=17, min_centroid_y=H * 0.42)
 
 
 def _find_head_center_x(raw_img):
