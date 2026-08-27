@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 33fe06ac-1a6e-4046-afff-7a89f2da62c7
-  modified: 2026-08-27T17:33:23.900Z
+  modified: 2026-08-27T17:48:39.895Z
 ---
 
 Scoot(34) player-card generation (`tools/player-cards/`, Modal + ComfyUI,
@@ -2082,6 +2082,29 @@ Removed Debra's row from `roster24.csv`, rebuilt the full set —
 ReferenceLatent correction technique (see round 28) if Brandon wants
 her added back; not attempted again here per his explicit call to drop
 her rather than keep iterating.
+
+**Round 30, 2026-08-27 — back-of-card template already existed, just
+never rendered against real art.** Brandon asked to start the back:
+white jersey, smaller frame area, blank stat line, player profile text
+area — "but I think we may have already had a template." Correct:
+`draw_back()` in `build_cards.py` was fully built (season/career stat
+table, profile text block, ghosted token watermark, 52×62pt side-pose
+panel) but had never actually been run against real roster art since
+the pipeline moved to the darkness-threshold jersey detection. The
+"light" (white) jersey recolor is entirely local — `jersey_variant()`
+recolors the existing `{serial}_figure.png` + `{serial}_jersey_mask.png`
+pair via a luminance-based PIL blend to the `JERSEY["light"]` colors
+(`#F4F1E8`/`#BFBBAD`), no new Modal generation needed at all. Ran it
+against the full 31-person roster, **zero code changes required** —
+worked cleanly across genders/hair styles/tiers on the first attempt.
+Published `fairchildlabs.org/card-review-26/`.
+
+**What's actually left for the back is content, not code:** real
+season/career stats per person, real 3-line profile bio text (spec:
+~28 chars/line, hard limit), and Brandon's call on whether the
+side-pose panel should get a real second photo/angle eventually or
+stay as the same front pose just recolored. None of that is fabricatable
+— needs his input or real data, not more pipeline work.
 
 **Note for future rounds:** the old SAS-token blob URLs
 (`raw_urls_r19.txt` and similar) expire ~24h after generation — regenerate
