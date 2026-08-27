@@ -261,6 +261,16 @@ def short_code(serial):
     return digest[:6].upper()
 
 
+def edition_label(row):
+    """What's PRINTED where the serial used to show -- the QR/hash code is
+    now the card's actual unique identifier, so the visible small-print
+    label is just "34-<edition>" (same on every card in a print run), not
+    the per-card serial. Printing the real 34-DRAFT-NN serial defeated the
+    whole point of hashing it for the QR: anyone holding one card could
+    read the next sequential serial straight off the card face."""
+    return f"34-{row.get('edition', '').strip() or '2026'}"
+
+
 def draw_glyph(c, cx, cy, r, disc_color, ink_color, invert=False):
     """The scoot token mark, inside a disc.
 
@@ -396,7 +406,7 @@ def draw_front(c, x, y, row, art_dir):
     c.drawRightString(tier_x, y + BAND + 19, tier_text)
     c.setFillColor(MUTED)
     c.setFont("Mono", 6)
-    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 8, serial)
+    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 8, edition_label(row))
 
     # token mark
     draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22, 14, INK, PAPER,
@@ -538,9 +548,9 @@ def draw_back(c, x, y, row, art_dir):
         if line:
             c.drawString(L, py2 - 10 * i, line)
 
-    # serial
+    # edition (not the per-card serial -- see edition_label())
     c.setFillColor(MUTED); c.setFont("Mono", 6)
-    c.drawRightString(R, iy + 8, serial)
+    c.drawRightString(R, iy + 8, edition_label(row))
     c.setFont("Cond", 6.5)
     c.drawString(L, iy + 8, "thedreamlaboratory.org")
 
