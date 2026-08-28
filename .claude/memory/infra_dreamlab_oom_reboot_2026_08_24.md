@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: 5e56fcf2-315e-4fe3-9a33-8b836065384a
-  modified: 2026-08-27T11:50:49.008Z
+  modified: 2026-08-27T20:07:44.556Z
 ---
 
 On 2026-08-24 around 21:43–22:06 UTC, dreamlab (see [[infra_prod_server]])
@@ -74,7 +74,7 @@ into a global OOM scan instead of being contained to its own cgroup.
 **Fix applied 2026-08-27:** `/home/brandon/scoot-pmp/docker-compose.yml` now
 sets `mem_limit: 512m`, `mem_reservation: 256m`, `oom_score_adj: 500`, and
 `GRANIAN_WORKERS=1` on the `searxng` service (commit `f7382d4` in the
-`scoot-pmp` repo, not yet pushed). This makes the container the preferred
+`scoot-pmp` repo, pushed). This makes the container the preferred
 kill target within its own memory ceiling rather than letting unrelated
 host processes (like an active Claude Code session) get picked instead. The
 underlying host-is-oversubscribed problem (3.8GB RAM across Scoot app +
