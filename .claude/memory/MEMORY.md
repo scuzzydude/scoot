@@ -3,7 +3,8 @@
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [BigMo Gmail/Drive/Calendar MCP + rclone](infra_bigmo_google_mcp.md) — 3 MCP servers + rclone remote `bigmo-gdrive:` (r/w) on fonde.brotherhood@gmail.com; creds in ~/.mcp-creds/bigmo-google/; naming convention for future accounts
 - [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP+SMTP on Zoho; 08-27 crashed the whole app via unhandled ImapFlow 'error' event, fixed `a85ce14`
-- [BigMo MMS capability — proven, unwired](bigmo_mms_capability.md) — mediaUrl now threaded through SMSProvider.send(); test MMS delivered successfully; no "send me my card" trigger built yet
+- [BigMo MMS capability — proven, unwired](bigmo_mms_capability.md) — mediaUrl threaded through SMSProvider.send(); superseded by [[project_card_link_sms_webchat]], the "send me my card" trigger now exists
+- [Player cards linked to SMS/webchat](project_card_link_sms_webchat.md) — "my card"/claim-by-code/self-edit profile, verified live via real Twilio MMS + webchat; 20/31 auto-linked, 11 need manual resolution
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
 - [SMS build resume — §8 complete + Phase 4 staking complete](project_sms_build_resume.md) — full SMS⇄Rooms + staking ritual/trust graph/revocation/self-stake history; superseded by [[scoot_currency_ledger]] for what's next
 - [Revised build plan — chat → staking → token → chain](project_plan.md) — Chat + staking done; Phase 5a token ledger now in progress, see [[scoot_currency_ledger]]; scootchain (5b) last
