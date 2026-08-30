@@ -133,6 +133,41 @@ export const scoots = pgTable("scoots", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Scoot(34) player cards (tools/player-cards/) — the roster/art pipeline
+// that runs outside this app (Modal + Azure blob, built into print PDFs).
+// This table is the queryable copy of that data, so BigMo can look a card
+// up by serial instead of it only existing in a scratch CSV. `frontImageUrl`
+// points at this app's own /media/ route (see media.ts), not the Azure SAS
+// URLs used mid-pipeline, which expire.
+export const playerCards = pgTable("player_cards", {
+  id: serial("id").primaryKey(),
+  serial: text("serial").notNull().unique(),  // e.g. "34-DRAFT-09"
+  scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+  handle: text("handle").notNull(),
+  name: text("name"),
+  aka: text("aka"),
+  tier: text("tier"),
+  position: text("position"),
+  home: text("home"),
+  joined: text("joined"),
+  edition: text("edition"),
+  g: text("g"),
+  winPct: text("win_pct"),
+  plusMinus: text("plus_minus"),
+  gCareer: text("g_career"),
+  winPctCareer: text("win_pct_career"),
+  pmCareer: text("pm_career"),
+  profile1: text("profile_1"),
+  profile2: text("profile_2"),
+  profile3: text("profile_3"),
+  frontImageUrl: text("front_image_url"),
+  // The 6-char hash already printed on the physical card next to its QR
+  // (short_code() in tools/player-cards/build_cards.py) -- the claim token
+  // for anyone whose card isn't auto-linked to a user by name match.
+  code: text("code").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const scootMembers = pgTable(
   "scoot_members",
   {
@@ -143,6 +178,9 @@ export const scootMembers = pgTable(
     // ScootFlags.LEGEND_NUMBER). The number stays a reserved seat in `users`; the
     // member keeps their own id. e.g. McGhee (member) wears 24. See arch/sms-rooms.md.
     wornNumber: integer("worn_number"),
+    // Links this membership to their player-cards roster entry (playerCards.serial),
+    // once claimed -- see card-commands.ts. NULL until auto-matched or self-claimed.
+    cardSerial: text("card_serial").references(() => playerCards.serial),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (t) => ({

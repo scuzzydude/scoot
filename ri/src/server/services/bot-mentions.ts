@@ -1,10 +1,24 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { bots, messages, roomMembers, users, UserFlags } from "../db/schema.js";
+import { bots, messages, roomMembers, users, scoots, UserFlags } from "../db/schema.js";
 import { getProvider } from "../llm/provider.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { fanOutToSms } from "../sms/fanout.js";
+import { resolveCardCommand } from "../sms/card-commands.js";
 import { log } from "../log.js";
+
+// Player-card commands are Scoot(34)/BigMo-specific business logic, not
+// generic multi-bot infra (this whole file otherwise has no idea what
+// "card" means) — same scoping as bigmo.ts's own hardcoded SCOOT_SLUG.
+// Cached: this Scoot's id never changes at runtime.
+const CARD_SCOOT_SLUG = "dream-laboratory";
+let cardScootIdCache: number | null = null;
+async function getCardScootId(): Promise<number | null> {
+  if (cardScootIdCache != null) return cardScootIdCache;
+  const [s] = await db.select({ id: scoots.id }).from(scoots).where(eq(scoots.slug, CARD_SCOOT_SLUG));
+  cardScootIdCache = s?.id ?? null;
+  return cardScootIdCache;
+}
 
 export const MENTION_REGEX = /(?:^|\s)@([a-zA-Z0-9_]+)/g;
 const HISTORY_WINDOW = parseInt(process.env.BOT_HISTORY_WINDOW ?? "20");
@@ -118,11 +132,12 @@ async function loadHistory(roomId: number): Promise<HistoryRow[]> {
 async function postBotMessage(
   roomId: number,
   bot: BotMember,
-  content: string
+  content: string,
+  mediaUrl?: string
 ): Promise<void> {
   const [msg] = await db
     .insert(messages)
-    .values({ roomId, userId: bot.userId, content })
+    .values({ roomId, userId: bot.userId, content, mediaUrl })
     .returning();
 
   broadcast(roomId, {
@@ -198,6 +213,27 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
 
   const startedAt = Date.now();
   try {
+    // Player-card commands ("my card", claim-by-code, self-edit profile) —
+    // BigMo-specific, checked before the freeform LLM path. Same
+    // transport-agnostic core as the SMS side (card-commands.ts); here the
+    // image is delivered as a normal chat message with mediaUrl set,
+    // instead of an MMS.
+    if (bot.username === "bigmo") {
+      const cardScootId = await getCardScootId();
+      const withoutMention = ctx.content.replace(MENTION_REGEX, "").trim();
+      const cardResult = cardScootId != null
+        ? await resolveCardCommand(ctx.authorId, cardScootId, withoutMention)
+        : null;
+      if (cardResult != null) {
+        log.info({ roomId: ctx.roomId, authorId: ctx.authorId, kind: cardResult.kind }, "bot mention: card command");
+        const mediaUrl = cardResult.kind === "send-card" && cardResult.card.frontImageUrl
+          ? cardResult.card.frontImageUrl // app-relative path — fine as-is for webchat's own <img src>
+          : undefined;
+        await postBotMessage(ctx.roomId, bot, cardResult.text, mediaUrl);
+        return;
+      }
+    }
+
     const history = await loadHistory(ctx.roomId);
     const providerMessages = buildProviderMessages(history, bot.userId);
     const provider = getProvider();

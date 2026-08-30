@@ -15,6 +15,7 @@ import { ensureDisclaimer } from "./disclaimer.js";
 import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
+import { tryHandleCardCommand } from "./card-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { tryHandleShutdownGate } from "./shutdown.js";
 import { log } from "../log.js";
@@ -194,6 +195,15 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (trustReply != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms trust query");
       return finish(trustReply, roomId);
+    }
+
+    // Player-card commands: "my card", claim-by-code, self-edit profile/aka.
+    // See card-commands.ts. Placed alongside the other member-facing "look up
+    // MY info" queries above, before the write-command / routing / LLM paths.
+    const cardReply = await tryHandleCardCommand(sender.id, phone, scootId, trimmed);
+    if (cardReply != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms card command");
+      return finish(cardReply, roomId);
     }
 
     // Pledge revocation: "revoke <name>" (bogus, self-service) or a LEADER
