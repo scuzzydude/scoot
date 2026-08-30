@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: reference
   originSessionId: 98793ce2-56d6-45b6-a991-49f07ef76a20
-  modified: 2026-08-27T20:00:23.902Z
+  modified: 2026-08-30T14:11:14.492Z
 ---
 
 Three user-scope MCP servers on dreamlab give Claude Code access to
@@ -15,10 +15,19 @@ Three user-scope MCP servers on dreamlab give Claude Code access to
 - **bigmo-gmail** — `@gongrzhe/server-gmail-autoauth-mcp`
 - **bigmo-gdrive** — `@isaacphi/mcp-gdrive` (also covers Sheets)
 - **bigmo-calendar** — `@cocal/google-calendar-mcp`
-- **bigmo-gdrive:** (rclone remote, full read-write `drive` scope, NOT a
-  FUSE mount — same command-driven pattern as `azarchive`, see
-  [[infra_cold_archive]]). Use `rclone lsd/copy/sync bigmo-gdrive:...`.
-  Config lives in `~/.config/rclone/rclone.conf` alongside `azarchive`.
+- **bigmo-gdrive:** (rclone remote, full read-write `drive` scope). Usable
+  two ways, both on the same underlying config in
+  `~/.config/rclone/rclone.conf` alongside `azarchive`:
+  - Command-driven, like `azarchive` (see [[infra_cold_archive]]):
+    `rclone lsd/copy/sync bigmo-gdrive:...`
+  - **Live FUSE mount at `/mnt/bigmo-gdrive`** (added 2026-08-30, after
+    initially setting up remote-only) — behaves like a normal directory.
+    Persistent via systemd **user** service
+    `~/.config/systemd/user/rclone-bigmo-gdrive.service`
+    (`--vfs-cache-mode writes`), `loginctl enable-linger brandon` so it
+    starts at boot without a login session. Check status:
+    `systemctl --user status rclone-bigmo-gdrive`. Unmount manually if
+    needed: `fusermount3 -u /mnt/bigmo-gdrive`.
 
 Check status: `claude mcp list`. Remove/re-add: `claude mcp remove <name>`
 then re-run `claude mcp add ... -s user ...` (exact commands below).

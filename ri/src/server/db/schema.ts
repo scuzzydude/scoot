@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, unique, jsonb } from "drizzle-orm/pg-core";
 
 // Bit positions for users.flags
 export const UserFlags = {
@@ -178,13 +178,31 @@ export const scootMembers = pgTable(
     // ScootFlags.LEGEND_NUMBER). The number stays a reserved seat in `users`; the
     // member keeps their own id. e.g. McGhee (member) wears 24. See arch/sms-rooms.md.
     wornNumber: integer("worn_number"),
-    // Links this membership to their player-cards roster entry (playerCards.serial),
-    // once claimed -- see card-commands.ts. NULL until auto-matched or self-claimed.
-    cardSerial: text("card_serial").references(() => playerCards.serial),
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.scootId, t.userId] }),
+  })
+);
+
+// A member can hold more than one player-card over time (a new roster/edition
+// each season, e.g. 2026 -> 2027) or even concurrently (a person with two
+// distinct card identities). One row per (member, card); `isActive` marks
+// which one "my card" sends by default. Claiming a new card (by code)
+// deactivates the member's other links and activates the new one -- see
+// card-commands.ts. Replaces the old single scootMembers.cardSerial column.
+export const cardLinks = pgTable(
+  "card_links",
+  {
+    id: serial("id").primaryKey(),
+    scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    cardSerial: text("card_serial").notNull().references(() => playerCards.serial),
+    isActive: boolean("is_active").notNull().default(true),
+    linkedAt: timestamp("linked_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqMemberCard: unique().on(t.scootId, t.userId, t.cardSerial),
   })
 );
 

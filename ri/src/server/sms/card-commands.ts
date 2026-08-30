@@ -9,7 +9,7 @@
 // .claude/plans/zazzy-petting-marshmallow.md for the full design.
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { playerCards, scootMembers } from "../db/schema.js";
+import { playerCards, scootMembers, cardLinks } from "../db/schema.js";
 import { throttledSend } from "./send.js";
 import { log } from "../log.js";
 
@@ -32,10 +32,14 @@ const CODE_PATTERN = /^[0-9a-f]{6}$/i;
 const MAX_PROFILE_LINES = 3;
 const MAX_LINE_CHARS = 28; // arch/player-cards.md: hard limit, longer runs off the card
 
+// The member's current default card -- the one "my card" sends. See
+// card_links's isActive comment in schema.ts: claiming a new card (by code)
+// flips this; a member can hold others (past editions, alt identities)
+// inactive at the same time.
 async function getLinkedCard(scootId: number, userId: number): Promise<PlayerCard | null> {
-  const [row] = await db.select({ cardSerial: scootMembers.cardSerial })
-    .from(scootMembers)
-    .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
+  const [row] = await db.select({ cardSerial: cardLinks.cardSerial })
+    .from(cardLinks)
+    .where(and(eq(cardLinks.scootId, scootId), eq(cardLinks.userId, userId), eq(cardLinks.isActive, true)));
   if (!row?.cardSerial) return null;
   const [card] = await db.select().from(playerCards).where(eq(playerCards.serial, row.cardSerial));
   return card ?? null;
@@ -90,14 +94,27 @@ export async function resolveCardCommand(
   if (CODE_PATTERN.test(norm)) {
     const [card] = await db.select().from(playerCards).where(eq(playerCards.code, norm.toUpperCase()));
     if (!card) return null; // not a real code — let it fall through rather than a hard error
-    const result = await db.update(scootMembers)
-      .set({ cardSerial: card.serial })
-      .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)))
-      .returning({ userId: scootMembers.userId });
-    if (!result.length) {
+    const [member] = await db.select({ userId: scootMembers.userId })
+      .from(scootMembers)
+      .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
+    if (!member) {
       log.warn({ userId, serial: card.serial }, "card claim: no scoot_members row to link");
       return { kind: "text", text: "Got the code, but I don't have you as a Fonde Brotherhood member yet — check with Brandon." };
     }
+    // Claiming a card makes it the default ("my card") without dropping any
+    // cards this member already holds (past editions, alt identities) — those
+    // just go inactive. Re-claiming a card already on file just reactivates it.
+    await db.transaction(async (tx) => {
+      await tx.update(cardLinks)
+        .set({ isActive: false })
+        .where(and(eq(cardLinks.scootId, scootId), eq(cardLinks.userId, userId)));
+      await tx.insert(cardLinks)
+        .values({ scootId, userId, cardSerial: card.serial, isActive: true })
+        .onConflictDoUpdate({
+          target: [cardLinks.scootId, cardLinks.userId, cardLinks.cardSerial],
+          set: { isActive: true },
+        });
+    });
     log.info({ userId, serial: card.serial }, "card command: claimed");
     return { kind: "send-card", card, text: `Linked! You're ${card.aka || card.handle} — here's your card.`, announceInline: true };
   }
