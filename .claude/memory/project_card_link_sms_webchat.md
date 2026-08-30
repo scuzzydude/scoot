@@ -1,11 +1,11 @@
 ---
 name: project-card-link-sms-webchat
-description: "Player cards linked to real users via SMS (BigMo)/webchat — 'my card' MMS/webchat delivery, claim-by-code, self-edit profile/aka. Built 2026-08-30, verified live against real Twilio."
+description: "Player cards linked to real users via SMS (BigMo)/webchat — 'my card' MMS/webchat delivery, claim-by-code, self-edit profile/aka, multi-card-per-member (card_links). Built 2026-08-30, verified live against real Twilio."
 metadata: 
   node_type: memory
   type: project
   originSessionId: cd96f0f9-30dc-43a1-9570-e939a94424ad
-  modified: 2026-08-30T17:26:05.336Z
+  modified: 2026-08-30T19:50:00.000Z
 ---
 
 Built and shipped 2026-08-30 (commit `ee30f01`), plan at
@@ -105,12 +105,46 @@ messages already populate, so it should render the same way, but this
 wasn't visually checked — flagged honestly rather than assumed).
 
 **Where this actually is right now:** the core "read/write my own card
-via text" loop works end-to-end on both channels for the 20 auto-linked
-people. Not done: (1) the ~11 unmatched cards need Brandon's manual
-resolution (especially the Bo ambiguity) or the self-serve claim flow
-(already built — they'd just need their own printed code) to actually
-link, (2) profile-text edits update the DB immediately but do NOT
-regenerate the front-card image — "my card" always sends whatever PNG
-was rendered at import time, a known/accepted V1 scoping limit (see the
-plan file), (3) no browser-side visual confirmation of the webchat image
-render yet.
+via text" loop works end-to-end on both channels. Manual resolution
+round (2026-08-30, same day) closed 4 of the original 11 unmatched
+cards — E-Dub, Black, Reggie (new user rows + phone numbers Brandon
+supplied over chat) and Trey-Up/Nick Gradney (phone added to his
+existing `nickgradney` row) — all linked via card_links (see below).
+Still open: the Bo ambiguity (`bigbo` vs `oldbo`), and no phone yet for
+Cleo, Kobe, Frank, Zelle. (2) profile-text edits update the DB
+immediately but do NOT regenerate the front-card image — "my card"
+always sends whatever PNG was rendered at import time, a known/accepted
+V1 scoping limit (see the plan file), (3) no browser-side visual
+confirmation of the webchat image render yet.
+
+**Schema changed 2026-08-30: one card per member → many.** Brandon's
+own framing: "we have 2026 cards but will produce a 2027 card set" —
+the original design (`scootMembers.cardSerial`, a single nullable
+column) couldn't hold more than one card per person, ever. Also hit
+immediately by a real case: Jen (34-DRAFT-24) and Jennifer
+(34-DRAFT-26) turned out to be the same person/phone
+(832-282-1314) — Brandon's call: "Same person, but we want to produce
+both cards for her."
+
+Replaced with a `card_links` join table (`ri/src/server/db/schema.ts`):
+`(id, scootId, userId, cardSerial, isActive, linkedAt)`, unique on
+`(scootId, userId, cardSerial)`. `isActive` marks the one "my card"
+sends by default. Claiming a card by code (`card-commands.ts`, wrapped
+in `db.transaction`) deactivates the member's other links and
+activates/upserts the new one — old cards stay linked, just inactive,
+so nothing is lost when a new season's card is claimed. Migration on
+prod: created `card_links`, backfilled all 24 existing single-links
+from `scoot_members.card_serial` (all becoming `isActive=true`),
+inserted Jen's card as Jennifer's second (inactive) link, then dropped
+the old column entirely (no back-compat shim, per this repo's
+convention of deleting rather than preserving unused code/columns).
+Verified live via simulated inbound SMS: "my card" from Jennifer's number still
+resolves to her active card (34-DRAFT-26), confirmed via app logs.
+`tools/player-cards/export_cards_to_app.py` (the reusable roster-import
+script) updated to generate `card_links` INSERT/deactivate SQL instead
+of the old single-column UPDATE — this is what a 2027 import run will
+use.
+
+No new SMS command surface added for multi-card yet (e.g. "my cards" to
+list all, or a way to pick a specific edition without re-texting its
+code) — not asked for, easy to add later against this same table.
