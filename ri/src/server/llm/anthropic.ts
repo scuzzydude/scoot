@@ -33,7 +33,7 @@ export class AnthropicProvider implements LLMProvider {
     }
 
     const response = await this.client.messages.create({
-      model: this.model,
+      model: options.model ?? this.model,
       max_tokens: options.maxTokens ?? 2048,
       system: options.system,
       messages: messages as Anthropic.MessageParam[],
@@ -51,7 +51,7 @@ export class AnthropicProvider implements LLMProvider {
     // Tool loop — max 3 rounds to avoid runaway calls
     for (let round = 0; round < 3; round++) {
       const response = await this.client.messages.create({
-        model: this.model,
+        model: options.model ?? this.model,
         max_tokens: options.maxTokens ?? 2048,
         system: options.system,
         tools: [SEARCH_TOOL],
@@ -86,7 +86,7 @@ export class AnthropicProvider implements LLMProvider {
 
     // Exhausted rounds — ask once more without tools
     const fallback = await this.client.messages.create({
-      model: this.model,
+      model: options.model ?? this.model,
       max_tokens: options.maxTokens ?? 2048,
       system: options.system,
       messages: thread,
