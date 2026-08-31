@@ -23,24 +23,25 @@ interface DigestResult {
 
 // Parse the LLM's labeled plain-text response (no JSON mode available in provider interface).
 // Format: "SUMMARY: ... / CRITICAL: yes|no / CRITICAL_INFO: ..."
+// Handles newlines and variations in spacing.
 function parseDigestResponse(text: string): DigestResult {
   const result: DigestResult = { isCritical: false };
 
-  // Extract summary (everything after SUMMARY: until / CRITICAL:)
-  const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=\s*\/\s*CRITICAL:|$)/s);
+  // Extract summary (everything after "SUMMARY:" until next label, handling newlines)
+  const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=\s*(?:\/|\n)?\s*CRITICAL:|$)/is);
   if (summaryMatch) {
     result.summary = summaryMatch[1].trim();
   }
 
-  // Extract critical flag
+  // Extract critical flag (yes|no), handling newlines
   const criticalMatch = text.match(/CRITICAL:\s*(yes|no)/i);
   if (criticalMatch) {
     result.isCritical = criticalMatch[1].toLowerCase() === "yes";
   }
 
-  // Extract critical info (everything after CRITICAL_INFO: if critical is true)
+  // Extract critical info (everything after "CRITICAL_INFO:" if critical is true)
   if (result.isCritical) {
-    const infoMatch = text.match(/CRITICAL_INFO:\s*(.+?)$/s);
+    const infoMatch = text.match(/CRITICAL_INFO:\s*(.+?)$/is);
     if (infoMatch) {
       result.criticalInfo = infoMatch[1].trim();
     }
