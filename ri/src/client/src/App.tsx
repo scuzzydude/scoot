@@ -1,10 +1,10 @@
 import { Switch, Route, Redirect } from "wouter";
-import { Header } from "./components/layout/header.js";
-import { BottomNav } from "./components/layout/bottom-nav.js";
+import { MobileShell } from "./components/layout/mobile-shell.js";
+import { DesktopShell } from "./components/layout/desktop-shell.js";
 import { Toaster } from "./components/ui/toaster.js";
 import { ProtectedRoute } from "./lib/protected-route.js";
-import { useAuth } from "./hooks/use-auth.js";
 import { ScootProvider } from "./hooks/use-scoot.js";
+import { LayoutModeProvider, useLayoutMode } from "./hooks/use-layout-mode.js";
 import AuthPage from "./pages/auth-page.js";
 import ChatPage from "./pages/chat-page.js";
 import MailPage from "./pages/mail-page.js";
@@ -18,51 +18,54 @@ import PrivacyPage from "./pages/privacy-page.js";
 import TermsPage from "./pages/terms-page.js";
 import NotFound from "./pages/not-found.js";
 
-export default function App() {
-  const { user } = useAuth();
+const routes = (
+  <Switch>
+    <Route path="/" component={() => <Redirect to="/chat" />} />
+    <Route path="/auth" component={AuthPage} />
+    <Route path="/privacy" component={PrivacyPage} />
+    <Route path="/terms" component={TermsPage} />
+    <Route path="/chat">
+      <ProtectedRoute><ChatPage /></ProtectedRoute>
+    </Route>
+    <Route path="/mail">
+      <ProtectedRoute><MailPage /></ProtectedRoute>
+    </Route>
+    <Route path="/wallet">
+      <ProtectedRoute><WalletPage /></ProtectedRoute>
+    </Route>
+    <Route path="/bot">
+      <ProtectedRoute><BotPage /></ProtectedRoute>
+    </Route>
+    <Route path="/sms-log">
+      <ProtectedRoute><SmsLogPage /></ProtectedRoute>
+    </Route>
+    <Route path="/oversight">
+      <ProtectedRoute><OversightPage /></ProtectedRoute>
+    </Route>
+    <Route path="/staking">
+      <ProtectedRoute><StakingPage /></ProtectedRoute>
+    </Route>
+    <Route path="/page/:slug">
+      <ProtectedRoute><ScootPage /></ProtectedRoute>
+    </Route>
+    <Route component={NotFound} />
+  </Switch>
+);
 
+function Shell() {
+  const { mode } = useLayoutMode();
+  return mode === "desktop" ? <DesktopShell>{routes}</DesktopShell> : <MobileShell>{routes}</MobileShell>;
+}
+
+export default function App() {
   return (
     <ScootProvider>
-      <div className="min-h-screen bg-black text-white">
-        <div className="mx-auto w-full max-w-[640px] min-h-screen md:border-x md:border-white/5 relative">
-          <Header />
-          <main className={`pt-14 ${user ? "pb-16" : ""}`}>
-            <Switch>
-              <Route path="/" component={() => <Redirect to="/chat" />} />
-              <Route path="/auth" component={AuthPage} />
-              <Route path="/privacy" component={PrivacyPage} />
-              <Route path="/terms" component={TermsPage} />
-              <Route path="/chat">
-                <ProtectedRoute><ChatPage /></ProtectedRoute>
-              </Route>
-              <Route path="/mail">
-                <ProtectedRoute><MailPage /></ProtectedRoute>
-              </Route>
-              <Route path="/wallet">
-                <ProtectedRoute><WalletPage /></ProtectedRoute>
-              </Route>
-              <Route path="/bot">
-                <ProtectedRoute><BotPage /></ProtectedRoute>
-              </Route>
-              <Route path="/sms-log">
-                <ProtectedRoute><SmsLogPage /></ProtectedRoute>
-              </Route>
-              <Route path="/oversight">
-                <ProtectedRoute><OversightPage /></ProtectedRoute>
-              </Route>
-              <Route path="/staking">
-                <ProtectedRoute><StakingPage /></ProtectedRoute>
-              </Route>
-              <Route path="/page/:slug">
-                <ProtectedRoute><ScootPage /></ProtectedRoute>
-              </Route>
-              <Route component={NotFound} />
-            </Switch>
-          </main>
-          {user && <BottomNav />}
+      <LayoutModeProvider>
+        <div className="min-h-screen bg-black text-white">
+          <Shell />
+          <Toaster />
         </div>
-        <Toaster />
-      </div>
+      </LayoutModeProvider>
     </ScootProvider>
   );
 }

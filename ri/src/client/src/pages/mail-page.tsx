@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { mailApi, type MailAttachmentMeta } from "../api/mail.js";
+import { useLayoutMode } from "../hooks/use-layout-mode.js";
+import { useDesktopSlots } from "../components/layout/desktop-shell.js";
 import { LinkAccountDialog } from "../components/mail/link-account-dialog.js";
 import { ComposeDialog, type ComposeSeed } from "../components/mail/compose-dialog.js";
-import { AttachmentPreviewDialog } from "../components/mail/attachment-preview-dialog.js";
+import { AttachmentPreviewDialog, AttachmentPreviewBody } from "../components/mail/attachment-preview-dialog.js";
+import { MailSidebar } from "../components/mail/mail-sidebar.js";
 import { Button } from "../components/ui/button.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
 import {
@@ -13,6 +16,7 @@ import {
   Reply as ReplyIcon,
   PenSquare,
   MailWarning,
+  X,
 } from "lucide-react";
 
 function timeLabel(iso: string | null): string {
@@ -27,11 +31,12 @@ function timeLabel(iso: string | null): string {
 
 export default function MailPage() {
   const qc = useQueryClient();
+  const { mode } = useLayoutMode();
   const { data: accounts = [] } = useQuery({ queryKey: ["mail", "accounts"], queryFn: mailApi.listAccounts });
 
   const [accountId, setAccountId] = useState<number | null>(null);
   const [folder, setFolder] = useState("INBOX");
-  const [view, setView] = useState<"list" | "reading">("list");
+  const [view, setView] = useState<"list" | "reading">("list"); // mobile drill-down only
   const [uid, setUid] = useState<number | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
@@ -56,10 +61,11 @@ export default function MailPage() {
     enabled: accountId !== null,
   });
 
+  const detailEnabled = accountId !== null && uid !== null && (mode === "desktop" || view === "reading");
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ["mail", "message", accountId, folder, uid],
     queryFn: () => mailApi.getMessage(accountId!, folder, uid!),
-    enabled: accountId !== null && uid !== null && view === "reading",
+    enabled: detailEnabled,
   });
 
   function openMessage(u: number) {
@@ -70,6 +76,17 @@ export default function MailPage() {
     setView("list");
     setUid(null);
     qc.invalidateQueries({ queryKey: ["mail", "messages", accountId, folder] });
+  }
+  function selectAccount(id: number) {
+    setAccountId(id);
+    setFolder("INBOX");
+    setUid(null);
+    setPreview(null);
+  }
+  function selectFolder(path: string) {
+    setFolder(path);
+    setUid(null);
+    setPreview(null);
   }
 
   function openReply() {
@@ -86,6 +103,40 @@ export default function MailPage() {
     setComposeOpen(true);
   }
 
+  const previewUrl = preview && accountId !== null && uid !== null ? mailApi.attachmentUrl(accountId, folder, uid, preview.partId) : null;
+
+  // Desktop: account/folder list docks in the sidebar, attachment preview
+  // (when one's selected) docks in the right panel -- both no-ops in mobile.
+  useDesktopSlots({
+    sidebar:
+      mode === "desktop" && accounts.length > 0 ? (
+        <MailSidebar
+          accounts={accounts}
+          accountId={accountId}
+          onSelectAccount={selectAccount}
+          folders={folders}
+          folder={folder}
+          onSelectFolder={selectFolder}
+          onLinkClick={() => setLinkOpen(true)}
+        />
+      ) : undefined,
+    rightPanel:
+      mode === "desktop" && preview && previewUrl ? (
+        <div className="p-4">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{preview.filename}</p>
+              <p className="text-xs text-white/40">{preview.contentType} · {(preview.size / 1024).toFixed(0)} KB</p>
+            </div>
+            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => setPreview(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <AttachmentPreviewBody attachment={preview} url={previewUrl} />
+        </div>
+      ) : undefined,
+  });
+
   if (accounts.length === 0) {
     return (
       <div className="max-w-lg mx-auto p-6 text-center space-y-4">
@@ -100,142 +151,198 @@ export default function MailPage() {
     );
   }
 
-  return (
-    <div className="max-w-lg mx-auto">
-      {view === "list" ? (
-        <>
-          <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1">
-            {accounts.map((a) => (
-              <button
-                key={a.id}
-                onClick={() => { setAccountId(a.id); setFolder("INBOX"); }}
-                className={`shrink-0 text-xs px-3 py-1.5 rounded-full border whitespace-nowrap ${
-                  a.id === accountId ? "bg-white text-black border-white font-semibold" : "border-white/15 text-white/60 hover:bg-white/5"
-                }`}
-              >
-                {a.label}
-                {a.needsReauth ? " ⚠" : ""}
-              </button>
-            ))}
+  const messageList = (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-white/10">
+        <span className="text-sm font-semibold">{folders.find((f) => f.path === folder)?.name ?? "Inbox"}</span>
+        <Button size="sm" variant="ghost" onClick={openCompose}>
+          <PenSquare className="h-4 w-4" />
+        </Button>
+      </div>
+      <ScrollArea className="flex-1">
+        {messagesLoading ? (
+          <p className="text-center text-sm text-white/40 py-8">Loading…</p>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-sm text-white/40 py-8">Nothing here.</p>
+        ) : (
+          messages.map((m) => (
             <button
-              onClick={() => setLinkOpen(true)}
-              className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-white/15 text-white/60 hover:bg-white/5 flex items-center gap-1"
+              key={m.uid}
+              onClick={() => openMessage(m.uid)}
+              className={`w-full text-left border-b border-white/10 px-4 py-3 hover:bg-white/5 flex gap-3 ${
+                mode === "desktop" && m.uid === uid ? "bg-white/[0.06]" : ""
+              }`}
             >
-              <Plus className="h-3 w-3" /> Link
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm truncate ${m.unread ? "font-bold" : "font-medium text-white/80"}`}>{m.from}</p>
+                <p className="text-xs text-white/50 truncate">{m.subject}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[11px] text-white/40 tabular-nums">{timeLabel(m.date)}</p>
+                {m.hasAttachments && <Paperclip className="h-3 w-3 text-white/30 mt-1 ml-auto" />}
+              </div>
             </button>
+          ))
+        )}
+      </ScrollArea>
+    </div>
+  );
+
+  const readingPane = (showBack: boolean) => (
+    <div className={mode === "desktop" ? "px-6 pt-4 pb-8 h-full overflow-y-auto" : "px-4 pt-3 pb-8"}>
+      {showBack && (
+        <Button variant="ghost" size="sm" onClick={backToList} className="mb-3 -ml-2">
+          <ChevronLeft className="h-4 w-4 mr-1" /> Inbox
+        </Button>
+      )}
+
+      {uid === null ? (
+        <p className="text-sm text-white/30 py-16 text-center">Select a message</p>
+      ) : detailLoading || !detail ? (
+        <p className="text-sm text-white/40 py-8 text-center">Loading…</p>
+      ) : (
+        <>
+          <h1 className="text-lg font-bold leading-snug mb-3">{detail.subject}</h1>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center text-xs font-bold shrink-0">
+              {detail.from.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold truncate">{detail.from}</p>
+              <p className="text-xs text-white/40 truncate">to {detail.to}</p>
+            </div>
           </div>
 
+          {detail.htmlBody ? (
+            <iframe
+              title="message body"
+              sandbox="allow-same-origin"
+              srcDoc={detail.htmlBody}
+              className="w-full rounded-lg border border-white/10 bg-white"
+              style={{ minHeight: 260 }}
+            />
+          ) : (
+            <p className="text-sm leading-relaxed whitespace-pre-line text-white/90">{detail.textBody}</p>
+          )}
+
+          {detail.attachments.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <p className="text-[11px] uppercase tracking-wide text-white/40">
+                Attachments ({detail.attachments.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {detail.attachments.map((att) => (
+                  <button
+                    key={att.partId}
+                    onClick={() => setPreview(att)}
+                    className={`flex items-center gap-2 border rounded-lg px-3 py-2 text-xs hover:bg-white/5 ${
+                      mode === "desktop" && preview?.partId === att.partId ? "border-white/40 bg-white/5" : "border-white/15"
+                    }`}
+                  >
+                    <Paperclip className="h-3.5 w-3.5 text-white/40" />
+                    <span className="max-w-[140px] truncate">{att.filename}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6">
+            <Button variant="outline" onClick={openReply}>
+              <ReplyIcon className="h-4 w-4 mr-1.5" /> Reply
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {mode === "desktop" ? (
+        <div className="flex h-full" style={{ height: "calc(100vh - 3.5rem)" }}>
+          <div className="w-[340px] shrink-0 border-r border-white/10">{messageList}</div>
+          <div className="flex-1 min-w-0">{readingPane(false)}</div>
+        </div>
+      ) : (
+        <div className="max-w-lg mx-auto">
           {account?.needsReauth && (
             <div className="mx-4 mt-2 rounded-lg border border-white/20 bg-white/5 p-3 text-xs text-white/70">
               This account needs to be reconnected — re-enter its app password.
             </div>
           )}
 
-          <div className="flex items-center justify-between px-4 pt-2 pb-1">
-            {folders.length > 0 ? (
-              <select
-                value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-                className="bg-transparent text-sm font-semibold border border-white/15 rounded-lg px-2 py-1"
-              >
-                {folders.map((f) => (
-                  <option key={f.path} value={f.path} className="bg-black">
-                    {f.name}{f.unread ? ` (${f.unread})` : ""}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="text-sm font-semibold">Inbox</span>
-            )}
-            <Button size="sm" variant="ghost" onClick={openCompose}>
-              <PenSquare className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <ScrollArea className="h-[calc(100vh-13rem)]">
-            {messagesLoading ? (
-              <p className="text-center text-sm text-white/40 py-8">Loading…</p>
-            ) : messages.length === 0 ? (
-              <p className="text-center text-sm text-white/40 py-8">Nothing here.</p>
-            ) : (
-              messages.map((m) => (
-                <button
-                  key={m.uid}
-                  onClick={() => openMessage(m.uid)}
-                  className="w-full text-left border-b border-white/10 px-4 py-3 hover:bg-white/5 flex gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm truncate ${m.unread ? "font-bold" : "font-medium text-white/80"}`}>{m.from}</p>
-                    <p className="text-xs text-white/50 truncate">{m.subject}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-[11px] text-white/40 tabular-nums">{timeLabel(m.date)}</p>
-                    {m.hasAttachments && <Paperclip className="h-3 w-3 text-white/30 mt-1 ml-auto" />}
-                  </div>
-                </button>
-              ))
-            )}
-          </ScrollArea>
-        </>
-      ) : (
-        <div className="px-4 pt-3 pb-8">
-          <Button variant="ghost" size="sm" onClick={backToList} className="mb-3 -ml-2">
-            <ChevronLeft className="h-4 w-4 mr-1" /> Inbox
-          </Button>
-
-          {detailLoading || !detail ? (
-            <p className="text-sm text-white/40 py-8 text-center">Loading…</p>
-          ) : (
+          {view === "list" ? (
             <>
-              <h1 className="text-lg font-bold leading-snug mb-3">{detail.subject}</h1>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="h-8 w-8 rounded-full bg-white text-black flex items-center justify-center text-xs font-bold shrink-0">
-                  {detail.from.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{detail.from}</p>
-                  <p className="text-xs text-white/40 truncate">to {detail.to}</p>
-                </div>
+              <div className="flex gap-2 overflow-x-auto px-4 pt-3 pb-1">
+                {accounts.map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => selectAccount(a.id)}
+                    className={`shrink-0 text-xs px-3 py-1.5 rounded-full border whitespace-nowrap ${
+                      a.id === accountId ? "bg-white text-black border-white font-semibold" : "border-white/15 text-white/60 hover:bg-white/5"
+                    }`}
+                  >
+                    {a.label}
+                    {a.needsReauth ? " ⚠" : ""}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setLinkOpen(true)}
+                  className="shrink-0 text-xs px-3 py-1.5 rounded-full border border-white/15 text-white/60 hover:bg-white/5 flex items-center gap-1"
+                >
+                  <Plus className="h-3 w-3" /> Link
+                </button>
               </div>
 
-              {detail.htmlBody ? (
-                <iframe
-                  title="message body"
-                  sandbox="allow-same-origin"
-                  srcDoc={detail.htmlBody}
-                  className="w-full rounded-lg border border-white/10 bg-white"
-                  style={{ minHeight: 260 }}
-                />
-              ) : (
-                <p className="text-sm leading-relaxed whitespace-pre-line text-white/90">{detail.textBody}</p>
-              )}
-
-              {detail.attachments.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-[11px] uppercase tracking-wide text-white/40">
-                    Attachments ({detail.attachments.length})
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {detail.attachments.map((att) => (
-                      <button
-                        key={att.partId}
-                        onClick={() => setPreview(att)}
-                        className="flex items-center gap-2 border border-white/15 rounded-lg px-3 py-2 text-xs hover:bg-white/5"
-                      >
-                        <Paperclip className="h-3.5 w-3.5 text-white/40" />
-                        <span className="max-w-[140px] truncate">{att.filename}</span>
-                      </button>
+              <div className="flex items-center justify-between px-4 pt-2 pb-1">
+                {folders.length > 0 ? (
+                  <select
+                    value={folder}
+                    onChange={(e) => setFolder(e.target.value)}
+                    className="bg-transparent text-sm font-semibold border border-white/15 rounded-lg px-2 py-1"
+                  >
+                    {folders.map((f) => (
+                      <option key={f.path} value={f.path} className="bg-black">
+                        {f.name}{f.unread ? ` (${f.unread})` : ""}
+                      </option>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-6">
-                <Button variant="outline" onClick={openReply}>
-                  <ReplyIcon className="h-4 w-4 mr-1.5" /> Reply
+                  </select>
+                ) : (
+                  <span className="text-sm font-semibold">Inbox</span>
+                )}
+                <Button size="sm" variant="ghost" onClick={openCompose}>
+                  <PenSquare className="h-4 w-4" />
                 </Button>
               </div>
+
+              <ScrollArea className="h-[calc(100vh-13rem)]">
+                {messagesLoading ? (
+                  <p className="text-center text-sm text-white/40 py-8">Loading…</p>
+                ) : messages.length === 0 ? (
+                  <p className="text-center text-sm text-white/40 py-8">Nothing here.</p>
+                ) : (
+                  messages.map((m) => (
+                    <button
+                      key={m.uid}
+                      onClick={() => openMessage(m.uid)}
+                      className="w-full text-left border-b border-white/10 px-4 py-3 hover:bg-white/5 flex gap-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm truncate ${m.unread ? "font-bold" : "font-medium text-white/80"}`}>{m.from}</p>
+                        <p className="text-xs text-white/50 truncate">{m.subject}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-[11px] text-white/40 tabular-nums">{timeLabel(m.date)}</p>
+                        {m.hasAttachments && <Paperclip className="h-3 w-3 text-white/30 mt-1 ml-auto" />}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </ScrollArea>
             </>
+          ) : (
+            readingPane(true)
           )}
         </div>
       )}
@@ -248,12 +355,14 @@ export default function MailPage() {
         accountLabel={account?.label}
         seed={composeSeed}
       />
-      <AttachmentPreviewDialog
-        open={preview !== null}
-        onOpenChange={(v) => !v && setPreview(null)}
-        attachment={preview}
-        url={preview && accountId !== null && uid !== null ? mailApi.attachmentUrl(accountId, folder, uid, preview.partId) : null}
-      />
-    </div>
+      {mode !== "desktop" && (
+        <AttachmentPreviewDialog
+          open={preview !== null}
+          onOpenChange={(v) => !v && setPreview(null)}
+          attachment={preview}
+          url={previewUrl}
+        />
+      )}
+    </>
   );
 }

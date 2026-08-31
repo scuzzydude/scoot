@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useAuth } from "../../hooks/use-auth.js";
 import { useScoot } from "../../hooks/use-scoot.js";
+import { useLayoutMode } from "../../hooks/use-layout-mode.js";
 import { Button } from "../ui/button.js";
 import {
   DropdownMenu,
@@ -10,11 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.js";
 import { Avatar, AvatarFallback } from "../ui/avatar.js";
-import { LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown, Monitor } from "lucide-react";
 
 export function Header() {
   const { user, logout } = useAuth();
   const { activeScoot, allScoots, setActiveScoot } = useScoot();
+  const { toggle } = useLayoutMode();
 
   return (
     <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-14 w-full max-w-[640px] bg-black border-b border-border flex items-center px-4 gap-3">
@@ -56,6 +58,18 @@ export function Header() {
       )}
 
       {(!user || !activeScoot) && <div className="flex-1" />}
+
+      {user && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-white/50 hover:text-white"
+          title="Switch to desktop view"
+          onClick={toggle}
+        >
+          <Monitor className="h-4 w-4" />
+        </Button>
+      )}
 
       <div className="shrink-0 w-8 flex justify-end">
         {user ? (

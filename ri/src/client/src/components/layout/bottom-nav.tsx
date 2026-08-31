@@ -1,36 +1,9 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Wallet, Bot, FileText, Inbox, Mail, Eye, Users } from "lucide-react";
-import { useScoot } from "../../hooks/use-scoot.js";
-import { hasLeader, hasStaked } from "../../api/scoots.js";
-
-const FIXED_NAV = [
-  { href: "/chat", label: "Chat", icon: MessageSquare },
-  { href: "/mail", label: "Mail", icon: Mail },
-  { href: "/wallet", label: "Wallet", icon: Wallet },
-  { href: "/bot", label: "Bot", icon: Bot },
-  { href: "/sms-log", label: "Texts", icon: Inbox },
-];
+import { useNavItems } from "../../hooks/use-nav-items.js";
 
 export function BottomNav() {
   const [location] = useLocation();
-  const { activeScoot } = useScoot();
-
-  const dynamicItems = (activeScoot?.navItems ?? [])
-    .filter((item) => !item.external)
-    .map((item) => ({ href: item.href, label: item.label, icon: FileText }));
-
-  // Staking catalog is "Brotherhood public info, but restricted" — staked
-  // members only (server also gates the endpoint).
-  const stakedItems = hasStaked(activeScoot?.userFlags)
-    ? [{ href: "/staking", label: "Brotherhood", icon: Users }]
-    : [];
-
-  // Oversight tab only for a per-Scoot LEADER (server also gates the endpoint).
-  const leaderItems = hasLeader(activeScoot?.userFlags)
-    ? [{ href: "/oversight", label: "Oversight", icon: Eye }]
-    : [];
-
-  const allItems = [...FIXED_NAV, ...dynamicItems, ...stakedItems, ...leaderItems];
+  const allItems = useNavItems();
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 z-50 h-16 w-full max-w-[640px] bg-black border-t border-border flex">
