@@ -128,6 +128,30 @@ export async function createFolder(account: MailAccount, name: string): Promise<
   }
 }
 
+// Check if a message is likely marketing/bulk based on RFC 2369 List-Unsubscribe header.
+// Cheap classification — header-only fetch, no body download. Returns true if the
+// header is present (indicates a mailing list or bulk sender); false otherwise.
+export async function isLikelyMarketing(
+  account: MailAccount,
+  folder: string,
+  uid: number
+): Promise<boolean> {
+  const client = await connect(account);
+  try {
+    await client.mailboxOpen(folder, { readOnly: true });
+    const msg = await client.fetchOne(String(uid), { headers: ["list-unsubscribe"] }, { uid: true });
+    if (!msg) return false;
+    // ImapFlow returns headers as a Map<string, any>
+    const headers = msg.headers as any;
+    if (headers instanceof Map) {
+      return headers.has("list-unsubscribe");
+    }
+    return false;
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 const LIST_PAGE_SIZE = 30;
 
 export async function listMessages(account: MailAccount, folder: string): Promise<MessageSummary[]> {
