@@ -1,11 +1,11 @@
 ---
 name: project-mail-client
-description: "Per-user multi-account IMAP mail client built into Scoot — read/reply/compose, inline attachment preview, dreamlab-vs-personal linking permission gate. Built 2026-08-31, mobile UI only so far."
+description: "Per-user multi-account IMAP mail client + toggleable desktop-wide layout (first in this app) — read/reply/compose, inline attachment preview, dreamlab-vs-personal linking gate, Chat+Mail in 3-pane desktop mode. Built 2026-08-31."
 metadata:
   node_type: memory
   type: project
   originSessionId: cd96f0f9-30dc-43a1-9570-e939a94424ad
-  modified: 2026-08-31T14:15:00.000Z
+  modified: 2026-08-31T15:10:00.000Z
 ---
 
 Built 2026-08-31 (commit `96026bb`), plan at
@@ -81,11 +81,52 @@ take effect, matching the same gotcha already documented in
 [[bigmo_mail_poller]] and [[project_card_link_sms_webchat]] — now hit a
 third time on this project.
 
-**NOT yet done:** Brandon linking his real accounts and testing
-read/reply/attachments against them live (the actual meaningful
-verification, per the plan — everything above is code-level/typecheck
-verification only); docx inline preview; the desktop-wide layout mode
-(plan phases 6-7); a login-flow smoke test was attempted via curl but
-this app's auth is OTP-based (`/api/v1/auth/login/request` +
-`/verify`), not username/password, so it wasn't practical to script —
-skipped in favor of Brandon testing live in his own browser session.
+**Update 2026-08-31, same day, commit `ef74690`:** rather than making
+Brandon re-type app passwords BigMo's own poller already has, added
+`scripts/seed-mail-accounts.ts` (`npm run seed:mail-accounts`, idempotent
+— reads `IMAP_*`/`GMAIL_IMAP_*` env vars, skips anything already linked
+or unconfigured) and ran it once against prod. Both dreamlab accounts
+verified live against real IMAP servers (not just DB rows) — Zoho
+returned 11 folders/11 unread, Gmail returned 8 folders/56 messages in
+INBOX. Real gotcha hit again: `npm install mailparser` on the host
+didn't reach the running container (`node_modules` is a named Docker
+volume, not bind-mounted) — had to `docker exec scoot-app-1 npm
+install` separately before the container's `tsx watch` stopped
+erroring.
+
+**Update 2026-08-31, same day, commit `c57a906`: desktop-wide layout
+shipped** (plan phases 6-7, the part deferred from the first pass).
+New `hooks/use-layout-mode.ts` (localStorage `scoot:layoutMode`,
+one-time `matchMedia` default, explicit toggle always wins after) and
+`components/layout/desktop-shell.tsx` — the first responsive/multi-pane
+layout this client has ever had (confirmed zero prior precedent during
+planning). Toggle lives as a Monitor/Smartphone icon button in both
+`header.tsx` (mobile) and `DesktopShell`'s own topbar.
+
+Slot architecture: `useDesktopSlots({sidebar, rightPanel})` — a page
+registers custom content via a React context `DesktopShell` provides;
+un-opted-in pages (wallet, bot, sms-log, oversight, staking) fall back
+automatically to a default nav sidebar (`DefaultNavSidebar`, built on a
+new shared `hooks/use-nav-items.ts` extracted from `bottom-nav.tsx` so
+the mobile and desktop nav lists can't drift apart) and no right panel
+— exactly "every other page renders unchanged inside main" from the
+plan, with zero changes needed to those page files.
+
+Chat docks `RoomList` in the sidebar and shows thread+input side-by-side
+(no more list/thread view-swap in desktop mode); mobile path re-verified
+unchanged. Mail is the flagship 3/4-pane case: `mail-sidebar.tsx`
+(new, accounts+folders) in the sidebar, message list + reading pane
+split inside `main`, and attachment preview slides into the right panel
+via a shared `AttachmentPreviewBody` extracted out of the mobile
+Dialog-based preview so neither mode duplicates the image/PDF-preview
+logic.
+
+**Still NOT done:** Brandon linking his personal (non-dreamlab) Gmail
+and Hotmail accounts through the UI and testing read/reply/attachments
+against them live — the dreamlab accounts were verified server-side via
+a script, but nobody has yet exercised the actual browser UI end to
+end; docx inline preview (still download-only fallback); a login-flow
+smoke test was attempted via curl but this app's auth is OTP-based
+(`/api/v1/auth/login/request` + `/verify`), not username/password, so
+it wasn't practical to script — real verification is Brandon using it
+live in his own browser session, both layout modes.
