@@ -12,6 +12,7 @@ import {
   listMessages,
   getMessage,
   getAttachmentContent,
+  moveMessage,
   MailDecryptionError,
 } from "../mail/client.js";
 import { sendFromAccount } from "../mail/smtp-send.js";
@@ -163,6 +164,21 @@ router.get("/accounts/:id/messages/:uid", async (req, res) => {
   try {
     const message = await getMessage(account, folder, uid);
     res.json({ ok: true, data: message });
+  } catch (err) {
+    handleMailError(res, err, account.id);
+  }
+});
+
+router.post("/accounts/:id/messages/:uid/move", async (req, res) => {
+  const account = await loadOwnedAccount(currentUserId(req), Number(req.params.id));
+  if (!account) { res.status(404).json({ ok: false, error: "Not found" }); return; }
+  const folder = typeof req.query.folder === "string" ? req.query.folder : "INBOX";
+  const uid = Number(req.params.uid);
+  const { toFolder } = req.body ?? {};
+  if (!toFolder) { res.status(400).json({ ok: false, error: "Missing toFolder" }); return; }
+  try {
+    await moveMessage(account, folder, uid, toFolder);
+    res.json({ ok: true });
   } catch (err) {
     handleMailError(res, err, account.id);
   }

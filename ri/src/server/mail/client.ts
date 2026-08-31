@@ -184,6 +184,16 @@ export async function getMessage(account: MailAccount, folder: string, uid: numb
   }
 }
 
+export async function moveMessage(account: MailAccount, folder: string, uid: number, toFolder: string): Promise<void> {
+  const client = await connect(account);
+  try {
+    await client.mailboxOpen(folder);
+    await client.messageMove(String(uid), toFolder, { uid: true });
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 export async function getAttachmentContent(
   account: MailAccount,
   folder: string,

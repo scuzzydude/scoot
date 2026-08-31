@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { mailApi, type MailAttachmentMeta } from "../api/mail.js";
+import { toast } from "../hooks/use-toast.js";
 import { useLayoutMode } from "../hooks/use-layout-mode.js";
 import { useDesktopSlots } from "../components/layout/desktop-shell.js";
 import { LinkAccountDialog } from "../components/mail/link-account-dialog.js";
@@ -17,6 +18,7 @@ import {
   Reply as ReplyIcon,
   PenSquare,
   MailWarning,
+  FolderInput,
   X,
 } from "lucide-react";
 
@@ -89,6 +91,18 @@ export default function MailPage() {
     setUid(null);
     setPreview(null);
   }
+
+  const moveMutation = useMutation({
+    mutationFn: (toFolder: string) => mailApi.moveMessage(accountId!, folder, uid!, toFolder),
+    onSuccess: (_data, toFolder) => {
+      const destName = folders.find((f) => f.path === toFolder)?.name ?? toFolder;
+      toast({ title: `Moved to ${destName}` });
+      qc.invalidateQueries({ queryKey: ["mail", "messages", accountId, folder] });
+      if (mode === "desktop") setUid(null);
+      else backToList();
+    },
+    onError: (err: Error) => toast({ title: "Move failed", description: err.message, variant: "destructive" }),
+  });
 
   function openReply() {
     if (!detail) return;
@@ -242,10 +256,26 @@ export default function MailPage() {
             </div>
           )}
 
-          <div className="mt-6">
+          <div className="mt-6 flex items-center gap-2">
             <Button variant="outline" onClick={openReply}>
               <ReplyIcon className="h-4 w-4 mr-1.5" /> Reply
             </Button>
+            {folders.length > 1 && (
+              <div className="relative">
+                <select
+                  disabled={moveMutation.isPending}
+                  value=""
+                  onChange={(e) => e.target.value && moveMutation.mutate(e.target.value)}
+                  className="appearance-none bg-transparent border border-white/15 rounded-lg pl-8 pr-3 py-2 text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
+                >
+                  <option value="" disabled className="bg-black">Move to…</option>
+                  {folders.filter((f) => f.path !== folder).map((f) => (
+                    <option key={f.path} value={f.path} className="bg-black">{f.name}</option>
+                  ))}
+                </select>
+                <FolderInput className="h-4 w-4 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/50" />
+              </div>
+            )}
           </div>
         </>
       )}

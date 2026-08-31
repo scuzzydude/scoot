@@ -90,6 +90,11 @@ export const mailApi = {
     apiFetch<MailMessageDetail>(`/accounts/${accountId}/messages/${uid}?folder=${encodeURIComponent(folder)}`),
   attachmentUrl: (accountId: number, folder: string, uid: number, partId: string) =>
     `/api/v1/mail/accounts/${accountId}/messages/${uid}/attachments/${partId}?folder=${encodeURIComponent(folder)}`,
+  moveMessage: (accountId: number, folder: string, uid: number, toFolder: string) =>
+    apiFetch<null>(`/accounts/${accountId}/messages/${uid}/move?folder=${encodeURIComponent(folder)}`, {
+      method: "POST",
+      body: JSON.stringify({ toFolder }),
+    }),
   send: async (accountId: number, input: SendMailInput): Promise<void> => {
     const form = new FormData();
     form.append("to", input.to);
