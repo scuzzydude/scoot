@@ -115,12 +115,19 @@ export async function processFolder(
       // Non-marketing: fetch full message and summarize
       const msg = await getMessage(account, folder, uid);
       const body = (msg.textBody || msg.htmlBody || "").slice(0, MAX_BODY_CHARS);
-      const prompt = `Summarize this email in 1-2 sentences. Flag if it contains critical info (account numbers, confirmation codes, security alerts, payment receipts). Format as:
-SUMMARY: [summary here]
-CRITICAL: yes|no
-CRITICAL_INFO: [extracted info if critical, else empty]
+      const prompt = `You are summarizing an archived email. Write a 1-2 sentence summary describing what the email is about. Then, decide if it contains critical information like account numbers, confirmation codes, security alerts, or payment details. Always respond in exactly this format (DO NOT use brackets or placeholder text):
 
-Email:
+SUMMARY: <actual summary here, 1-2 sentences>
+CRITICAL: yes
+CRITICAL_INFO: <account number 12345, confirmation code ABC>
+
+OR
+
+SUMMARY: <actual summary here, 1-2 sentences>
+CRITICAL: no
+CRITICAL_INFO:
+
+Email content:
 ${body}`;
 
       const response = await getProvider().chat(
