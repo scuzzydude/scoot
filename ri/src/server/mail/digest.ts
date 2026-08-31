@@ -22,28 +22,31 @@ interface DigestResult {
 }
 
 // Parse the LLM's labeled plain-text response (no JSON mode available in provider interface).
-// Format: "SUMMARY: ... / CRITICAL: yes|no / CRITICAL_INFO: ..."
-// Handles newlines and variations in spacing.
+// Format: "SUMMARY: ... CRITICAL: yes|no CRITICAL_INFO: ..."
 function parseDigestResponse(text: string): DigestResult {
   const result: DigestResult = { isCritical: false };
 
-  // Extract summary (everything after "SUMMARY:" until next label, handling newlines)
-  const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=\s*(?:\/|\n)?\s*CRITICAL:|$)/is);
-  if (summaryMatch) {
-    result.summary = summaryMatch[1].trim();
+  // Split by CRITICAL: to cleanly separate summary from the rest
+  const parts = text.split(/CRITICAL:\s*/i);
+  if (parts.length > 0) {
+    // Everything before "CRITICAL:" is the summary (strip "SUMMARY:" prefix)
+    const summaryText = parts[0].replace(/^SUMMARY:\s*/i, "").trim();
+    result.summary = summaryText || undefined;
   }
 
-  // Extract critical flag (yes|no), handling newlines
-  const criticalMatch = text.match(/CRITICAL:\s*(yes|no)/i);
-  if (criticalMatch) {
-    result.isCritical = criticalMatch[1].toLowerCase() === "yes";
-  }
+  // Extract critical flag from the second part (after first CRITICAL:)
+  if (parts.length > 1) {
+    const criticalMatch = parts[1].match(/^(yes|no)/i);
+    if (criticalMatch) {
+      result.isCritical = criticalMatch[1].toLowerCase() === "yes";
+    }
 
-  // Extract critical info (everything after "CRITICAL_INFO:" if critical is true)
-  if (result.isCritical) {
-    const infoMatch = text.match(/CRITICAL_INFO:\s*(.+?)$/is);
-    if (infoMatch) {
-      result.criticalInfo = infoMatch[1].trim();
+    // Extract critical info (everything after "CRITICAL_INFO:" in the rest)
+    if (result.isCritical) {
+      const infoMatch = parts[1].match(/CRITICAL_INFO:\s*(.+?)$/is);
+      if (infoMatch) {
+        result.criticalInfo = infoMatch[1].trim();
+      }
     }
   }
 
