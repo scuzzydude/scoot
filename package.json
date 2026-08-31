@@ -14,6 +14,7 @@
     "bot:invite": "tsx ri/src/server/scripts/bot-invite.ts",
     "seed:fakes": "tsx ri/src/server/scripts/seed-fake-users.ts",
     "seed:scoot34": "tsx ri/src/server/scripts/seed-scoot34.ts",
+    "seed:mail-accounts": "tsx ri/src/server/scripts/seed-mail-accounts.ts",
     "research:moses": "tsx ri/src/server/scripts/research-moses.ts",
     "session:save": "node scripts/save-session.cjs",
     "setup:memory": "bash scripts/setup-claude-memory.sh",
