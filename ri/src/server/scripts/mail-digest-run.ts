@@ -9,8 +9,12 @@ import { db } from "../db/index.js";
 import { mailAccounts } from "../db/schema.js";
 import { isDreamlabAddress } from "../mail/domain-policy.js";
 import { runDigestPass } from "../mail/digest.js";
+import { initProvider } from "../llm/provider.js";
 import { ROOT_USER_ID } from "../trust/graph.js";
 import { log } from "../log.js";
+
+// Initialize LLM provider (Anthropic or OpenAI-compat, configured via env)
+await initProvider();
 
 const args = process.argv.slice(2);
 const email = args.find((a) => !a.startsWith("--"));
