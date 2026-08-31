@@ -1,0 +1,193 @@
+// Per-user IMAP client wrapper — connects per request (no persistent pooling
+// in v1), fetches folders/messages/attachments live. No local mail store:
+// IMAP already is the store (see mail_accounts in schema.ts for why).
+import { ImapFlow, type MailboxObject } from "imapflow";
+import { simpleParser, type AddressObject } from "mailparser";
+import type { MailAccount } from "../db/schema.js";
+import { decryptSecret } from "../lib/crypto.js";
+import { log } from "../log.js";
+
+export interface FolderInfo {
+  path: string;
+  name: string;
+  unread: number;
+}
+
+export interface MessageSummary {
+  uid: number;
+  from: string;
+  fromAddress: string;
+  subject: string;
+  date: string | null;
+  unread: boolean;
+  hasAttachments: boolean;
+  snippet: string;
+}
+
+export interface AttachmentMeta {
+  partId: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}
+
+export interface MessageDetail {
+  uid: number;
+  from: string;
+  fromAddress: string;
+  to: string;
+  subject: string;
+  date: string | null;
+  textBody: string;
+  htmlBody: string | null;
+  attachments: AttachmentMeta[];
+}
+
+// Thrown specifically when the stored app password can't be decrypted
+// (ENCRYPTION_KEY rotated/lost) — distinct from a network/auth failure
+// against the mail server itself, so routes can set needsReauth precisely
+// rather than on every transient IMAP hiccup.
+export class MailDecryptionError extends Error {}
+
+function decryptOrThrow(account: MailAccount): string {
+  try {
+    return decryptSecret(account.encryptedPassword);
+  } catch (err) {
+    throw new MailDecryptionError(`could not decrypt stored password for account ${account.id}`);
+  }
+}
+
+async function connect(account: MailAccount): Promise<ImapFlow> {
+  const client = new ImapFlow({
+    host: account.imapHost,
+    port: account.imapPort,
+    secure: true,
+    auth: { user: account.imapUser, pass: decryptOrThrow(account) },
+    logger: false,
+  });
+  // See mail/poller.ts's 2026-08-26 incident comment: ImapFlow emits 'error'
+  // as a standalone EventEmitter event outside the promise chain — an
+  // unhandled one crashes the whole process on a transient network failure.
+  client.on("error", (err) => log.error({ err, accountId: account.id }, "mail client: error event"));
+  await client.connect();
+  return client;
+}
+
+function addressLabel(addr?: AddressObject | AddressObject[]): { name: string; address: string } {
+  const first = Array.isArray(addr) ? addr[0] : addr;
+  const val = first?.value?.[0];
+  if (!val) return { name: "(unknown)", address: "" };
+  return { name: val.name || val.address || "(unknown)", address: val.address || "" };
+}
+
+export async function listFolders(account: MailAccount): Promise<FolderInfo[]> {
+  const client = await connect(account);
+  try {
+    const list = await client.list();
+    const out: FolderInfo[] = [];
+    for (const box of list) {
+      if (box.flags?.has("\\Noselect")) continue;
+      let unread = 0;
+      try {
+        const status = await client.status(box.path, { unseen: true });
+        unread = status.unseen ?? 0;
+      } catch {
+        // some providers reject STATUS on certain special folders — not fatal
+      }
+      out.push({ path: box.path, name: box.name, unread });
+    }
+    return out;
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+const LIST_PAGE_SIZE = 30;
+
+export async function listMessages(account: MailAccount, folder: string): Promise<MessageSummary[]> {
+  const client = await connect(account);
+  try {
+    const box: MailboxObject = await client.mailboxOpen(folder, { readOnly: true });
+    if (box.exists === 0) return [];
+    const start = Math.max(1, box.exists - LIST_PAGE_SIZE + 1);
+    const range = `${start}:*`;
+    const out: MessageSummary[] = [];
+    for await (const msg of client.fetch(range, { envelope: true, flags: true, bodyStructure: true })) {
+      const from = addressLabel(msg.envelope?.from as AddressObject[] | undefined);
+      const hasAttachments = hasAttachmentParts(msg.bodyStructure);
+      out.push({
+        uid: msg.uid,
+        from: from.name,
+        fromAddress: from.address,
+        subject: msg.envelope?.subject ?? "(no subject)",
+        date: msg.envelope?.date ? new Date(msg.envelope.date).toISOString() : null,
+        unread: !msg.flags?.has("\\Seen"),
+        hasAttachments,
+        snippet: "",
+      });
+    }
+    out.reverse(); // newest first
+    return out;
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+// bodyStructure is a recursive tree; a node with a disposition or a filename
+// on a non-text/non-multipart part is an attachment.
+function hasAttachmentParts(node: any): boolean {
+  if (!node) return false;
+  if (node.disposition === "attachment" || (node.parameters?.name && node.type !== "multipart")) return true;
+  if (Array.isArray(node.childNodes)) return node.childNodes.some(hasAttachmentParts);
+  return false;
+}
+
+export async function getMessage(account: MailAccount, folder: string, uid: number): Promise<MessageDetail> {
+  const client = await connect(account);
+  try {
+    await client.mailboxOpen(folder, { readOnly: true });
+    const dl = await client.download(String(uid), undefined, { uid: true });
+    const parsed = await simpleParser(dl.content);
+    await client.messageFlagsAdd({ uid: String(uid) }, ["\\Seen"], { uid: true }).catch(() => {});
+    const from = addressLabel(parsed.from);
+    const to = Array.isArray(parsed.to) ? parsed.to.map((t) => addressLabel(t).address).join(", ") : addressLabel(parsed.to).address;
+    return {
+      uid,
+      from: from.name,
+      fromAddress: from.address,
+      to,
+      subject: parsed.subject ?? "(no subject)",
+      date: parsed.date ? parsed.date.toISOString() : null,
+      textBody: parsed.text ?? "",
+      htmlBody: parsed.html || null,
+      attachments: parsed.attachments.map((a, i) => ({
+        partId: String(i),
+        filename: a.filename ?? `attachment-${i}`,
+        contentType: a.contentType,
+        size: a.size,
+      })),
+    };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+export async function getAttachmentContent(
+  account: MailAccount,
+  folder: string,
+  uid: number,
+  partId: string
+): Promise<{ filename: string; contentType: string; content: Buffer } | null> {
+  const client = await connect(account);
+  try {
+    await client.mailboxOpen(folder, { readOnly: true });
+    const dl = await client.download(String(uid), undefined, { uid: true });
+    const parsed = await simpleParser(dl.content);
+    const idx = Number(partId);
+    const att = parsed.attachments[idx];
+    if (!att) return null;
+    return { filename: att.filename ?? `attachment-${idx}`, contentType: att.contentType, content: att.content };
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}

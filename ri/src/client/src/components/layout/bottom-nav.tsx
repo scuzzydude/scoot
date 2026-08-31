@@ -1,10 +1,11 @@
 import { Link, useLocation } from "wouter";
-import { MessageSquare, Wallet, Bot, FileText, Inbox, Eye, Users } from "lucide-react";
+import { MessageSquare, Wallet, Bot, FileText, Inbox, Mail, Eye, Users } from "lucide-react";
 import { useScoot } from "../../hooks/use-scoot.js";
 import { hasLeader, hasStaked } from "../../api/scoots.js";
 
 const FIXED_NAV = [
   { href: "/chat", label: "Chat", icon: MessageSquare },
+  { href: "/mail", label: "Mail", icon: Mail },
   { href: "/wallet", label: "Wallet", icon: Wallet },
   { href: "/bot", label: "Bot", icon: Bot },
   { href: "/sms-log", label: "Texts", icon: Inbox },

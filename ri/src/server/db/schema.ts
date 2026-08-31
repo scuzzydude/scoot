@@ -206,6 +206,41 @@ export const cardLinks = pgTable(
   })
 );
 
+// Per-user linked IMAP/SMTP mail account. Belongs to the person, not a Scoot
+// membership (no scootId) — unlike cardLinks, an email address isn't
+// Scoot-specific. No message/thread/attachment tables: folder listings and
+// bodies are fetched live from IMAP per request (see mail/client.ts); IMAP
+// already is the store. `encryptedPassword` covers both IMAP and SMTP auth
+// (one app password per account for every provider in scope). `isDreamlab`
+// is a snapshot of the domain-policy check at link time (display only, not
+// re-derived on every read). See mail/domain-policy.ts + mail/permissions.ts
+// for the linking rule: dreamlab-domain addresses linkable by any member,
+// anything else requires a Scoot LEADER.
+export const mailAccounts = pgTable(
+  "mail_accounts",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    label: text("label").notNull(),
+    emailAddress: text("email_address").notNull(),
+    imapHost: text("imap_host").notNull(),
+    imapPort: integer("imap_port").notNull().default(993),
+    imapUser: text("imap_user").notNull(),
+    smtpHost: text("smtp_host").notNull(),
+    smtpPort: integer("smtp_port").notNull().default(465),
+    smtpUser: text("smtp_user").notNull(),
+    encryptedPassword: text("encrypted_password").notNull(),
+    isDreamlab: boolean("is_dreamlab").notNull(),
+    needsReauth: boolean("needs_reauth").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+  },
+  (t) => ({
+    uniqUserAddress: unique().on(t.userId, t.emailAddress),
+  })
+);
+export type MailAccount = typeof mailAccounts.$inferSelect;
+
 export const scootPages = pgTable("scoot_pages", {
   id: serial("id").primaryKey(),
   scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),

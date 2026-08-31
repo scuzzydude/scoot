@@ -7,6 +7,7 @@ import { initProvider as initSmsProvider } from "./sms/provider.js";
 import { seedDefaultUser } from "./db/seed-default-user.js";
 import { seedBots } from "./db/seed-bots.js";
 import { startMailPoller } from "./mail/poller.js";
+import { startAttachmentCacheSweeper } from "./mail/attachment-cache.js";
 import { startAnthropicShim } from "./llm/anthropic-shim.js";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
@@ -43,6 +44,8 @@ try {
 } catch (err) {
   process.stderr.write(`Mail poller init failed (set IMAP_* env vars to enable): ${err}\n`);
 }
+
+startAttachmentCacheSweeper();
 
 try {
   startAnthropicShim();

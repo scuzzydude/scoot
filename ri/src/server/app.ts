@@ -17,6 +17,7 @@ import botRouter from "./routes/bot.js";
 import mediaRouter from "./routes/media.js";
 import rcWebhookRouter from "./routes/rc-webhook.js";
 import smsRouter from "./routes/sms.js";
+import mailRouter from "./routes/mail.js";
 
 const PgSession = connectPgSimple(session);
 
@@ -77,5 +78,6 @@ app.use("/api/v1/bot", botRouter);
 app.use("/api/v1/media", mediaRouter);
 app.use("/api/v1/rc", rcWebhookRouter);
 app.use("/api/v1/sms", smsRouter);
+app.use("/api/v1/mail", mailRouter);
 
 export { app };

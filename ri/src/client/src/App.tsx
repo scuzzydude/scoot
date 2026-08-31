@@ -7,6 +7,7 @@ import { useAuth } from "./hooks/use-auth.js";
 import { ScootProvider } from "./hooks/use-scoot.js";
 import AuthPage from "./pages/auth-page.js";
 import ChatPage from "./pages/chat-page.js";
+import MailPage from "./pages/mail-page.js";
 import WalletPage from "./pages/wallet-page.js";
 import BotPage from "./pages/bot-page.js";
 import SmsLogPage from "./pages/sms-log-page.js";
@@ -33,6 +34,9 @@ export default function App() {
               <Route path="/terms" component={TermsPage} />
               <Route path="/chat">
                 <ProtectedRoute><ChatPage /></ProtectedRoute>
+              </Route>
+              <Route path="/mail">
+                <ProtectedRoute><MailPage /></ProtectedRoute>
               </Route>
               <Route path="/wallet">
                 <ProtectedRoute><WalletPage /></ProtectedRoute>
