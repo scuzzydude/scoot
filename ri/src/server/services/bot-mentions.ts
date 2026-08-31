@@ -5,6 +5,7 @@ import { getProvider } from "../llm/provider.js";
 import { broadcast } from "../ws/chat-ws.js";
 import { fanOutToSms } from "../sms/fanout.js";
 import { resolveCardCommand } from "../sms/card-commands.js";
+import { resolveMailDigestCommand, formatDigestForWebchat } from "../sms/mail-digest-commands.js";
 import { log } from "../log.js";
 
 // Player-card commands are Scoot(34)/BigMo-specific business logic, not
@@ -230,6 +231,15 @@ export async function handleMentions(ctx: MentionContext): Promise<void> {
           ? cardResult.card.frontImageUrl // app-relative path — fine as-is for webchat's own <img src>
           : undefined;
         await postBotMessage(ctx.roomId, bot, cardResult.text, mediaUrl);
+        return;
+      }
+
+      // Email digest query: "my digest", "email digest", etc.
+      const digestResult = await resolveMailDigestCommand(ctx.authorId, withoutMention);
+      if (digestResult != null) {
+        log.info({ roomId: ctx.roomId, authorId: ctx.authorId }, "bot mention: digest query");
+        const text = formatDigestForWebchat(digestResult);
+        await postBotMessage(ctx.roomId, bot, text);
         return;
       }
     }

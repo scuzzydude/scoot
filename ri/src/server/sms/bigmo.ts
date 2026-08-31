@@ -16,6 +16,7 @@ import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
 import { tryHandleCardCommand } from "./card-commands.js";
+import { tryHandleMailDigestCommand } from "./mail-digest-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { tryHandleShutdownGate } from "./shutdown.js";
 import { log } from "../log.js";
@@ -204,6 +205,13 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (cardReply != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms card command");
       return finish(cardReply, roomId);
+    }
+
+    // Email digest query: "my digest", "email digest", "critical emails" — see mail-digest-commands.ts.
+    const digestReply = await tryHandleMailDigestCommand(sender.id, trimmed);
+    if (digestReply != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms digest query");
+      return finish(digestReply, roomId);
     }
 
     // Pledge revocation: "revoke <name>" (bogus, self-service) or a LEADER
