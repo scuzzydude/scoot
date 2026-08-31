@@ -240,6 +240,7 @@ export const mailAccounts = pgTable(
   })
 );
 export type MailAccount = typeof mailAccounts.$inferSelect;
+export type MailDigestEntry = typeof mailDigestEntries.$inferSelect;
 
 export const scootPages = pgTable("scoot_pages", {
   id: serial("id").primaryKey(),
@@ -453,6 +454,23 @@ export const mailCheckState = pgTable("mail_check_state", {
   lastUid: integer("last_uid"),
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
 });
+
+export const mailDigestEntries = pgTable("mail_digest_entries", {
+  id: serial("id").primaryKey(),
+  mailAccountId: integer("mail_account_id").references(() => mailAccounts.id, { onDelete: "cascade" }).notNull(),
+  folder: text("folder").notNull(),
+  uid: integer("uid").notNull(),
+  subject: text("subject").notNull(),
+  fromAddress: text("from_address").notNull(),
+  date: timestamp("date", { withTimezone: true }),
+  category: text("category").notNull(), // 'marketing' | 'content'
+  summary: text("summary"), // null for marketing
+  isCritical: boolean("is_critical").notNull().default(false),
+  criticalInfo: text("critical_info"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => ({
+  uniqEntry: unique().on(t.mailAccountId, t.folder, t.uid),
+}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
