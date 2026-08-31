@@ -3,6 +3,7 @@
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [BigMo Gmail/Drive/Calendar MCP + rclone](infra_bigmo_google_mcp.md) — 3 MCP servers + rclone remote `bigmo-gdrive:` (r/w) on fonde.brotherhood@gmail.com; creds in ~/.mcp-creds/bigmo-google/; naming convention for future accounts
 - [BigMo mail poller — first scheduled job in Scoot](bigmo_mail_poller.md) — IMAP+SMTP on Zoho; 08-27 crashed the whole app via unhandled ImapFlow 'error' event, fixed `a85ce14`
+- [Per-user mail client — dreamlab + personal, read/reply/compose](project_mail_client.md) — new mail_accounts table, AES-256-GCM at rest (first in repo), dreamlab-vs-Leader linking gate; mobile UI only, desktop layout still pending
 - [BigMo MMS capability — proven, unwired](bigmo_mms_capability.md) — mediaUrl threaded through SMSProvider.send(); superseded by [[project_card_link_sms_webchat]], the "send me my card" trigger now exists
 - [Player cards linked to SMS/webchat](project_card_link_sms_webchat.md) — "my card"/claim-by-code/self-edit profile, verified live via real Twilio MMS + webchat; 20/31 auto-linked, 11 need manual resolution
 - [Scoot conceptual model — Foundation, Scoot(X), scootage, pledges](scoot_concept_model.md) — Design vocabulary from Brandon's book; Scoot(34) = The Dream Laboratory / Fonde Brotherhood; per-Scoot UI term overloading
