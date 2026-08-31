@@ -32,7 +32,7 @@ export function startAnthropicShim(): void {
   }
 
   const client = new Anthropic({ apiKey: process.env.LLM_API_KEY });
-  const defaultModel = process.env.LLM_MODEL ?? "claude-sonnet-4-5";
+  const defaultModel = process.env.LLM_MODEL ?? "claude-sonnet-5";
   const port = parseInt(process.env.PMP_SHIM_PORT ?? "4001", 10);
 
   const app = express();

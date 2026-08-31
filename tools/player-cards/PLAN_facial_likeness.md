@@ -1152,3 +1152,28 @@ pass is art-only. Published as "Full roster sample" on the review
 page.
 
 **Next, per Brandon's own sequencing:** move to the back-of-card side.
+
+## Open backlog item — Claude vision judge, not yet built (added 2026-08-30)
+
+Idea from Brandon: add an automated visual QA step using a Claude model
+(vision input) as a "judge" over each generated card — replacing the
+current manual eyeball-review workflow. Two metrics:
+1. **Likeness score** — how well the generated face matches the
+   source reference photo.
+2. **Whitewash score** — flags skin-tone/ethnicity drift from the
+   source photo, the specific recurring failure documented repeatedly
+   in this project (ANIME style, Debra, batch 2's first pass — see
+   `.claude/memory/project_player_cards_facial_likeness.md`).
+
+**Scope note:** this does NOT touch the generation pipeline itself —
+Claude has no image-generation capability; the diffusion models (SDXL/
+PuLID/Kontext/USO on Modal) remain the only thing that produces the
+actual card art. This is purely a review/scoring step, feeding
+source-photo + generated-card pairs to a Claude model with vision and
+getting back structured scores, likely useful for catching regressions
+automatically across a full-roster batch run instead of relying on
+Brandon's own eye every time (see the round-27/28 "full-roster
+verification pass" lesson above for exactly the kind of bug class this
+would catch sooner).
+
+Not started — no design, no script, no chosen model/prompt yet.

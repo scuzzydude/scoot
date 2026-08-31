@@ -2204,3 +2204,19 @@ session continues this work next, so if picking this up in a fresh
 session, don't assume the default scratchpad has these files; the path
 above is the one that matters until this round ships and gets cleaned
 up.
+
+**Backlog item added 2026-08-30, not started: Claude vision judge for
+card QA.** Brandon's idea after asking whether Claude Fable 5 would
+improve generation quality — clarified Claude has no image-gen
+capability so it can't touch the diffusion pipeline itself, but vision
+input makes it a plausible automated *review* step. Two metrics
+proposed: a likeness score (match to source photo) and a whitewash
+score (skin-tone/ethnicity drift — the specific recurring failure
+documented multiple times in this project: ANIME style whitewashing,
+Debra's unresolved case, batch 2's first-pass regression). Would
+replace/augment Brandon's manual eyeball review, and could plausibly
+catch full-roster-only bug classes (like round 27/28's black-and-white
+renders and jersey-mask bleed) automatically instead of after shipping.
+No design, script, or model/prompt chosen yet — full note in
+`tools/player-cards/PLAN_facial_likeness.md`'s new "Open backlog item"
+section.

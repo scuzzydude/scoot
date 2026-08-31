@@ -171,7 +171,7 @@ interface LLMProvider {
 ```
 
 **Implementations:**
-- `AnthropicProvider` — uses Anthropic SDK, `claude-sonnet-4-20250514` default model
+- `AnthropicProvider` — uses Anthropic SDK, `claude-sonnet-5` default model
 - `OpenAICompatProvider` — uses OpenAI SDK pointed at any compatible endpoint (vLLM, Ollama, etc.)
 
 Active provider selected by `LLM_PROVIDER` env var (`anthropic` | `openai_compat`).
