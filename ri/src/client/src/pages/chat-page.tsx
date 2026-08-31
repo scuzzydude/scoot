@@ -19,25 +19,28 @@ function ChatPageInner() {
 
   // Desktop: room list docks in the shell's sidebar, always visible --
   // selecting a room never hides it (no list/thread swap like mobile).
-  useDesktopSlots({
+  const slots = useDesktopSlots({
     sidebar: mode === "desktop" ? <RoomList selectedRoomId={selectedRoom?.id ?? null} onSelectRoom={setSelectedRoom} /> : undefined,
   });
 
   if (mode === "desktop") {
     return (
-      <div className="flex flex-col h-full min-h-0" style={{ height: "calc(100vh - 3.5rem)" }}>
-        {selectedRoom ? (
-          <>
-            <MessageThread room={selectedRoom} typingUsers={typingUsers} onBack={() => setSelectedRoom(null)} />
-            <MessageInput roomId={selectedRoom.id} sendWs={send} />
-          </>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-white/30 gap-2">
-            <MessageSquare className="h-8 w-8" />
-            <p className="text-sm">Pick a room from the sidebar</p>
-          </div>
-        )}
-      </div>
+      <>
+        {slots}
+        <div className="flex flex-col h-full min-h-0" style={{ height: "calc(100vh - 3.5rem)" }}>
+          {selectedRoom ? (
+            <>
+              <MessageThread room={selectedRoom} typingUsers={typingUsers} onBack={() => setSelectedRoom(null)} />
+              <MessageInput roomId={selectedRoom.id} sendWs={send} />
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-white/30 gap-2">
+              <MessageSquare className="h-8 w-8" />
+              <p className="text-sm">Pick a room from the sidebar</p>
+            </div>
+          )}
+        </div>
+      </>
     );
   }
 

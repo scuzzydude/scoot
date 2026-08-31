@@ -107,7 +107,7 @@ export default function MailPage() {
 
   // Desktop: account/folder list docks in the sidebar, attachment preview
   // (when one's selected) docks in the right panel -- both no-ops in mobile.
-  useDesktopSlots({
+  const slots = useDesktopSlots({
     sidebar:
       mode === "desktop" && accounts.length > 0 ? (
         <MailSidebar
@@ -259,6 +259,7 @@ export default function MailPage() {
 
   return (
     <>
+      {slots}
       {mode === "desktop" ? (
         <div className="flex h-full" style={{ height: "calc(100vh - 3.5rem)" }}>
           <div className="w-[340px] shrink-0 border-r border-white/10">{messageList}</div>

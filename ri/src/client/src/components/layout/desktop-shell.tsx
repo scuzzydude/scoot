@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "../../hooks/use-auth.js";
 import { useScoot } from "../../hooks/use-scoot.js";
@@ -15,32 +16,55 @@ import { Avatar, AvatarFallback } from "../ui/avatar.js";
 import { Button } from "../ui/button.js";
 import { LogOut, Smartphone } from "lucide-react";
 
-// A page that wants a custom sidebar/right panel (chat, mail) registers it
-// here instead of DesktopShell owning per-route knowledge of every page.
-// Everything else falls back to the default nav sidebar and no right panel
-// -- "every other page renders unchanged inside main" from the plan.
+// A page that wants a custom sidebar/right panel (chat, mail) portals it
+// into these DOM nodes instead of DesktopShell owning per-route knowledge of
+// every page. Everything else falls back to the default nav sidebar and no
+// right panel -- "every other page renders unchanged inside main" from the
+// plan. Portal target elements (not raw refs) so a child's render can react
+// to them becoming available; `hasSidebar`/`hasRightPanel` are plain
+// booleans synced via effect purely to toggle the default-sidebar fallback
+// -- NOT used to carry the JSX itself, which is portaled directly during
+// render. (An earlier version stored the JSX in ancestor state via an
+// effect keyed on the JSX's own identity, which is a new object every
+// render -- that re-triggered the effect every render, which re-triggered
+// the state update, which re-rendered the child, forever: an infinite
+// render loop that crashed the whole app to a blank screen. Don't
+// reintroduce that shape.)
 interface DesktopSlotsContextValue {
-  setSidebar: (node: ReactNode | null) => void;
-  setRightPanel: (node: ReactNode | null) => void;
+  sidebarEl: HTMLElement | null;
+  rightPanelEl: HTMLElement | null;
+  setHasSidebar: (v: boolean) => void;
+  setHasRightPanel: (v: boolean) => void;
 }
 const DesktopSlotsContext = createContext<DesktopSlotsContextValue>({
-  setSidebar: () => {},
-  setRightPanel: () => {},
+  sidebarEl: null,
+  rightPanelEl: null,
+  setHasSidebar: () => {},
+  setHasRightPanel: () => {},
 });
 
-export function useDesktopSlots(opts: { sidebar?: ReactNode; rightPanel?: ReactNode }) {
-  const { setSidebar, setRightPanel } = useContext(DesktopSlotsContext);
+export function useDesktopSlots(opts: { sidebar?: ReactNode; rightPanel?: ReactNode }): ReactNode {
+  const { sidebarEl, rightPanelEl, setHasSidebar, setHasRightPanel } = useContext(DesktopSlotsContext);
   const { mode } = useLayoutMode();
+  const wantSidebar = mode === "desktop" && opts.sidebar != null;
+  const wantRightPanel = mode === "desktop" && opts.rightPanel != null;
+
   useEffect(() => {
-    if (mode !== "desktop") return;
-    setSidebar(opts.sidebar ?? null);
-    setRightPanel(opts.rightPanel ?? null);
-    return () => {
-      setSidebar(null);
-      setRightPanel(null);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, opts.sidebar, opts.rightPanel]);
+    setHasSidebar(wantSidebar);
+    return () => setHasSidebar(false);
+  }, [wantSidebar, setHasSidebar]);
+
+  useEffect(() => {
+    setHasRightPanel(wantRightPanel);
+    return () => setHasRightPanel(false);
+  }, [wantRightPanel, setHasRightPanel]);
+
+  return (
+    <>
+      {wantSidebar && sidebarEl ? createPortal(opts.sidebar, sidebarEl) : null}
+      {wantRightPanel && rightPanelEl ? createPortal(opts.rightPanel, rightPanelEl) : null}
+    </>
+  );
 }
 
 function DefaultNavSidebar() {
@@ -71,11 +95,13 @@ export function DesktopShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { activeScoot, allScoots, setActiveScoot } = useScoot();
   const { setMode } = useLayoutMode();
-  const [sidebarOverride, setSidebar] = useState<ReactNode | null>(null);
-  const [rightPanel, setRightPanel] = useState<ReactNode | null>(null);
+  const [sidebarEl, setSidebarEl] = useState<HTMLElement | null>(null);
+  const [rightPanelEl, setRightPanelEl] = useState<HTMLElement | null>(null);
+  const [hasSidebar, setHasSidebar] = useState(false);
+  const [hasRightPanel, setHasRightPanel] = useState(false);
 
   return (
-    <DesktopSlotsContext.Provider value={{ setSidebar, setRightPanel }}>
+    <DesktopSlotsContext.Provider value={{ sidebarEl, rightPanelEl, setHasSidebar, setHasRightPanel }}>
       <div className="min-h-screen flex flex-col">
         <header className="h-14 shrink-0 flex items-center gap-4 px-4 border-b border-white/10">
           <Link href="/" className="shrink-0 flex items-center">
@@ -139,15 +165,23 @@ export function DesktopShell({ children }: { children: ReactNode }) {
 
         <div className="flex-1 min-h-0 flex">
           {user && (
-            <aside className="w-60 shrink-0 border-r border-white/10 overflow-y-auto">
-              {sidebarOverride ?? <DefaultNavSidebar />}
+            // Always mounted (ref stability for the portal target) -- width
+            // never changes, only whether the default nav or portaled
+            // content is visible inside it.
+            <aside ref={setSidebarEl} className="w-60 shrink-0 border-r border-white/10 overflow-y-auto">
+              {!hasSidebar && <DefaultNavSidebar />}
             </aside>
           )}
 
           <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
 
-          {rightPanel && (
-            <aside className="w-80 shrink-0 border-l border-white/10 overflow-y-auto">{rightPanel}</aside>
+          {user && (
+            // Always mounted too, same reason -- just collapses to zero
+            // width instead of unmounting when nothing's docked in it.
+            <aside
+              ref={setRightPanelEl}
+              className={hasRightPanel ? "w-80 shrink-0 border-l border-white/10 overflow-y-auto" : "w-0 overflow-hidden"}
+            />
           )}
         </div>
       </div>
