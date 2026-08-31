@@ -104,6 +104,16 @@ export default function MailPage() {
     onError: (err: Error) => toast({ title: "Move failed", description: err.message, variant: "destructive" }),
   });
 
+  const createFolderMutation = useMutation({
+    mutationFn: (name: string) => mailApi.createFolder(accountId!, name),
+    onSuccess: (data) => {
+      toast({ title: "Folder created" });
+      qc.invalidateQueries({ queryKey: ["mail", "folders", accountId] });
+      setFolder(data.path);
+    },
+    onError: (err: Error) => toast({ title: "Couldn't create folder", description: err.message, variant: "destructive" }),
+  });
+
   function openReply() {
     if (!detail) return;
     setComposeSeed({
@@ -133,6 +143,7 @@ export default function MailPage() {
           folder={folder}
           onSelectFolder={selectFolder}
           onLinkClick={() => setLinkOpen(true)}
+          onCreateFolder={(name) => createFolderMutation.mutate(name)}
         />
       ) : undefined,
     rightPanel:

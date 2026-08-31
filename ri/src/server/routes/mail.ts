@@ -13,6 +13,7 @@ import {
   getMessage,
   getAttachmentContent,
   moveMessage,
+  createFolder,
   MailDecryptionError,
 } from "../mail/client.js";
 import { sendFromAccount } from "../mail/smtp-send.js";
@@ -139,6 +140,19 @@ router.get("/accounts/:id/folders", async (req, res) => {
   try {
     const folders = await listFolders(account);
     res.json({ ok: true, data: folders });
+  } catch (err) {
+    handleMailError(res, err, account.id);
+  }
+});
+
+router.post("/accounts/:id/folders", async (req, res) => {
+  const account = await loadOwnedAccount(currentUserId(req), Number(req.params.id));
+  if (!account) { res.status(404).json({ ok: false, error: "Not found" }); return; }
+  const { name } = req.body ?? {};
+  if (!name) { res.status(400).json({ ok: false, error: "Missing name" }); return; }
+  try {
+    const path = await createFolder(account, name);
+    res.status(201).json({ ok: true, data: { path } });
   } catch (err) {
     handleMailError(res, err, account.id);
   }

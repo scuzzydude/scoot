@@ -1,5 +1,46 @@
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { Plus, FolderPlus, Check, X } from "lucide-react";
 import type { MailAccountSummary, MailFolder } from "../../api/mail.js";
+
+function NewFolderRow({ onCreate }: { onCreate: (name: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-xs text-white/40 hover:bg-white/5 hover:text-white/70"
+      >
+        <FolderPlus className="h-3.5 w-3.5" /> New folder
+      </button>
+    );
+  }
+
+  function submit() {
+    if (name.trim()) onCreate(name.trim());
+    setOpen(false);
+    setName("");
+  }
+
+  return (
+    <div className="flex items-center gap-1 px-2 py-1">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") { setOpen(false); setName(""); }
+        }}
+        placeholder="Folder name"
+        className="flex-1 min-w-0 bg-white/5 border border-white/15 rounded px-2 py-1 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-white/40"
+      />
+      <button onClick={submit} className="text-white/60 hover:text-white shrink-0"><Check className="h-3.5 w-3.5" /></button>
+      <button onClick={() => { setOpen(false); setName(""); }} className="text-white/40 hover:text-white shrink-0"><X className="h-3.5 w-3.5" /></button>
+    </div>
+  );
+}
 
 export function MailSidebar({
   accounts,
@@ -9,6 +50,7 @@ export function MailSidebar({
   folder,
   onSelectFolder,
   onLinkClick,
+  onCreateFolder,
 }: {
   accounts: MailAccountSummary[];
   accountId: number | null;
@@ -17,6 +59,7 @@ export function MailSidebar({
   folder: string;
   onSelectFolder: (path: string) => void;
   onLinkClick: () => void;
+  onCreateFolder: (name: string) => void;
 }) {
   return (
     <div className="flex flex-col h-full">
@@ -51,6 +94,7 @@ export function MailSidebar({
                       {f.unread > 0 && <span className="text-white/40 tabular-nums">{f.unread}</span>}
                     </button>
                   ))}
+                  <NewFolderRow onCreate={onCreateFolder} />
                 </div>
               )}
             </div>

@@ -84,6 +84,8 @@ export const mailApi = {
     apiFetch<null>(`/accounts/${accountId}`, { method: "DELETE" }),
   listFolders: (accountId: number) =>
     apiFetch<MailFolder[]>(`/accounts/${accountId}/folders`),
+  createFolder: (accountId: number, name: string) =>
+    apiFetch<{ path: string }>(`/accounts/${accountId}/folders`, { method: "POST", body: JSON.stringify({ name }) }),
   listMessages: (accountId: number, folder: string) =>
     apiFetch<MailMessageSummary[]>(`/accounts/${accountId}/messages?folder=${encodeURIComponent(folder)}`),
   getMessage: (accountId: number, folder: string, uid: number) =>

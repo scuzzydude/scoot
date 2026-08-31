@@ -114,6 +114,20 @@ export async function listFolders(account: MailAccount): Promise<FolderInfo[]> {
   }
 }
 
+// name is a display name, not a full path -- ImapFlow's mailboxCreate takes
+// either and resolves it under the account's root using its delimiter, so
+// this works the same across Gmail (label, "/" delimiter) and Zoho ("."
+// delimiter) without the caller needing to know which.
+export async function createFolder(account: MailAccount, name: string): Promise<string> {
+  const client = await connect(account);
+  try {
+    const result = await client.mailboxCreate(name);
+    return result.path;
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
 const LIST_PAGE_SIZE = 30;
 
 export async function listMessages(account: MailAccount, folder: string): Promise<MessageSummary[]> {
