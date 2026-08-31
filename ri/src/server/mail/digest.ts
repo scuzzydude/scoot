@@ -21,31 +21,32 @@ interface DigestResult {
   criticalInfo?: string;
 }
 
-// Parse the LLM's labeled plain-text response (no JSON mode available in provider interface).
-// Format: "SUMMARY: ... CRITICAL: yes|no CRITICAL_INFO: ..."
+// Parse the LLM's labeled plain-text response.
+// Very defensive: expect "SUMMARY: <text>" followed by "CRITICAL: yes|no"
+// followed by optional "CRITICAL_INFO: <text>". Extract and clean aggressively.
 function parseDigestResponse(text: string): DigestResult {
   const result: DigestResult = { isCritical: false };
 
-  // Split by CRITICAL: to cleanly separate summary from the rest
-  const parts = text.split(/CRITICAL:\s*/i);
-  if (parts.length > 0) {
-    // Everything before "CRITICAL:" is the summary (strip "SUMMARY:" prefix)
-    const summaryText = parts[0].replace(/^SUMMARY:\s*/i, "").trim();
-    result.summary = summaryText || undefined;
+  // Extract summary: everything from "SUMMARY:" to "CRITICAL:" (on same or next line)
+  const summaryMatch = text.match(/SUMMARY:\s*(.+?)(?=CRITICAL:|$)/is);
+  if (summaryMatch) {
+    result.summary = summaryMatch[1].trim();
   }
 
-  // Extract critical flag from the second part (after first CRITICAL:)
-  if (parts.length > 1) {
-    const criticalMatch = parts[1].match(/^(yes|no)/i);
-    if (criticalMatch) {
-      result.isCritical = criticalMatch[1].toLowerCase() === "yes";
-    }
+  // Extract critical flag: first occurrence of yes or no after CRITICAL:
+  const criticalMatch = text.match(/CRITICAL:\s*(yes|no)/i);
+  if (criticalMatch) {
+    result.isCritical = criticalMatch[1].toLowerCase() === "yes";
+  }
 
-    // Extract critical info (everything after "CRITICAL_INFO:" in the rest)
-    if (result.isCritical) {
-      const infoMatch = parts[1].match(/CRITICAL_INFO:\s*(.+?)$/is);
-      if (infoMatch) {
-        result.criticalInfo = infoMatch[1].trim();
+  // Extract critical info: text after CRITICAL_INFO: until end
+  if (result.isCritical) {
+    const infoMatch = text.match(/CRITICAL_INFO:\s*(.+?)$/is);
+    if (infoMatch) {
+      const infoText = infoMatch[1].trim();
+      // Only set if it's not empty and not the placeholder text
+      if (infoText && infoText !== "empty]" && infoText !== "[extracted info if critical, else empty]") {
+        result.criticalInfo = infoText;
       }
     }
   }
