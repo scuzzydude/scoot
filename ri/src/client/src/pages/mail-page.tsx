@@ -7,6 +7,7 @@ import { LinkAccountDialog } from "../components/mail/link-account-dialog.js";
 import { ComposeDialog, type ComposeSeed } from "../components/mail/compose-dialog.js";
 import { AttachmentPreviewDialog, AttachmentPreviewBody } from "../components/mail/attachment-preview-dialog.js";
 import { MailSidebar } from "../components/mail/mail-sidebar.js";
+import { HtmlBodyFrame } from "../components/mail/html-body-frame.js";
 import { Button } from "../components/ui/button.js";
 import { ScrollArea } from "../components/ui/scroll-area.js";
 import {
@@ -214,13 +215,7 @@ export default function MailPage() {
           </div>
 
           {detail.htmlBody ? (
-            <iframe
-              title="message body"
-              sandbox="allow-same-origin"
-              srcDoc={detail.htmlBody}
-              className="w-full rounded-lg border border-white/10 bg-white"
-              style={{ minHeight: 260 }}
-            />
+            <HtmlBodyFrame html={detail.htmlBody} />
           ) : (
             <p className="text-sm leading-relaxed whitespace-pre-line text-white/90">{detail.textBody}</p>
           )}

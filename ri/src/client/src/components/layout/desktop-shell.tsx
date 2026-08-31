@@ -67,6 +67,34 @@ export function useDesktopSlots(opts: { sidebar?: ReactNode; rightPanel?: ReactN
   );
 }
 
+// Icon-only nav in the topbar -- always visible regardless of what a page
+// docks in the sidebar (RoomList, MailSidebar, ...), so a page that takes
+// over the whole sidebar for its own content can never trap the user with
+// no way to navigate elsewhere.
+function TopNav() {
+  const [location] = useLocation();
+  const items = useNavItems();
+  return (
+    <nav className="flex items-center gap-0.5">
+      {items.map(({ href, label, icon: Icon }) => {
+        const active = location.startsWith(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            title={label}
+            className={`flex items-center justify-center h-8 w-8 rounded-lg transition-colors ${
+              active ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 function DefaultNavSidebar() {
   const [location] = useLocation();
   const items = useNavItems();
@@ -107,6 +135,8 @@ export function DesktopShell({ children }: { children: ReactNode }) {
           <Link href="/" className="shrink-0 flex items-center">
             <img src="/assets/white_on_transparent_scoot.png" alt="Scoot" className="h-7 w-auto" style={{ maxWidth: 38 }} />
           </Link>
+
+          {user && <TopNav />}
 
           {user && allScoots.length > 1 && activeScoot && (
             <DropdownMenu>

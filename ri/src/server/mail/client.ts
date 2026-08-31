@@ -73,11 +73,23 @@ async function connect(account: MailAccount): Promise<ImapFlow> {
   return client;
 }
 
+// For mailparser's parsed output (getMessage/getAttachmentContent), whose
+// address fields nest as AddressObject.value[].
 function addressLabel(addr?: AddressObject | AddressObject[]): { name: string; address: string } {
   const first = Array.isArray(addr) ? addr[0] : addr;
   const val = first?.value?.[0];
   if (!val) return { name: "(unknown)", address: "" };
   return { name: val.name || val.address || "(unknown)", address: val.address || "" };
+}
+
+// For ImapFlow's own envelope shape (listMessages), which is a flat array of
+// {name, address} -- NOT wrapped in .value like mailparser's AddressObject.
+// Using addressLabel() here was the bug behind every sender showing
+// "(unknown)": first?.value?.[0] is always undefined on this shape.
+function envelopeAddressLabel(addr?: Array<{ name?: string; address?: string }>): { name: string; address: string } {
+  const first = addr?.[0];
+  if (!first) return { name: "(unknown)", address: "" };
+  return { name: first.name || first.address || "(unknown)", address: first.address || "" };
 }
 
 export async function listFolders(account: MailAccount): Promise<FolderInfo[]> {
@@ -113,7 +125,7 @@ export async function listMessages(account: MailAccount, folder: string): Promis
     const range = `${start}:*`;
     const out: MessageSummary[] = [];
     for await (const msg of client.fetch(range, { envelope: true, flags: true, bodyStructure: true })) {
-      const from = addressLabel(msg.envelope?.from as AddressObject[] | undefined);
+      const from = envelopeAddressLabel(msg.envelope?.from);
       const hasAttachments = hasAttachmentParts(msg.bodyStructure);
       out.push({
         uid: msg.uid,
