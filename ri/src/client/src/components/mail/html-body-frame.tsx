@@ -10,12 +10,17 @@ export function HtmlBodyFrame({ html }: { html: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(260);
 
+  // Add base target="_blank" so all links open in new tabs
+  const htmlWithBaseTarget = html.includes("<base")
+    ? html
+    : html.replace("<head>", "<head><base target=\"_blank\">");
+
   return (
     <iframe
       ref={ref}
       title="message body"
-      sandbox="allow-same-origin"
-      srcDoc={html}
+      sandbox="allow-same-origin allow-popups"
+      srcDoc={htmlWithBaseTarget}
       className="w-full rounded-lg border border-white/10 bg-white"
       style={{ height }}
       onLoad={() => {
