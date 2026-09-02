@@ -36,6 +36,11 @@ services:
       - "127.0.0.1:4001:4001"
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      # Self-hosted mail (Dovecot :993 / Postfix :587) lives on this VM. The
+      # container can't hairpin to the VM's public IP, so map the domain to the
+      # docker host gateway -- the Let's Encrypt cert still validates because
+      # the hostname the app connects to is the real one.
+      - "thedreamlaboratory.org:host-gateway"
     volumes:
       - ../..:/app
       - node_modules:/app/node_modules

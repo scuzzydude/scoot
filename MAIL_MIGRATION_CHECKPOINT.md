@@ -65,9 +65,32 @@
 | SMTP host | `localhost` / `dreamlab.thedreamlaboratory.org` | Port: 25 (MTA-to-MTA), 587 (submission, STARTTLS + SASL via Dovecot socket `/var/spool/postfix/private/auth`, PLAIN/LOGIN) |
 
 ### Mail client settings (Outlook / iOS / Thunderbird)
-- IMAP: `dreamlab.thedreamlaboratory.org` :993 SSL/TLS, user = full email, normal password auth
-- SMTP: `dreamlab.thedreamlaboratory.org` :587 STARTTLS, auth required, same creds
+- IMAP: `thedreamlaboratory.org` :993 SSL/TLS, user = full email, normal password auth
+- SMTP: `thedreamlaboratory.org` :587 STARTTLS, auth required, same creds
 - **Do NOT enable SPA** (Outlook "Secure Password Authentication" = NTLM, unsupported)
+- Use the apex name until the `mail` A record exists AND the LE cert is expanded to cover it
+  (`certbot --expand -d thedreamlaboratory.org -d www.thedreamlaboratory.org -d mail.thedreamlaboratory.org`).
+  Cert currently covers apex + www only.
+
+### Outbound relay (interim) — Azure blocks outbound :25
+Azure pay-as-you-go VMs can't reach any MX on port 25 (verified 2026-09-02: gmail + hotmail time out; 587 open).
+Postfix therefore relays through Zoho: `relayhost = [smtppro.zoho.com]:587`, per-sender SASL creds in
+`/etc/postfix/sasl_passwd` (brandon@ and hakeem@ each auth as themselves — Zoho rejects From/auth mismatch).
+**This keeps a Zoho dependency.** Replace by either an Azure support ticket ("remove SMTP :25 restriction")
+or a transactional relay (Brevo/SendGrid) — just change `relayhost` + `sasl_passwd`.
+
+### App-side wiring (2026-09-02)
+- `mail_accounts` row 1 (brandon@) repointed from Zoho to `thedreamlaboratory.org` :993 / :587.
+- `.env`: `IMAP_HOST`/`SMTP_HOST=thedreamlaboratory.org`, `SMTP_PORT=587` (BigMo poller + OTP mail).
+- Container can't hairpin to the VM public IP, so `ri/physical/docker-compose.yml` maps
+  `thedreamlaboratory.org` → `host-gateway` via `extra_hosts`; LE cert validates as normal.
+- `ri/src/server/email/smtp.ts` now does STARTTLS on 587 (was hard-coded implicit TLS).
+
+### DNS still TODO (Azure DNS zone thedreamlaboratory.org)
+1. A `mail` → 13.64.77.78 (MX target — inbound from the internet is dead until this exists)
+2. A `dreamlab` → 13.64.77.78 (optional convenience)
+3. Apex TXT: delete `v=spf1 include:zohomail.com ~all` (two SPF records = permerror). Keep `v=spf1 ip4:13.64.77.78 -all`.
+   NOTE: while relaying via Zoho, SPF should be `v=spf1 ip4:13.64.77.78 include:zohomail.com -all`.
 | SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
 | DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 

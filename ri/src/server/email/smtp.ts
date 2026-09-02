@@ -10,10 +10,15 @@ function transport() {
   const user = process.env.IMAP_USER;
   const pass = process.env.IMAP_PASSWORD;
   if (!host || !user || !pass) return null;
+  const port = Number(process.env.SMTP_PORT ?? 465);
+  // 465 = implicit TLS; 587 (our own Postfix submission port) = STARTTLS,
+  // required rather than opportunistic so creds never go out in plaintext.
+  const implicitTls = port === 465;
   return nodemailer.createTransport({
     host,
-    port: Number(process.env.SMTP_PORT ?? 465),
-    secure: true,
+    port,
+    secure: implicitTls,
+    requireTLS: !implicitTls,
     auth: { user, pass },
   });
 }
