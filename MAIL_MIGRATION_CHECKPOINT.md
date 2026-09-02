@@ -57,6 +57,7 @@
 |---------|----------|--------|-------|
 | brandon@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot configured, 64 msgs backed up |
 | hakeem@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot ready, awaiting IMAP enable in Zoho |
+| lexi@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Created 2026-09-02 (Scoot user id 4); no Zoho history |
 
 | Item | Value | Notes |
 |------|-------|-------|
