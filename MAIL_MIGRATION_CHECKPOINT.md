@@ -80,6 +80,12 @@ because classic Outlook / Schannel reset the TLS handshake against the ECDSA cer
 "TLS handshaking: Connection reset by peer", no alert). `/etc/dovecot/private/dovecot.{pem,key}` are
 symlinks into that lineage. `verbose_ssl = yes` left on in 10-logging.conf for diagnostics.
 
+### Before cancelling Zoho: final straggler sync
+Some senders' resolvers cached the old Zoho MX for a while after cutover (2026-09-02 ~16:36–16:39 UTC:
+Hotmail→hakeem@ landed in Zoho and got forwarded to his Gmail). Zoho still accepts mail for the domain
+until the account is closed. Before cancelling, re-run an IMAP sync Zoho→local for both accounts
+(dedupe by Message-ID — the existing /tmp script appends blindly) so nothing that landed there is lost.
+
 ### Outbound relay (interim) — Azure blocks outbound :25
 Azure pay-as-you-go VMs can't reach any MX on port 25 (verified 2026-09-02: gmail + hotmail time out; 587 open).
 Postfix therefore relays through Zoho: `relayhost = [smtppro.zoho.com]:587`, per-sender SASL creds in
