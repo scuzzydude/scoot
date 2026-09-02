@@ -73,6 +73,13 @@
 - 2026-09-02: `mail` A record live; LE cert expanded to apex + www + mail (expires 2026-12-01,
   `renew_hook = systemctl reload apache2 dovecot postfix`). `mail.thedreamlaboratory.org` and the apex both work as server name.
 
+### Mail TLS cert is a separate RSA lineage (2026-09-02)
+Apache keeps the default ECDSA cert (`live/thedreamlaboratory.org`). Dovecot + Postfix use
+`live/mail.thedreamlaboratory.org` (RSA-2048, SANs mail + apex, deploy hook reloads dovecot/postfix)
+because classic Outlook / Schannel reset the TLS handshake against the ECDSA cert (Dovecot log:
+"TLS handshaking: Connection reset by peer", no alert). `/etc/dovecot/private/dovecot.{pem,key}` are
+symlinks into that lineage. `verbose_ssl = yes` left on in 10-logging.conf for diagnostics.
+
 ### Outbound relay (interim) — Azure blocks outbound :25
 Azure pay-as-you-go VMs can't reach any MX on port 25 (verified 2026-09-02: gmail + hotmail time out; 587 open).
 Postfix therefore relays through Zoho: `relayhost = [smtppro.zoho.com]:587`, per-sender SASL creds in
