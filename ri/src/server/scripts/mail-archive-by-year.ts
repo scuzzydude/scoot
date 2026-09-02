@@ -4,7 +4,9 @@
 // pass --execute to actually do it. Real IMAP MOVE against real accounts is
 // not something to run blind.
 //
-// Usage: npx tsx ri/src/server/scripts/mail-archive-by-year.ts <email> [--execute] [--folder=INBOX]
+// Usage: npx tsx ri/src/server/scripts/mail-archive-by-year.ts <email> [--execute] [--folder=INBOX] [--include-current]
+//   --include-current: also move this year's messages into "<year>" (a full inbox sweep).
+//                      Without it the current year stays put, since that's live mail.
 import { eq, and } from "drizzle-orm";
 import { ImapFlow } from "imapflow";
 import { db } from "../db/index.js";
@@ -18,6 +20,7 @@ const CHUNK_SIZE = 300; // keep IMAP UID-set command lines a sane length
 const args = process.argv.slice(2);
 const email = args.find((a) => !a.startsWith("--"));
 const execute = args.includes("--execute");
+const includeCurrent = args.includes("--include-current");
 const folderArg = args.find((a) => a.startsWith("--folder="));
 const folder = folderArg ? folderArg.split("=")[1] : "INBOX";
 
@@ -70,9 +73,10 @@ try {
     process.exit(0);
   }
 
-  // Never archive the current year -- that's this year's live mail, not history.
+  // By default don't archive the current year -- that's this year's live mail,
+  // not history. --include-current overrides for a deliberate clean-inbox sweep.
   for (const year of years) {
-    if (year === currentYear) {
+    if (year === currentYear && !includeCurrent) {
       console.log(`Skipping ${year} (current year, staying in ${folder}).`);
       continue;
     }

@@ -1,7 +1,7 @@
 // On-demand digest runner: summarize and extract critical info from archived email.
 // Matches the pattern of mail-archive-by-year.ts and link-mail-account.ts —
 // email arg, lookup account, process year folders, report summary.
-// Gmail accounts only (Dreamlab/Zoho excluded, per [[scoot_currency_ledger]] design).
+// Works on any linked account (was Gmail-only while the Dreamlab mailbox was at Zoho).
 //
 // Usage: npx tsx ri/src/server/scripts/mail-digest-run.ts <email> [--folder=FOLDER]
 import { eq, and } from "drizzle-orm";
@@ -27,11 +27,9 @@ if (!email) {
   process.exit(1);
 }
 
-// Restrict to Gmail accounts (Dreamlab/Zoho excluded per design)
-if (!email.includes("@gmail.com")) {
-  console.error("Digest is Gmail-only. Dreamlab/Zoho accounts excluded.");
-  process.exit(1);
-}
+// Originally Gmail-only (the Dreamlab mailbox lived at Zoho then). Since
+// 2026-09-02 that mailbox is self-hosted on this VM, so every linked account
+// is fair game for the digest.
 
 const [account] = await db.select().from(mailAccounts)
   .where(and(eq(mailAccounts.userId, ROOT_USER_ID), eq(mailAccounts.emailAddress, email)));
