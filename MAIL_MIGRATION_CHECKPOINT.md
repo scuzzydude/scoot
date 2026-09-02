@@ -87,6 +87,15 @@ Hotmail→hakeem@ landed in Zoho and got forwarded to his Gmail). Zoho still acc
 until the account is closed. Before cancelling, re-run an IMAP sync Zoho→local for both accounts
 (dedupe by Message-ID — the existing /tmp script appends blindly) so nothing that landed there is lost.
 
+### Brevo relay — configured, PENDING ACTIVATION (2026-09-02)
+Domain authenticated in Brevo (brevo-code TXT + brevo1/brevo2._domainkey CNAMEs live in Azure DNS).
+SMTP login `b79aea001@smtp-brevo.com`, key name `BigMo_MAIL` (value in `/etc/postfix/sasl_passwd.brevo` — not in repo).
+First send returned `502 5.7.0 Your SMTP account is not yet activated` — Brevo gates new accounts for
+transactional/SMTP; request activation (contact@brevo.com or the banner on the SMTP page). Once active:
+  relayhost = [smtp-relay.brevo.com]:587 ; smtp_sender_dependent_authentication = no ; sasl_passwd = brevo line
+  SPF → `v=spf1 ip4:13.64.77.78 include:spf.brevo.com -all` ; then cancel Zoho.
+Relay is on Zoho again until then.
+
 ### Outbound relay (interim) — Azure blocks outbound :25
 Azure pay-as-you-go VMs can't reach any MX on port 25 (verified 2026-09-02: gmail + hotmail time out; 587 open).
 Postfix therefore relays through Zoho: `relayhost = [smtppro.zoho.com]:587`, per-sender SASL creds in
