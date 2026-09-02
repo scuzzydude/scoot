@@ -24,7 +24,7 @@
 - Hostname: `mail.thedreamlaboratory.org`
 - Domain: `thedreamlaboratory.org`
 - SMTP listening: Port 25 (both IPv4 & IPv6)
-- Virtual mailbox routing: Configured for `brandon@thedreamlaboratory.org`
+- Virtual mailbox routing: `brandon@` and `hakeem@` in `/etc/postfix/virtual_mailboxes` (hakeem was missing until 2026-09-02 16:40 — inbound to him bounced 550 before that). `postmaster@`/`abuse@` alias to brandon@ via `/etc/postfix/virtual_aliases`. **Adding a mailbox = passwd entry + virtual_mailboxes line + `postmap` + reload.**
 - Virtual mailbox location: `/var/lib/mail/brandon@thedreamlaboratory.org/`
 
 **Config changes:**
