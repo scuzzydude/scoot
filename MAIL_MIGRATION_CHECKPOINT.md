@@ -68,9 +68,8 @@
 - IMAP: `thedreamlaboratory.org` :993 SSL/TLS, user = full email, normal password auth
 - SMTP: `thedreamlaboratory.org` :587 STARTTLS, auth required, same creds
 - **Do NOT enable SPA** (Outlook "Secure Password Authentication" = NTLM, unsupported)
-- Use the apex name until the `mail` A record exists AND the LE cert is expanded to cover it
-  (`certbot --expand -d thedreamlaboratory.org -d www.thedreamlaboratory.org -d mail.thedreamlaboratory.org`).
-  Cert currently covers apex + www only.
+- 2026-09-02: `mail` A record live; LE cert expanded to apex + www + mail (expires 2026-12-01,
+  `renew_hook = systemctl reload apache2 dovecot postfix`). `mail.thedreamlaboratory.org` and the apex both work as server name.
 
 ### Outbound relay (interim) — Azure blocks outbound :25
 Azure pay-as-you-go VMs can't reach any MX on port 25 (verified 2026-09-02: gmail + hotmail time out; 587 open).
@@ -86,11 +85,11 @@ or a transactional relay (Brevo/SendGrid) — just change `relayhost` + `sasl_pa
   `thedreamlaboratory.org` → `host-gateway` via `extra_hosts`; LE cert validates as normal.
 - `ri/src/server/email/smtp.ts` now does STARTTLS on 587 (was hard-coded implicit TLS).
 
-### DNS still TODO (Azure DNS zone thedreamlaboratory.org)
-1. A `mail` → 13.64.77.78 (MX target — inbound from the internet is dead until this exists)
-2. A `dreamlab` → 13.64.77.78 (optional convenience)
-3. Apex TXT: delete `v=spf1 include:zohomail.com ~all` (two SPF records = permerror). Keep `v=spf1 ip4:13.64.77.78 -all`.
-   NOTE: while relaying via Zoho, SPF should be `v=spf1 ip4:13.64.77.78 include:zohomail.com -all`.
+### DNS (Azure DNS zone thedreamlaboratory.org) — state 2026-09-02 16:15 UTC
+- ✅ A `mail` → 13.64.77.78 (MX target)
+- ✅ single SPF record: `v=spf1 ip4:13.64.77.78 -all`
+- ⚠️ TODO while outbound relays via Zoho: SPF must be `v=spf1 ip4:13.64.77.78 include:zohomail.com -all`,
+  otherwise receivers see mail from Zoho IPs failing SPF `-all`. Drop the include again once the relay moves off Zoho.
 | SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
 | DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
