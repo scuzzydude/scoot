@@ -141,12 +141,14 @@ export async function isLikelyMarketing(
     await client.mailboxOpen(folder, { readOnly: true });
     const msg = await client.fetchOne(String(uid), { headers: ["list-unsubscribe"] }, { uid: true });
     if (!msg) return false;
-    // ImapFlow returns headers as a Map<string, any>
-    const headers = msg.headers as any;
-    if (headers instanceof Map) {
-      return headers.has("list-unsubscribe");
-    }
-    return false;
+    // ImapFlow hands back the requested header block as a raw Buffer (RFC 5322
+    // text), not a parsed Map -- an earlier version checked `instanceof Map`
+    // and therefore never flagged anything (0 marketing across 3,000+ digest
+    // entries). Match the header name at line start, case-insensitively.
+    const raw = msg.headers;
+    if (!raw) return false;
+    const text = Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw);
+    return /^list-unsubscribe:/im.test(text);
   } finally {
     await client.logout().catch(() => {});
   }
