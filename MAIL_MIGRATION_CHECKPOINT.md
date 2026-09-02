@@ -63,31 +63,71 @@
 
 ---
 
-## Next Steps (For Resume Session)
+## Backup from Zoho IMAP ✅
 
-### Phase 2c (continued): Backup from Zoho IMAP
+**Completed:** Python IMAP sync script successfully backed up 64 messages.
 
-**Approach:** Since imapsync is not available as standard Ubuntu package, use manual export/import:
+### Brandon@thedreamlaboratory.org: 64 messages backed up
+- **INBOX:** 26 messages
+- **Sent:** 9 messages
+- **Spam:** 2 messages
+- **Notification:** 8 messages
+- **Newsletter:** 11 messages
+- **Archive:** 7 messages
+- **Google_non_profit:** 1 message
 
-```bash
-# Option 1: Using Thunderbird or mail client to export from Zoho
-# Export as MBOX from Zoho webmail, then import to Dovecot
+**Storage:** 2.5MB in `/var/lib/mail/brandon@thedreamlaboratory.org/`
+**Status:** All emails imported with folder structure intact. Ready for Phase 3.
 
-# Option 2: Using doveadm to back up directly (requires upstream Zoho IMAP setup)
-# Set up upstream=yes in dovecot config temporarily
+### Hakeem@thedreamlaboratory.org: Pending
+Account credentials need verification. Possible issues:
+- 2FA enabled → may need app-specific password from Zoho
+- Password case/special characters
+- Account temporary lock from failed attempts
 
-# Option 3: Manual IMAP copy using offlineimap or similar
-# (Would need to install additional tools)
+When ready: Run `python3 /tmp/zoho_backup_final.py` and update ACCOUNTS list with hakeem's credentials.
+
+### Phase 3: Mail Deliverability Setup (CRITICAL for non-spam)
+
+Before cutover, add DNS records to prevent emails from being flagged as spam:
+
+#### 1. SPF Record (Sender Policy Framework)
 ```
+thedreamlaboratory.org IN TXT "v=spf1 ip4:13.64.77.78 -all"
+```
+Tells receiving servers only mail from 13.64.77.78 is legitimate.
 
-**Recommendation:** Use Zoho webmail MBOX export → Dovecot import via doveadm.
+#### 2. DKIM (DomainKeys Identified Mail)
+Generate keys on server:
+```bash
+openssl genrsa -out /etc/postfix/dkim_private.pem 2048
+openssl rsa -in /etc/postfix/dkim_private.pem -pubout -out /etc/postfix/dkim_public.pem
+```
+Add to DNS:
+```
+default._domainkey.thedreamlaboratory.org IN TXT "v=DKIM1; k=rsa; p=<public-key-here>"
+```
+Configure Postfix to sign outgoing messages (requires milter integration).
 
-### Phase 3: Pre-Cutover Validation
+#### 3. DMARC (Domain-based Message Authentication)
+```
+_dmarc.thedreamlaboratory.org IN TXT "v=DMARC1; p=quarantine; rua=mailto:postmaster@thedreamlaboratory.org"
+```
+Tells servers how to handle auth failures, receive policy reports.
 
-1. **Test inbound mail:** Send test email to `brandon@thedreamlaboratory.org` and verify receipt
-2. **Test outbound mail:** Verify SMTP acceptance and queuing
-3. **Check mailbox quota:** No quota limits currently set (check dovecot.conf)
-4. **Verify DNS/SPF:** Will be needed for mail acceptance
+#### 4. Reverse DNS (PTL Record)
+Verify Azure has reverse DNS set up for 13.64.77.78:
+```bash
+dig +short -x 13.64.77.78
+```
+Should resolve to dreamlab or mail.thedreamlaboratory.org.
+
+### Phase 3b: Pre-Cutover Validation
+
+1. **Test inbound mail:** Send test email to `brandon@thedreamlaboratory.org` and verify receipt on Dovecot
+2. **Test outbound mail:** Verify Postfix accepts & queues mail from localhost
+3. **Check mailbox quota:** No quota limits currently set (fine for migration)
+4. **Verify DNS records:** Ensure SPF/DKIM/DMARC are live before MX cutover
 
 ### Phase 4: Cutover (DNS MX Update)
 
