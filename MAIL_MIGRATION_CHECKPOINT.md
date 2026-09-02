@@ -62,7 +62,7 @@
 |------|-------|-------|
 | Dovecot passwd file | `/etc/dovecot/passwd` | SHA512-CRYPT, readable by dovecot |
 | IMAP host | `localhost` or `thedreamlaboratory.org` | Ports: 143 (plain), 993 (SSL) |
-| SMTP host | `localhost` / `dreamlab.thedreamlaboratory.org` | Port: 25 (MTA-to-MTA), 587 (submission, STARTTLS + SASL via Dovecot socket `/var/spool/postfix/private/auth`, PLAIN/LOGIN) |
+| SMTP host | `localhost` / `dreamlab.thedreamlaboratory.org` | Port: 25 (MTA-to-MTA), 465 (submissions, implicit TLS + SASL), 587 (submission, STARTTLS + SASL via Dovecot socket `/var/spool/postfix/private/auth`, PLAIN/LOGIN) |
 | SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
 | DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
@@ -89,7 +89,7 @@ or a transactional relay (Brevo/SendGrid) — just change `relayhost` + `sasl_pa
 
 ### Azure NSG (steve-nsg, rg FairchildLabs1) — opened 2026-09-02
 Inbound originally allowed only 80/443/22, so no SMTP/IMAP ever reached the VM (Hotmail tests silently
-never arrived, Outlook couldn't connect). Added rule `Mail` pri 360: TCP 25, 587, 993 from `*`.
+never arrived, Outlook couldn't connect). Added rule `Mail` pri 360: TCP 25, 465, 587, 993 from `*`.
 Managed via `az network nsg rule ...` (az CLI is logged in on dreamlab).
 
 ### DNS (Azure DNS zone thedreamlaboratory.org) — state 2026-09-02 16:15 UTC
