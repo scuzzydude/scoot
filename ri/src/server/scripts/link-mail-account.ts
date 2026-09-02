@@ -4,8 +4,9 @@
 // himself. The password is taken as a CLI arg only (never written to disk
 // in this file) and immediately encrypted before it touches the DB.
 //
-// Usage: npx tsx ri/src/server/scripts/link-mail-account.ts <email> <appPassword> [label] [provider]
-//   provider: gmail (default) | outlook | zoho
+// Usage: npx tsx ri/src/server/scripts/link-mail-account.ts <email> <appPassword> [label] [provider] [userId]
+//   provider: gmail (default) | outlook | zoho | dreamlab
+//   userId:   defaults to ROOT_USER_ID (Brandon); pass another id to link a mailbox for someone else
 import { eq, and } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { mailAccounts } from "../db/schema.js";
@@ -19,21 +20,29 @@ const PROVIDER_PRESETS: Record<string, { imapHost: string; imapPort: number; smt
   gmail: { imapHost: "imap.gmail.com", imapPort: 993, smtpHost: "smtp.gmail.com", smtpPort: 465 },
   outlook: { imapHost: "outlook.office365.com", imapPort: 993, smtpHost: "smtp.office365.com", smtpPort: 587 },
   zoho: { imapHost: "imappro.zoho.com", imapPort: 993, smtpHost: "smtppro.zoho.com", smtpPort: 465 },
+  // Self-hosted Dovecot/Postfix on this VM. The hostname resolves to the docker
+  // host-gateway inside the app container (see ri/physical/docker-compose.yml).
+  dreamlab: { imapHost: "thedreamlaboratory.org", imapPort: 993, smtpHost: "thedreamlaboratory.org", smtpPort: 587 },
 };
 
-const [, , email, rawPassword, labelArg, providerArg] = process.argv;
+const [, , email, rawPassword, labelArg, providerArg, userIdArg] = process.argv;
 if (!email || !rawPassword) {
-  console.error("Usage: link-mail-account.ts <email> <appPassword> [label] [provider=gmail|outlook|zoho]");
+  console.error("Usage: link-mail-account.ts <email> <appPassword> [label] [provider=gmail|outlook|zoho|dreamlab] [userId]");
   process.exit(1);
 }
 const password = rawPassword.replace(/\s+/g, ""); // Google/Microsoft display app passwords with spaces for readability only
 const provider = providerArg ?? "gmail";
 const preset = PROVIDER_PRESETS[provider];
 if (!preset) {
-  console.error(`Unknown provider "${provider}" -- expected gmail, outlook, or zoho.`);
+  console.error(`Unknown provider "${provider}" -- expected gmail, outlook, zoho, or dreamlab.`);
   process.exit(1);
 }
 const label = labelArg ?? email;
+const targetUserId = userIdArg ? Number(userIdArg) : ROOT_USER_ID;
+if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
+  console.error(`Bad userId "${userIdArg}"`);
+  process.exit(1);
+}
 
 if (!encryptionAvailable()) {
   console.error("ENCRYPTION_KEY not set -- cannot link accounts.");
@@ -41,21 +50,21 @@ if (!encryptionAvailable()) {
 }
 
 const isDreamlab = isDreamlabAddress(email);
-if (!isDreamlab && !(await userIsLeaderAnywhere(ROOT_USER_ID))) {
-  console.error(`${email} is not a dreamlab address and ROOT_USER_ID lacks Leader -- refusing (same rule the UI enforces).`);
+if (!isDreamlab && !(await userIsLeaderAnywhere(targetUserId))) {
+  console.error(`${email} is not a dreamlab address and user ${targetUserId} lacks Leader -- refusing (same rule the UI enforces).`);
   process.exit(1);
 }
 
 const [existing] = await db.select({ id: mailAccounts.id })
   .from(mailAccounts)
-  .where(and(eq(mailAccounts.userId, ROOT_USER_ID), eq(mailAccounts.emailAddress, email)));
+  .where(and(eq(mailAccounts.userId, targetUserId), eq(mailAccounts.emailAddress, email)));
 if (existing) {
   console.log(`Already linked: ${email} (id ${existing.id})`);
   process.exit(0);
 }
 
 const [row] = await db.insert(mailAccounts).values({
-  userId: ROOT_USER_ID,
+  userId: targetUserId,
   label,
   emailAddress: email,
   imapHost: preset.imapHost,
