@@ -14,7 +14,8 @@ import {
 } from "../ui/dropdown-menu.js";
 import { Avatar, AvatarFallback } from "../ui/avatar.js";
 import { Button } from "../ui/button.js";
-import { LogOut, Smartphone } from "lucide-react";
+import { LogOut, Smartphone, Eye, Undo2 } from "lucide-react";
+import { ImpersonateDialog, ImpersonationBanner } from "./impersonation.js";
 
 // A page that wants a custom sidebar/right panel (chat, mail) portals it
 // into these DOM nodes instead of DesktopShell owning per-route knowledge of
@@ -120,17 +121,20 @@ function DefaultNavSidebar() {
 }
 
 export function DesktopShell({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, stopImpersonation } = useAuth();
   const { activeScoot, allScoots, setActiveScoot } = useScoot();
   const { setMode } = useLayoutMode();
   const [sidebarEl, setSidebarEl] = useState<HTMLElement | null>(null);
   const [rightPanelEl, setRightPanelEl] = useState<HTMLElement | null>(null);
   const [hasSidebar, setHasSidebar] = useState(false);
   const [hasRightPanel, setHasRightPanel] = useState(false);
+  const [viewAsOpen, setViewAsOpen] = useState(false);
 
   return (
     <DesktopSlotsContext.Provider value={{ sidebarEl, rightPanelEl, setHasSidebar, setHasRightPanel }}>
+      {user?.canImpersonate && <ImpersonateDialog open={viewAsOpen} onOpenChange={setViewAsOpen} />}
       <div className="min-h-screen flex flex-col">
+        <ImpersonationBanner />
         <header className="h-14 shrink-0 flex items-center gap-4 px-4 border-b border-white/10">
           <Link href="/" className="shrink-0 flex items-center">
             <img src="/assets/white_on_transparent_scoot.png" alt="Scoot" className="h-7 w-auto" style={{ maxWidth: 38 }} />
@@ -184,6 +188,18 @@ export function DesktopShell({ children }: { children: ReactNode }) {
                 <div className="px-2 py-1.5 text-sm font-medium">{user.displayName ?? user.username}</div>
                 <div className="px-2 pb-1.5 text-xs text-white/50">@{user.username} · {user.email}</div>
                 <DropdownMenuSeparator />
+                {user.impersonating && (
+                  <DropdownMenuItem onClick={() => stopImpersonation()}>
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Back to {user.impersonating.actorDisplayName ?? user.impersonating.actorUsername}
+                  </DropdownMenuItem>
+                )}
+                {user.canImpersonate && (
+                  <DropdownMenuItem onSelect={() => setViewAsOpen(true)}>
+                    <Eye className="mr-2 h-4 w-4" />
+                    View as…
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => logout()}>
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign out

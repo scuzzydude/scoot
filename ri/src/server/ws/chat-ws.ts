@@ -51,8 +51,14 @@ export function setupChatWS(server: Server, sessionMiddleware: RequestHandler) {
     const parts = url.pathname.split("/");
     const roomId = parseInt(parts[parts.length - 1]);
 
-    const session = (req as IncomingMessage & { session?: { passport?: { user?: number } } }).session;
-    const userId = session?.passport?.user;
+    const session = (req as IncomingMessage & {
+      session?: { passport?: { user?: number }; impersonateUserId?: number };
+    }).session;
+    // Root's read-only "view as" (auth/impersonation.ts): subscribe as the
+    // target so the viewed rooms stream live. Only the Root-guarded endpoint
+    // ever sets impersonateUserId, and this socket is receive-only, so no
+    // write can be made as the target through here.
+    const userId = session?.impersonateUserId ?? session?.passport?.user;
 
     if (!userId || isNaN(roomId)) {
       ws.close(1008, "Unauthorized");

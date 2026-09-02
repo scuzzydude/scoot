@@ -11,14 +11,19 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu.js";
 import { Avatar, AvatarFallback } from "../ui/avatar.js";
-import { LogOut, ChevronDown, Monitor } from "lucide-react";
+import { LogOut, ChevronDown, Monitor, Eye, Undo2 } from "lucide-react";
+import { useState } from "react";
+import { ImpersonateDialog } from "./impersonation.js";
 
 export function Header() {
-  const { user, logout } = useAuth();
+  const { user, logout, stopImpersonation } = useAuth();
   const { activeScoot, allScoots, setActiveScoot } = useScoot();
   const { toggle } = useLayoutMode();
+  const [viewAsOpen, setViewAsOpen] = useState(false);
 
   return (
+    <>
+    {user?.canImpersonate && <ImpersonateDialog open={viewAsOpen} onOpenChange={setViewAsOpen} />}
     <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 h-14 w-full max-w-[640px] bg-black border-b border-border flex items-center px-4 gap-3">
       <Link href="/" className="shrink-0 flex items-center">
         <img
@@ -87,6 +92,18 @@ export function Header() {
               <div className="px-2 py-1.5 text-sm font-medium">{user.displayName ?? user.username}</div>
               <div className="px-2 pb-1.5 text-xs text-white/50">@{user.username} · {user.email}</div>
               <DropdownMenuSeparator />
+              {user.impersonating && (
+                <DropdownMenuItem onClick={() => stopImpersonation()}>
+                  <Undo2 className="mr-2 h-4 w-4" />
+                  Back to {user.impersonating.actorDisplayName ?? user.impersonating.actorUsername}
+                </DropdownMenuItem>
+              )}
+              {user.canImpersonate && (
+                <DropdownMenuItem onSelect={() => setViewAsOpen(true)}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  View as…
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={() => logout()}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
@@ -96,5 +113,6 @@ export function Header() {
         ) : null}
       </div>
     </header>
+    </>
   );
 }

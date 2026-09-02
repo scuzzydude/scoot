@@ -8,6 +8,7 @@ import { db, pool } from "./db/index.js";
 import { users } from "./db/schema.js";
 import { eq } from "drizzle-orm";
 import type { User } from "./db/schema.js";
+import { isRoot, readOnlyWhileImpersonating } from "./auth/impersonation.js";
 
 import authRouter from "./routes/auth.js";
 import chatRouter from "./routes/chat.js";
@@ -44,10 +45,28 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 passport.serializeUser((user, done) => done(null, (user as User).id));
-passport.deserializeUser(async (id: number, done) => {
-  const user = await db.query.users.findFirst({ where: eq(users.id, id) });
-  done(null, user ?? false);
+// The session always holds the REAL login id. If Root has started "view as"
+// (auth/impersonation.ts), swap the target in as req.user and keep the real
+// user on req.actor. Anything stale or unauthorized in the session is dropped.
+passport.deserializeUser<number, express.Request>(async (req, id, done) => {
+  const real = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (!real) {
+    done(null, false);
+    return;
+  }
+  const targetId = req.session?.impersonateUserId;
+  if (targetId && targetId !== real.id && isRoot(real)) {
+    const target = await db.query.users.findFirst({ where: eq(users.id, targetId) });
+    if (target) {
+      req.actor = real;
+      done(null, target);
+      return;
+    }
+  }
+  if (targetId && req.session) delete req.session.impersonateUserId;
+  done(null, real);
 });
+app.use(readOnlyWhileImpersonating);
 
 const MEDIA_DIR = process.env.MEDIA_DIR ?? "/tmp/scoot-media";
 const INLINE_MEDIA_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm"]);

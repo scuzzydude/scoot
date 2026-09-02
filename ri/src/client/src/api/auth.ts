@@ -1,12 +1,22 @@
 import type { RegisterInput, LoginRequestInput, LoginVerifyInput } from "@shared/schema.js";
 
-interface UserData {
+export interface UserData {
   id: number;
   username: string;
   email: string;
   displayName: string | null;
   isBot: boolean;
   isStaked: boolean;
+  /** Set while Root is viewing the app as this user (read-only). */
+  impersonating: { actorId: number; actorUsername: string; actorDisplayName: string | null } | null;
+  /** True for the real Root user, whether or not a view-as is active. */
+  canImpersonate: boolean;
+}
+
+export interface ImpersonationTarget {
+  id: number;
+  username: string;
+  displayName: string | null;
 }
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -35,4 +45,11 @@ export const authApi = {
     apiFetch<UserData>("/auth/login/verify", { method: "POST", body: JSON.stringify(data) }),
 
   logout: () => apiFetch<null>("/auth/logout", { method: "POST" }),
+
+  impersonationTargets: () => apiFetch<ImpersonationTarget[]>("/auth/impersonate/targets"),
+
+  impersonate: (userId: number) =>
+    apiFetch<ImpersonationTarget>("/auth/impersonate", { method: "POST", body: JSON.stringify({ userId }) }),
+
+  stopImpersonation: () => apiFetch<null>("/auth/impersonate/stop", { method: "POST" }),
 };

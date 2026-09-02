@@ -270,6 +270,16 @@ export const loginOtps = pgTable("login_otps", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Audit trail for Root's read-only "view as another user" (auth/impersonation.ts).
+// One row per start/stop. Created on prod by hand (never db:push).
+export const impersonationLog = pgTable("impersonation_log", {
+  id: serial("id").primaryKey(),
+  actorId: integer("actor_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  targetId: integer("target_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  action: text("action").notNull(), // "start" | "stop"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const stakingCodes = pgTable("staking_codes", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
