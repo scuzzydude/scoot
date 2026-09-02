@@ -62,7 +62,12 @@
 |------|-------|-------|
 | Dovecot passwd file | `/etc/dovecot/passwd` | SHA512-CRYPT, readable by dovecot |
 | IMAP host | `localhost` or `thedreamlaboratory.org` | Ports: 143 (plain), 993 (SSL) |
-| SMTP host | `localhost` | Port: 25 (SMTP), 587 (submission), 465 (smtps) |
+| SMTP host | `localhost` / `dreamlab.thedreamlaboratory.org` | Port: 25 (MTA-to-MTA), 587 (submission, STARTTLS + SASL via Dovecot socket `/var/spool/postfix/private/auth`, PLAIN/LOGIN) |
+
+### Mail client settings (Outlook / iOS / Thunderbird)
+- IMAP: `dreamlab.thedreamlaboratory.org` :993 SSL/TLS, user = full email, normal password auth
+- SMTP: `dreamlab.thedreamlaboratory.org` :587 STARTTLS, auth required, same creds
+- **Do NOT enable SPA** (Outlook "Secure Password Authentication" = NTLM, unsupported)
 | SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
 | DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
