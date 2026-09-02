@@ -53,13 +53,18 @@
 
 ## Credentials
 
+| Account | Password | Status | Notes |
+|---------|----------|--------|-------|
+| brandon@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot configured, 64 msgs backed up |
+| hakeem@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot ready, awaiting IMAP enable in Zoho |
+
 | Item | Value | Notes |
 |------|-------|-------|
 | Dovecot passwd file | `/etc/dovecot/passwd` | SHA512-CRYPT, readable by dovecot |
-| Dovecot user | `brandon@thedreamlaboratory.org` | UID 8, GID 8 (mail system user) |
-| Temp password | `temp123` | Hash: `$6$wqVkeVBTjgEmYpv3$...` |
 | IMAP host | `localhost` or `thedreamlaboratory.org` | Ports: 143 (plain), 993 (SSL) |
+| SMTP host | `localhost` | Port: 25 (SMTP), 587 (submission), 465 (smtps) |
 | SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
+| DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
 ---
 
@@ -79,13 +84,17 @@
 **Storage:** 2.5MB in `/var/lib/mail/brandon@thedreamlaboratory.org/`
 **Status:** All emails imported with folder structure intact. Ready for Phase 3.
 
-### Hakeem@thedreamlaboratory.org: Pending
-Account credentials need verification. Possible issues:
-- 2FA enabled → may need app-specific password from Zoho
-- Password case/special characters
-- Account temporary lock from failed attempts
+### Hakeem@thedreamlaboratory.org: Ready (IMAP disabled in Zoho)
+**Status:** IMAP not yet enabled in Zoho account.
+- Dovecot directory created: `/var/lib/mail/hakeem@thedreamlaboratory.org/`
+- User credentials in passwd file: ***REMOVED***
+- Ready to receive emails once IMAP is enabled in Zoho
 
-When ready: Run `python3 /tmp/zoho_backup_final.py` and update ACCOUNTS list with hakeem's credentials.
+**To complete:**
+1. Log into Hakeem's Zoho account
+2. Enable IMAP access in account settings
+3. Run backup script: `python3 /tmp/zoho_backup_final.py`
+4. Backup will sync all emails from Zoho to local Dovecot
 
 ### Phase 3: Mail Deliverability Setup (CRITICAL for non-spam)
 
