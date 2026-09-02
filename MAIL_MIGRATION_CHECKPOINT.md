@@ -63,6 +63,8 @@
 | Dovecot passwd file | `/etc/dovecot/passwd` | SHA512-CRYPT, readable by dovecot |
 | IMAP host | `localhost` or `thedreamlaboratory.org` | Ports: 143 (plain), 993 (SSL) |
 | SMTP host | `localhost` / `dreamlab.thedreamlaboratory.org` | Port: 25 (MTA-to-MTA), 587 (submission, STARTTLS + SASL via Dovecot socket `/var/spool/postfix/private/auth`, PLAIN/LOGIN) |
+| SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
+| DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
 ### Mail client settings (Outlook / iOS / Thunderbird)
 - IMAP: `thedreamlaboratory.org` :993 SSL/TLS, user = full email, normal password auth
@@ -90,8 +92,6 @@ or a transactional relay (Brevo/SendGrid) — just change `relayhost` + `sasl_pa
 - ✅ single SPF record: `v=spf1 ip4:13.64.77.78 -all`
 - ⚠️ TODO while outbound relays via Zoho: SPF must be `v=spf1 ip4:13.64.77.78 include:zohomail.com -all`,
   otherwise receivers see mail from Zoho IPs failing SPF `-all`. Drop the include again once the relay moves off Zoho.
-| SSL cert | `/etc/letsencrypt/live/thedreamlaboratory.org/` | Via Let's Encrypt |
-| DKIM private key | `/etc/postfix/dkim_private.pem` | Generated for mail signing |
 
 ---
 
