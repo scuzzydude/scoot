@@ -43,3 +43,5 @@ reason to route through claude.ai when already running on the server.
 **Why:** Brandon's production target for the Dream Laboratory / Fonde Brotherhood (Scoot(34)). Server bringup happened 2026-05-27 after a HW bump (RAM/CPU) made the VM able to actually run the stack.
 
 **How to apply:** When deploying changes to prod, ssh in, `cd /home/brandon/scoot`, `git pull`, `sudo docker compose -f ri/physical/docker-compose.yml up -d --build`. If schema changed: `sudo docker compose -f ri/physical/docker-compose.yml exec app npm run db:push`. Don't touch Apache vhosts without confirming with Brandon — `fairchildlabs.org` is live.
+
+**NSG (2026-09-02):** VM resource is still named `steve` in Azure (rg `FairchildLabs1`, NSG `steve-nsg`). Inbound rules: 80, 443, 22, and `Mail` (25/587/993) added for the self-hosted mail server. Any new listening service needs an NSG rule too — `az` CLI is logged in on the box. Outbound :25 is blocked by Azure policy (Postfix relays via smart host on 587).

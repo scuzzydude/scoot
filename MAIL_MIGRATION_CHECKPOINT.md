@@ -87,6 +87,11 @@ or a transactional relay (Brevo/SendGrid) — just change `relayhost` + `sasl_pa
   `thedreamlaboratory.org` → `host-gateway` via `extra_hosts`; LE cert validates as normal.
 - `ri/src/server/email/smtp.ts` now does STARTTLS on 587 (was hard-coded implicit TLS).
 
+### Azure NSG (steve-nsg, rg FairchildLabs1) — opened 2026-09-02
+Inbound originally allowed only 80/443/22, so no SMTP/IMAP ever reached the VM (Hotmail tests silently
+never arrived, Outlook couldn't connect). Added rule `Mail` pri 360: TCP 25, 587, 993 from `*`.
+Managed via `az network nsg rule ...` (az CLI is logged in on dreamlab).
+
 ### DNS (Azure DNS zone thedreamlaboratory.org) — state 2026-09-02 16:15 UTC
 - ✅ A `mail` → 13.64.77.78 (MX target)
 - ✅ single SPF record: `v=spf1 ip4:13.64.77.78 -all`
