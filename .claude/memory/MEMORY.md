@@ -1,7 +1,7 @@
 # Memory Index
 
 - [Email digest — LLM summarize + critical-info extract](project_mail_digest.md) — Haiku-based backlog processor for archived Gmail (owner-only); SMS/webchat queries via BigMo; handles 2700+ emails on mdcon
-- [Brevo relay live; Zoho cancel pending](project_mail_brevo_activation_pending.md) — relay/SPF/sync all done 2026-09-03; ask Brandon if Zoho is cancelled, then delete; mailbox pw leaked in git history, rotate
+- [Brevo relay live; Zoho cancel pending](project_mail_brevo_activation_pending.md) — relay/SPF/sync all done 2026-09-03; ask Brandon if Zoho is cancelled, then delete; mailbox pw rotated + history rewritten 2026-09-03, other machines need reset --hard
 - [Reminder: set up Hotmail after 2026-09-30](project_mail_hotmail_pending.md) — Brandon deferred it, ask again once that date passes, delete this once done
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [BigMo Gmail/Drive/Calendar MCP + rclone](infra_bigmo_google_mcp.md) — 3 MCP servers + rclone remote `bigmo-gdrive:` (r/w) on fonde.brotherhood@gmail.com; creds in ~/.mcp-creds/bigmo-google/; naming convention for future accounts
