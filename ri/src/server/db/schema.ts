@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, unique, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean, primaryKey, unique, jsonb, index } from "drizzle-orm/pg-core";
 
 // Bit positions for users.flags
 export const UserFlags = {
@@ -203,6 +203,36 @@ export const cardLinks = pgTable(
   },
   (t) => ({
     uniqMemberCard: unique().on(t.scootId, t.userId, t.cardSerial),
+  })
+);
+
+// Card art versions, content-addressed by sha256 (migration 0021). A member
+// may submit many source photos; each may yield many renders. Rows/files are
+// never overwritten -- every new photo or render is a new hash. Files live at
+// MEDIA_DIR/card-art/<hash>.<ext>, mirrored to Azure Blob by the host-side
+// cold-sync timer which fills `coldPath`. See sms/card-photo-commands.ts.
+export const cardArt = pgTable(
+  "card_art",
+  {
+    id: serial("id").primaryKey(),
+    hash: text("hash").notNull().unique(),
+    kind: text("kind").notNull(),                       // 'source' | 'render'
+    scootId: integer("scoot_id").references(() => scoots.id, { onDelete: "cascade" }).notNull(),
+    userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    cardSerial: text("card_serial").references(() => playerCards.serial),
+    parentHash: text("parent_hash"),                    // self-reference (render -> source); FK lives in SQL
+    mediaUrl: text("media_url").notNull(),
+    coldPath: text("cold_path"),
+    mime: text("mime").notNull(),
+    bytes: integer("bytes").notNull(),
+    origin: text("origin").notNull(),                   // 'sms' | 'web' | 'pipeline'
+    status: text("status").notNull().default("received"),
+    meta: jsonb("meta").notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    userIdx: index("card_art_user_idx").on(t.scootId, t.userId, t.createdAt),
+    parentIdx: index("card_art_parent_idx").on(t.parentHash),
   })
 );
 

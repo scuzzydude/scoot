@@ -127,3 +127,18 @@ If a teammate (or Claude) updated the database schema:
 ```bash
 docker compose exec app npm run db:push
 ```
+
+## Card art cold-storage sync (host-side, optional)
+
+Member card photos and renders are stored content-addressed under
+`$DATA_DIR/media/card-art/<sha256>.<ext>` and recorded in the `card_art`
+table (migration `0021_card_art.sql`). A host-side systemd timer mirrors them
+to Azure Blob (`azarchive:media/card-art/versions`) and fills `cold_path`:
+
+```bash
+sudo cp ri/physical/systemd/card-art-cold-sync.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now card-art-cold-sync.timer
+```
+
+Requires `rclone` with the `azarchive:` remote configured on the host. The
+script (`scripts/card-art-cold-sync.sh`) is idempotent and never deletes.

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run card art cold sync every 10 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+Unit=card-art-cold-sync.service
+
+[Install]
+WantedBy=timers.target

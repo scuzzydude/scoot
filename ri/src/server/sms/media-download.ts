@@ -25,7 +25,15 @@ function extFromContentType(ct: string | null): string {
 // are unavailable, or the download fails for any reason — NEVER throws, so a
 // transient network hiccup can't break the staking flow. Caller falls back to
 // the original URL on null (degraded, but the ritual still completes).
-export async function downloadTwilioMedia(mediaUrl: string): Promise<string | null> {
+export interface TwilioMediaBytes { buf: Buffer; ext: string; mime: string }
+
+// Fetches a Twilio-hosted MMS media URL (Basic Auth with the account's own
+// credentials) and returns the raw bytes + type. Returns null if this isn't a
+// Twilio media URL, credentials are unavailable, or the fetch fails -- NEVER
+// throws. Callers that need a plain "save to /media" path use
+// downloadTwilioMedia() below; callers that need to hash or place the file
+// themselves (card-photo-commands.ts) use this directly.
+export async function fetchTwilioMediaBytes(mediaUrl: string): Promise<TwilioMediaBytes | null> {
   if (!mediaUrl.startsWith("https://api.twilio.com/")) return null;
   try {
     const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -35,15 +43,31 @@ export async function downloadTwilioMedia(mediaUrl: string): Promise<string | nu
     const auth = Buffer.from(`${sid}:${token}`).toString("base64");
     const res = await fetch(mediaUrl, { headers: { Authorization: `Basic ${auth}` } });
     if (!res.ok) {
-      log.error({ status: res.status, mediaUrl }, "downloadTwilioMedia: fetch failed");
+      log.error({ status: res.status, mediaUrl }, "fetchTwilioMediaBytes: fetch failed");
       return null;
     }
+    const mime = res.headers.get("content-type") ?? "application/octet-stream";
+    return { buf: Buffer.from(await res.arrayBuffer()), ext: extFromContentType(mime), mime };
+  } catch (err) {
+    log.error({ err, mediaUrl }, "fetchTwilioMediaBytes threw");
+    return null;
+  }
+}
 
-    const filename = `${randomUUID()}${extFromContentType(res.headers.get("content-type"))}`;
-    await writeFile(path.join(MEDIA_DIR, filename), Buffer.from(await res.arrayBuffer()));
+// Downloads a Twilio-hosted MMS media URL and saves it to local media storage
+// under a random name. Returns the local /media/<file> URL, or null on any
+// failure -- NEVER throws, so a transient network hiccup can't break the
+// staking flow. Caller falls back to the original URL on null (degraded, but
+// the ritual still completes).
+export async function downloadTwilioMedia(mediaUrl: string): Promise<string | null> {
+  const media = await fetchTwilioMediaBytes(mediaUrl);
+  if (!media) return null;
+  try {
+    const filename = `${randomUUID()}${media.ext}`;
+    await writeFile(path.join(MEDIA_DIR, filename), media.buf);
     return `/media/${filename}`;
   } catch (err) {
-    log.error({ err, mediaUrl }, "downloadTwilioMedia threw");
+    log.error({ err, mediaUrl }, "downloadTwilioMedia write failed");
     return null;
   }
 }

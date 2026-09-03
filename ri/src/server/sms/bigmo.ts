@@ -16,6 +16,7 @@ import { tryHandleStakeRequest, tryHandleStakerFlow } from "./staking.js";
 import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
 import { tryHandleCardCommand } from "./card-commands.js";
+import { tryHandleCardPhotoCommand } from "./card-photo-commands.js";
 import { tryHandleMailDigestCommand } from "./mail-digest-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { tryHandleShutdownGate } from "./shutdown.js";
@@ -186,6 +187,15 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (selfStakeFlow != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms self-stake flow");
       return finish(selfStakeFlow, roomId);
+    }
+    // Card source-photo intake: a bare photo (or one whose text mentions
+    // card/photo/pic) from a member is stored hash-addressed in card_art for
+    // the render pipeline; "my photos" lists them. See card-photo-commands.ts.
+    // Must sit before the bare-photo guard below.
+    const cardPhotoReply = await tryHandleCardPhotoCommand(sender.id, scootId, trimmed, mediaUrls);
+    if (cardPhotoReply != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms card photo");
+      return finish(cardPhotoReply, roomId);
     }
     if (!trimmed) return finish("", roomId); // a bare photo with no active flow — nothing to do
 

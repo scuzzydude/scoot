@@ -1,0 +1,8 @@
+[Unit]
+Description=Mirror Scoot card art to Azure Blob cold storage
+After=docker.service
+
+[Service]
+Type=oneshot
+User=brandon
+ExecStart=/home/brandon/scoot/scripts/card-art-cold-sync.sh
