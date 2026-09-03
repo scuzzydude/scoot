@@ -3,7 +3,7 @@
 // table"), so a Brother's BigMo thread survives restarts and is visible in the
 // app. A known user's conversation lives in their active room, which defaults to
 // a DM-with-BigMo room until inbound routing can switch it. See arch/sms-rooms.md.
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { chatRooms, dmPairs, messages, roomMembers, smsState, users } from "../db/schema.js";
 
@@ -57,13 +57,28 @@ export async function getActiveRoom(userId: number): Promise<number> {
   return roomId;
 }
 
-// Last `cap` turns in a room, oldest→newest, mapped to chat roles. BigMo's own
-// messages become "assistant"; everyone else is "user".
-export async function loadHistory(roomId: number, cap: number): Promise<{ role: string; content: string }[]> {
+export interface HistoryWindow {
+  hours: number;     // keep everything this recent...
+  maxTurns: number;  // ...up to this many turns (newest win)
+  minTurns: number;  // ...and never fewer than this many, however old (so an overnight gap doesn't wipe context)
+}
+
+// Recent turns in a room, oldest→newest, mapped to chat roles. BigMo's own
+// messages become "assistant"; everyone else is "user". Window is time-based
+// (Brandon 2026-09-03: BigMo is a serial chat and must keep at least a day of
+// context; compaction can trim length but not the day).
+export async function loadHistory(roomId: number, win: HistoryWindow): Promise<{ role: string; content: string }[]> {
   const bigmoId = await getBigmoId();
-  const rows = await db.select({ userId: messages.userId, content: messages.content })
-    .from(messages).where(eq(messages.roomId, roomId))
-    .orderBy(desc(messages.id)).limit(cap);
+  const since = new Date(Date.now() - win.hours * 3600 * 1000);
+  let rows = await db.select({ userId: messages.userId, content: messages.content })
+    .from(messages)
+    .where(and(eq(messages.roomId, roomId), gte(messages.createdAt, since)))
+    .orderBy(desc(messages.id)).limit(win.maxTurns);
+  if (rows.length < win.minTurns) {
+    rows = await db.select({ userId: messages.userId, content: messages.content })
+      .from(messages).where(eq(messages.roomId, roomId))
+      .orderBy(desc(messages.id)).limit(win.minTurns);
+  }
   return rows.reverse().map((r) => ({
     role: r.userId === bigmoId ? "assistant" : "user",
     content: r.content,

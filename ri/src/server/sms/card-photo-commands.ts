@@ -23,6 +23,11 @@ const PHOTO_LIST_PATTERN = /^(my |card |list )*(card )?(photos|pics|pictures)$/i
 // mentions card/photo/pic (or is empty), so an unrelated MMS in the middle of
 // a conversation isn't silently filed as card art.
 const PHOTO_INTENT_PATTERN = /\b(card|photo|pic|picture|headshot|selfie)\b/i;
+// Text-only "use this as my card pic" / "new card photo" -- the photo itself
+// usually arrives as a separate MMS a second before or after (phones split
+// text + attachment into two webhooks), so answer in terms of what's on file.
+const CARD_PIC_TEXT_PATTERN = /\b(card|profile)\s*(pic|photo|picture|shot)s?\b|\bas my card\b/i;
+const RECENT_PHOTO_WINDOW_MS = 10 * 60 * 1000;
 
 export type CardArtRow = typeof cardArt.$inferSelect;
 
@@ -97,7 +102,14 @@ export async function tryHandleCardPhotoCommand(
   const hasPhoto = mediaUrls.length > 0;
 
   if (!hasPhoto) {
-    if (!PHOTO_LIST_PATTERN.test(trimmed.trim())) return null;
+    if (!PHOTO_LIST_PATTERN.test(trimmed.trim())) {
+      if (!CARD_PIC_TEXT_PATTERN.test(trimmed)) return null;
+      const [latest] = await listCardSourcePhotos(scootId, userId);
+      if (latest && Date.now() - latest.createdAt.getTime() < RECENT_PHOTO_WINDOW_MS) {
+        return `Got it — the photo you just sent (${shortHash(latest.hash)}) is saved as your card photo. I'll render it and send you the result to approve.`;
+      }
+      return "Send me the photo and I'll save it as your card photo. Face the camera, good light, arm's length works best.";
+    }
     const rows = await listCardSourcePhotos(scootId, userId);
     if (!rows.length) return "No card photos on file for you yet. Text me a photo and I'll save it as a card photo.";
     const lines = rows.map((r) => `${shortHash(r.hash)}  ${r.status}  ${r.createdAt.toISOString().slice(0, 10)}`);

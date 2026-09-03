@@ -53,7 +53,10 @@ async function getStake(scootId: number, userId: number): Promise<bigint | null>
 // Conversation window — short so SMS stays crisp. Known users get DB-backed,
 // room-scoped history (see conversation.ts); strangers (no user row, can't write
 // to messages) fall back to this ephemeral in-memory map.
-const HISTORY_CAP = 10;
+// Conversation memory window for the LLM path. A full day of turns, capped,
+// with a floor so a quiet night doesn't leave BigMo amnesiac next morning.
+const HISTORY_WINDOW = { hours: 24, maxTurns: 60, minTurns: 10 };
+const STRANGER_HISTORY_CAP = 10;
 const strangerHistory = new Map<string, { role: string; content: string }[]>();
 
 async function getMemberRoster(scootId: number): Promise<string> {
@@ -128,7 +131,14 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
   // which records the inbound + the reply to sms_deliveries (one exit fires per
   // call, so each pair is logged once). Strangers have no user row → skipped.
   // Best-effort: a transcript-log failure must never break the reply.
-  const finish = async (reply: string, rid: number | null): Promise<string> => {
+  //
+  // It ALSO appends command exchanges (card photo saved, "my photos", gymboss
+  // replies, ...) to the member's BigMo DM room, so the LLM path's history is
+  // the whole serial conversation, not just the LLM's own turns. Before this,
+  // a Brother could get "Saved card photo" and one second later BigMo would
+  // insist it can't do card pics. The LLM exit persists its own turns (only on
+  // a good reply) and passes alreadyPersisted so they aren't doubled.
+  const finish = async (reply: string, rid: number | null, opts: { alreadyPersisted?: boolean } = {}): Promise<string> => {
     if (sender && reply) {
       try {
         await db.insert(smsDeliveries).values([
@@ -137,6 +147,16 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
         ]);
       } catch (err) {
         log.error({ err, userId: sender.id }, "sms_deliveries transcript log failed");
+      }
+      if (!opts.alreadyPersisted) {
+        try {
+          const dm = await getBigmoDmRoom(sender.id);
+          const inbound = trimmed || (hasPhoto ? "[sent a photo]" : "");
+          if (inbound) await appendTurn(dm, sender.id, inbound);
+          await appendTurn(dm, await getBigmoId(), reply);
+        } catch (err) {
+          log.error({ err, userId: sender.id }, "dm history append failed");
+        }
       }
     }
     return reply;
@@ -268,7 +288,7 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
       return finish(route.reply ?? "", roomId);
     }
 
-    priorHist = await loadHistory(roomId, HISTORY_CAP);
+    priorHist = await loadHistory(roomId, HISTORY_WINDOW);
     // Long-term semantic recall across all past Brotherhood texts (degrades to
     // nothing if the vault is unset/down — see memory.ts). Surfaced as BACKGROUND
     // in the system prompt; the Verified Schedule on the inbound still wins for
@@ -306,7 +326,7 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     } else {
       const h = strangerHistory.get(strangerKey) ?? [];
       h.push({ role: "user", content: trimmed }, { role: "assistant", content: reply });
-      strangerHistory.set(strangerKey, h.slice(-HISTORY_CAP));
+      strangerHistory.set(strangerKey, h.slice(-STRANGER_HISTORY_CAP));
     }
     // Persist a durable, attributable memory of substantive member messages
     // (skip strangers and one-word acks). Fire-and-forget — a memory write must
@@ -315,7 +335,7 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
       void remember(trimmed, MEMORY_SPACE, sender.displayName ?? sender.username);
     }
     log.info({ phone, sender: sender?.username ?? "unknown", roomId, reply }, "bigmo sms reply sent");
-    return finish(reply, roomId);
+    return finish(reply, roomId, { alreadyPersisted: true });
   } catch (err) {
     log.error({ err, phone }, "bigmo sms: LLM error");
     return finish("I'm havin' a technical moment. Try again in a minute.", roomId);
