@@ -1,7 +1,7 @@
 # Memory Index
 
 - [Email digest — LLM summarize + critical-info extract](project_mail_digest.md) — Haiku-based backlog processor for archived Gmail (owner-only); SMS/webchat queries via BigMo; handles 2700+ emails on mdcon
-- [Brevo relay live; Zoho cancel pending](project_mail_brevo_activation_pending.md) — relay/SPF/sync all done 2026-09-03; ask Brandon if Zoho is cancelled, then delete; mailbox pw rotated + history rewritten 2026-09-03, other machines need reset --hard
+- [Brevo relay live; Zoho cancel pending](project_mail_brevo_activation_pending.md) — relay/SPF/sync all done 2026-09-03; ask Brandon if Zoho is cancelled, then delete; mailbox pw rotated + history rewritten 2026-09-03
 - [Reminder: set up Hotmail after 2026-09-30](project_mail_hotmail_pending.md) — Brandon deferred it, ask again once that date passes, delete this once done
 - [Mask secrets in saved transcripts (public repo)](feedback_transcript_redaction.md) — `scripts/save-session.cjs` redacts API keys / hex / DB creds in both JSONL+MD; extend patterns, never disable
 - [BigMo Gmail/Drive/Calendar MCP + rclone](infra_bigmo_google_mcp.md) — 3 MCP servers + rclone remote `bigmo-gdrive:` (r/w) on fonde.brotherhood@gmail.com; creds in ~/.mcp-creds/bigmo-google/; naming convention for future accounts
@@ -19,7 +19,7 @@
 - [Keep SETUP.md current with install procedure](feedback_setup_procedure.md) — update SETUP.md in the same commit whenever env vars or first-run steps change
 - [WSL2 remote access — mirrored networking + SSH](infra_wsl_network.md) — LAN IP 192.168.1.118; SSH :22 passwordless from work laptop; Vite :5173, RC :3100 reachable on LAN
 - [Prod server — dreamlab (Azure VM, renamed from steve 2026-07-27)](infra_prod_server.md) — 13.64.77.78, hosts fairchildlabs.org + thedreamlaboratory.org; Scoot stack on Docker, API :3000, Vite :5174, DATA_DIR=/var/lib/scoot
-- [Claude Code runs ON prod dreamlab, not WSL](infra_claude_runs_on_dreamlab.md) — when in /home/brandon/scoot, the host IS prod; no SSH-to-deploy; edits go straight to prod; hostname renamed from steve 2026-07-27 (work-LAN name collision)
+- [Claude Code runs ON prod dreamlab, not WSL](infra_claude_runs_on_dreamlab.md) — dreamlab is the ONLY repo checkout (no local clones as of 2026-09-03); when in /home/brandon/scoot, the host IS prod; no SSH-to-deploy; edits go straight to prod; hostname renamed from steve 2026-07-27 (work-LAN name collision)
 - [Scoot identity model + SMS<->rooms framework](scoot_identity_and_sms_rooms.md) — scoots.id = canonical index (Scoot(34)=id 34, NOT serial); users global, staking per-Scoot via scoot_members; rooms backbone w/ app+SMS transports; arch/sms-rooms.md
 - [BigMo: no LLM time/date math — deterministic schedule facts](bigmo_no_llm_time_math.md) — wrong time to a 55+ senior is the cardinal sin; `schedule.ts` computes verified facts, LLM only phrases; don't shell out to `date`
 - [Twilio US SMS needs A2P 10DLC registration](twilio_a2p_10dlc_registration.md) — Fonde Brotherhood account, +13614232253 long-code; undelivered + errorCode 30034 means reg gap, not a code bug

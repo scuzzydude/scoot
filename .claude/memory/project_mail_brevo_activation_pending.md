@@ -9,6 +9,6 @@ metadata:
 
 **Remaining (Brandon's action):** cancel the Zoho Mail subscription. Ask if it's been done; delete this memory when confirmed.
 
-**Resolved 2026-09-03:** the shared mailbox password had been committed in cleartext in `MAIL_MIGRATION_CHECKPOINT.md`. Same day: all three dreamlab mailboxes rotated to distinct random passwords (cleartext kept root-only in `/root/dreamlab-mail-passwords.txt`; Dovecot passwd, `mail_accounts` rows 1+5, and `.env IMAP_PASSWORD` updated), and git history rewritten with `git filter-repo --replace-text` + force-push. **Other machines must `git fetch && git reset --hard origin/main`** (or re-clone) before their next pull. Old commits may linger in GitHub's cache until GitHub support purges them.
+**Resolved 2026-09-03:** the shared mailbox password had been committed in cleartext in `MAIL_MIGRATION_CHECKPOINT.md`. Same day: all three dreamlab mailboxes rotated to distinct random passwords (cleartext kept root-only in `/root/dreamlab-mail-passwords.txt`; Dovecot passwd, `mail_accounts` rows 1+5, and `.env IMAP_PASSWORD` updated), and git history rewritten with `git filter-repo --replace-text` + force-push. (No other checkouts exist — dreamlab is the only clone.) Old commits may linger in GitHub's cache until GitHub support purges them.
 
 Full state: `MAIL_MIGRATION_CHECKPOINT.md`. Related: [[project_mail_client]], [[infra_prod_server]].

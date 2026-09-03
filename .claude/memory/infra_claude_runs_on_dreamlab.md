@@ -19,3 +19,5 @@ When Claude Code is running in `/home/brandon/scoot` on this project, the host *
 - There is a *separate, unrelated* machine named `steve` at 10.238.64.17 on Brandon's work-LAN — this is the collision the 2026-07-27 rename was meant to resolve. If you ever see "steve" referenced in older memory/docs/commits, it means this box (now dreamlab), not the work machine.
 - Because this is prod, treat actions with extra care: confirm before touching shared services (Apache vhosts, postgres data, fairchildlabs.org). See [[infra_prod_server]] for the stack layout and Apache caveat.
 - Cross-reference: [[infra_prod_server]] describes the VM itself; this memory clarifies *where Claude is running from*.
+
+**2026-09-03:** Brandon confirmed dreamlab is the *only* checkout of the scoot repo — no clones on laptop/home/work (CLAUDE.md's 3-machine note is historical). History rewrites/force-pushes here need no follow-up on other machines.
