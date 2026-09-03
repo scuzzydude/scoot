@@ -10,16 +10,23 @@ export function HtmlBodyFrame({ html }: { html: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(260);
 
-  // Add base target="_blank" so all links open in new tabs
-  const htmlWithBaseTarget = html.includes("<base")
+  // Add base target="_blank" so all links open in new tabs. Emails without a
+  // <head> (or with an uppercase one) still get the base tag, prepended.
+  const BASE_TAG = '<base target="_blank">';
+  const htmlWithBaseTarget = /<base\b/i.test(html)
     ? html
-    : html.replace("<head>", "<head><base target=\"_blank\">");
+    : /<head\b[^>]*>/i.test(html)
+      ? html.replace(/<head\b[^>]*>/i, (m) => m + BASE_TAG)
+      : BASE_TAG + html;
 
   return (
     <iframe
       ref={ref}
       title="message body"
-      sandbox="allow-same-origin allow-popups"
+      // allow-popups-to-escape-sandbox: without it the new tab inherits this
+      // frame's no-scripts sandbox, so JS-based tracking redirects (Brevo,
+      // Mailchimp, etc.) render a blank "Redirection" page.
+      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
       srcDoc={htmlWithBaseTarget}
       className="w-full rounded-lg border border-white/10 bg-white"
       style={{ height }}
