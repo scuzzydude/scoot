@@ -8,6 +8,8 @@ metadata:
   modified: 2026-09-02T18:48:04.432Z
 ---
 
+**Checked 2026-09-03: still `502 not yet activated` on a direct SMTP AUTH test.** No mail to contact@brevo.com ever left this server (mail.log + Sent folder empty), and the 09-02 'Complete your registration' confirm email may not have been clicked. Both surfaced to Brandon 2026-09-03.
+
 **Ask Brandon on or after 2026-09-03:** has Brevo activated the SMTP account? (No button in the UI; he had to email contact@brevo.com on 2026-09-02.)
 
 **Why:** self-hosted mail on dreamlab is live for inbound (brandon@, hakeem@, lexi@), but Azure blocks outbound :25 so Postfix relays through Zoho. Brandon does not want to pay for Zoho next year. Brevo relay is fully configured but returned `502 Your SMTP account is not yet activated` on first send.
