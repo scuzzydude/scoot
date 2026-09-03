@@ -152,7 +152,7 @@ Managed via `az network nsg rule ...` (az CLI is logged in on dreamlab).
 ### Hakeem@thedreamlaboratory.org: Ready (IMAP disabled in Zoho)
 **Status:** IMAP not yet enabled in Zoho account.
 - Dovecot directory created: `/var/lib/mail/hakeem@thedreamlaboratory.org/`
-- User credentials in passwd file: ***REMOVED***
+- User credentials in passwd file: (not in repo)
 - Ready to receive emails once IMAP is enabled in Zoho
 
 **To complete:**
