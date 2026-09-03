@@ -1,25 +1,14 @@
 ---
 name: project_mail_brevo_activation_pending
-description: "Reminder from 2026-09-03 on — check whether Brevo activated SMTP, then swap Postfix relay off Zoho, update SPF, final Zoho sync, cancel Zoho"
-metadata: 
-  node_type: memory
+description: "Brevo relay live 2026-09-03; only remaining step is Brandon cancelling the Zoho subscription. Delete once he confirms."
+metadata:
   type: project
-  originSessionId: ecda33cf-286c-4828-a502-508e37b5fe68
-  modified: 2026-09-02T18:48:04.432Z
 ---
 
-**Checked 2026-09-03: still `502 not yet activated` on a direct SMTP AUTH test.** No mail to contact@brevo.com ever left this server (mail.log + Sent folder empty), and the 09-02 'Complete your registration' confirm email may not have been clicked. Both surfaced to Brandon 2026-09-03.
+**Done 2026-09-03:** Brevo SMTP activated, Postfix relayhost switched to `[smtp-relay.brevo.com]:587`, SPF now `include:spf.brevo.com`, final Zoho→local straggler sync completed (Message-ID dedupe). Nothing on dreamlab depends on Zoho any more.
 
-**Ask Brandon on or after 2026-09-03:** has Brevo activated the SMTP account? (No button in the UI; he had to email contact@brevo.com on 2026-09-02.)
+**Remaining (Brandon's action):** cancel the Zoho Mail subscription. Ask if it's been done; delete this memory when confirmed.
 
-**Why:** self-hosted mail on dreamlab is live for inbound (brandon@, hakeem@, lexi@), but Azure blocks outbound :25 so Postfix relays through Zoho. Brandon does not want to pay for Zoho next year. Brevo relay is fully configured but returned `502 Your SMTP account is not yet activated` on first send.
+**Security note raised 2026-09-03:** the shared Dovecot mailbox password was committed in cleartext in `MAIL_MIGRATION_CHECKPOINT.md` (commits `96391f0`, `684c7de`) in the public repo. Scrubbed from HEAD, but git history still has it — rotation recommended, see [[project_mail_client]] for where the app stores mailbox creds.
 
-**How to apply — once activated:**
-1. `sudo cp /etc/postfix/sasl_passwd.brevo /etc/postfix/sasl_passwd && sudo postmap /etc/postfix/sasl_passwd`
-2. `sudo postconf -e "relayhost = [smtp-relay.brevo.com]:587" "smtp_sender_dependent_authentication = no" && sudo postfix reload`
-3. Send from brandon@, hakeem@, lexi@ to scuzzydude@hotmail.com; all three must show `status=sent`.
-4. Tell Brandon to edit the Azure `@` TXT SPF to `v=spf1 ip4:13.64.77.78 include:spf.brevo.com -all`.
-5. Final straggler IMAP sync Zoho → local for brandon@ and hakeem@ (dedupe by Message-ID; the old /tmp script appends blindly).
-6. Then Brandon cancels Zoho. Delete this memory when done.
-
-Full state in repo: `MAIL_MIGRATION_CHECKPOINT.md`. Related: [[project_mail_client]], [[infra_prod_server]].
+Full state: `MAIL_MIGRATION_CHECKPOINT.md`. Related: [[project_mail_client]], [[infra_prod_server]].

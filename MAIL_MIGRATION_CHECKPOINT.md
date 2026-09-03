@@ -55,9 +55,9 @@
 
 | Account | Password | Status | Notes |
 |---------|----------|--------|-------|
-| brandon@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot configured, 64 msgs backed up |
-| hakeem@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Dovecot ready, awaiting IMAP enable in Zoho |
-| lexi@thedreamlaboratory.org | ***REMOVED*** | ✅ Active | Created 2026-09-02 (Scoot user id 4); no Zoho history |
+| brandon@thedreamlaboratory.org | (see `/etc/dovecot/passwd`; not in repo) | ✅ Active | Dovecot configured, 64 msgs backed up |
+| hakeem@thedreamlaboratory.org | (same store) | ✅ Active | Dovecot ready, awaiting IMAP enable in Zoho |
+| lexi@thedreamlaboratory.org | (same store) | ✅ Active | Created 2026-09-02 (Scoot user id 4); no Zoho history |
 
 | Item | Value | Notes |
 |------|-------|-------|
@@ -87,7 +87,17 @@ Hotmail→hakeem@ landed in Zoho and got forwarded to his Gmail). Zoho still acc
 until the account is closed. Before cancelling, re-run an IMAP sync Zoho→local for both accounts
 (dedupe by Message-ID — the existing /tmp script appends blindly) so nothing that landed there is lost.
 
-### Brevo relay — configured, PENDING ACTIVATION (2026-09-02)
+### Brevo relay — ACTIVE, Postfix cut over 2026-09-03
+Brevo activated the SMTP account after Brandon completed registration on 2026-09-03. Same day:
+- `/etc/postfix/sasl_passwd` = Brevo line (Zoho copy kept at `sasl_passwd.zoho.bak`), `relayhost = [smtp-relay.brevo.com]:587`,
+  `smtp_sender_dependent_authentication = no`. Test sends from brandon@/hakeem@/lexi@ all `status=sent (250 OK queued)`.
+- SPF in Azure DNS updated to `v=spf1 ip4:13.64.77.78 include:spf.brevo.com -all` (via `az network dns record-set txt update`).
+- Final straggler sync Zoho→local done with Message-ID dedupe (scratch script; brandon: 5 Sent msgs, hakeem: 1 Sent msg copied).
+- App/BigMo already used local Postfix only — no app config referenced Zoho.
+**Remaining: Brandon cancels the Zoho subscription.** Nothing on the server depends on it any more.
+
+#### Previous state (2026-09-02, for history)
+##### Brevo relay — configured, PENDING ACTIVATION (2026-09-02)
 Domain authenticated in Brevo (brevo-code TXT + brevo1/brevo2._domainkey CNAMEs live in Azure DNS).
 SMTP login `b79aea001@smtp-brevo.com`, key name `BigMo_MAIL` (value in `/etc/postfix/sasl_passwd.brevo` — not in repo).
 First send returned `502 5.7.0 Your SMTP account is not yet activated` — Brevo gates new accounts for
