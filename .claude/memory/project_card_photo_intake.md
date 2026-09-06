@@ -1,6 +1,6 @@
 ---
 name: project_card_photo_intake
-description: "Card comicization via SMS — Phase 1 (intake) built 2026-09-03: hash-addressed card_art table, photo-by-text stored + cold-synced; render orchestration + approval loop NOT built yet. Trial with Brandon first."
+description: "Card comicization via SMS — intake (09-03), manual render driver + approve/reject by text (09-06) built; first end-to-end card from a phone selfie done for Brandon (card-review-30). Auto-trigger of the render job NOT built yet."
 metadata:
   type: project
 ---
@@ -13,6 +13,8 @@ metadata:
 - Host systemd timer `card-art-cold-sync` (10 min): `rclone copy --immutable` to `azarchive:media/card-art/versions`, then fills `cold_path` via psql. rclone is host-only (not in the app container) — that's why it's a timer, not app code.
 - Verified end to end with a real file (store → serve 200 → sync → cold_path filled), test artefacts removed.
 
-**Not built yet (Phase 2):** the render job. Plan agreed: async job (Modal takes minutes; Twilio webhook can't wait) → run existing pipeline (see [[project_player_cards_facial_likeness]]: Kontext+PuLID gen, hair inpaint w/ reference, jersey composite, finalize/crop, `build_cards.draw_front`) as ONE call → store render as `card_art` kind=render with parent_hash → MMS to Brandon for approve/reject code → on approve swap `player_cards.front_image_url` and MMS the member. Rate-limit 1 render/member/day. Licensing (FLUX-dev, Kontext-dev, InsightFace non-commercial) still undecided before opening to all members.
+**2026-09-06, first end-to-end run on Brandon's selfie (source `f58155b6`):** `tools/player-cards/render_card_photo.py <hash> [--describe "..."] [--from-raw <blob>]` runs raw (Kontext+PuLID noir, Modal) → jersey (composite_jersey, Modal; crest deliberately dropped since 08-26) → figure (finalize_card + crop_to_slot, local) → card (draw_front, 300dpi). Every stage is a `card_art` render row (`meta.stage`), parent_hash = source; the Modal stages need PUBLIC input URLs so each intermediate is re-hosted at `/media/card-art/<hash>.png` (blob container is private, `rclone link` unsupported). Result: good likeness straight from an MMS selfie, no per-subject tuning beyond the explicit appearance sentence. Review page: `/var/www/html/card-review-30/` (next is 31 — never overwrite). "approve card" / "reject card" by text (`card-photo-commands.ts`) promote/mark the newest rendered card; approve sets `player_cards.front_image_url`. Card was MMS'd to Brandon for his decision. Driver is still run BY HAND — the only missing piece is a job that triggers it on intake (and a rate limit).
+
+**Still not built:** the auto-trigger. Plan agreed: async job (Modal takes minutes; Twilio webhook can't wait) → run existing pipeline (see [[project_player_cards_facial_likeness]]: Kontext+PuLID gen, hair inpaint w/ reference, jersey composite, finalize/crop, `build_cards.draw_front`) as ONE call → store render as `card_art` kind=render with parent_hash → MMS to Brandon for approve/reject code → on approve swap `player_cards.front_image_url` and MMS the member. Rate-limit 1 render/member/day. Licensing (FLUX-dev, Kontext-dev, InsightFace non-commercial) still undecided before opening to all members.
 
 **First real step when resuming:** Brandon texts a selfie → check `select * from card_art` → run the pipeline by hand on that file (no orchestration code yet) to see how phone-selfie input quality holds up. Related: [[project_card_link_sms_webchat]].
