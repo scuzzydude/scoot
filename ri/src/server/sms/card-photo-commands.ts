@@ -8,7 +8,7 @@
 import { createHash } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { cardArt, cardLinks, playerCards, scootMembers } from "../db/schema.js";
 import { fetchTwilioMediaBytes } from "./media-download.js";
@@ -28,6 +28,12 @@ const PHOTO_INTENT_PATTERN = /\b(card|photo|pic|picture|headshot|selfie)\b/i;
 // text + attachment into two webhooks), so answer in terms of what's on file.
 const CARD_PIC_TEXT_PATTERN = /\b(card|profile)\s*(pic|photo|picture|shot)s?\b|\bas my card\b/i;
 const RECENT_PHOTO_WINDOW_MS = 10 * 60 * 1000;
+// Approval loop for a finished render: the member (or Brandon, during the
+// trial) texts "approve card" to make the newest rendered card THE card
+// ("my card" sends it from then on), or "reject card" to bin it. Only the
+// newest rendered-but-undecided card is in play at any time.
+const APPROVE_PATTERN = /^(approve|accept|keep|yes)( (my |the |new )?card)?$/i;
+const REJECT_PATTERN = /^(reject|decline|no|redo|nope)( (my |the |new )?card)?$/i;
 
 export type CardArtRow = typeof cardArt.$inferSelect;
 
@@ -91,6 +97,34 @@ export async function listCardSourcePhotos(scootId: number, userId: number): Pro
     .limit(10);
 }
 
+async function pendingRenderedCard(scootId: number, userId: number): Promise<CardArtRow | null> {
+  const [row] = await db.select().from(cardArt)
+    .where(and(
+      eq(cardArt.scootId, scootId), eq(cardArt.userId, userId),
+      eq(cardArt.kind, "render"), eq(cardArt.status, "rendered"),
+      sql`${cardArt.meta}->>'stage' = 'card'`,
+    ))
+    .orderBy(desc(cardArt.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
+// Approve: the render becomes the card's front image (player_cards.frontImageUrl),
+// so "my card" and the app both show it. Reject: just mark it; the file and
+// row stay (nothing in card_art is ever deleted -- it's the version history).
+export async function applyCardDecision(render: CardArtRow, decision: "approved" | "rejected"): Promise<string> {
+  await db.transaction(async (tx) => {
+    await tx.update(cardArt).set({ status: decision }).where(eq(cardArt.hash, render.hash));
+    if (decision === "approved" && render.cardSerial) {
+      await tx.update(playerCards).set({ frontImageUrl: render.mediaUrl }).where(eq(playerCards.serial, render.cardSerial));
+    }
+  });
+  log.info({ hash: shortHash(render.hash), cardSerial: render.cardSerial, decision }, "card art: decision");
+  return decision === "approved"
+    ? `Done — ${shortHash(render.hash)} is your card now. Text "my card" any time to see it.`
+    : `Got it, ${shortHash(render.hash)} is out. Send another photo whenever you want a redo.`;
+}
+
 // SMS entry point. Returns null if this message isn't card-photo related
 // (caller falls through). Must run BEFORE bigmo.ts's bare-photo guard.
 export async function tryHandleCardPhotoCommand(
@@ -102,7 +136,18 @@ export async function tryHandleCardPhotoCommand(
   const hasPhoto = mediaUrls.length > 0;
 
   if (!hasPhoto) {
-    if (!PHOTO_LIST_PATTERN.test(trimmed.trim())) {
+    const t = trimmed.trim();
+    if (APPROVE_PATTERN.test(t) || REJECT_PATTERN.test(t)) {
+      const decision = APPROVE_PATTERN.test(t) ? "approved" : "rejected";
+      const pending = await pendingRenderedCard(scootId, userId);
+      if (!pending) {
+        // A bare "yes"/"no" with nothing pending isn't ours -- let the LLM have it.
+        if (/^(yes|no|nope)$/i.test(t)) return null;
+        return "No new card waiting on your say-so right now. Text me a photo and I'll make one.";
+      }
+      return applyCardDecision(pending, decision);
+    }
+    if (!PHOTO_LIST_PATTERN.test(t)) {
       if (!CARD_PIC_TEXT_PATTERN.test(trimmed)) return null;
       const [latest] = await listCardSourcePhotos(scootId, userId);
       if (latest && Date.now() - latest.createdAt.getTime() < RECENT_PHOTO_WINDOW_MS) {

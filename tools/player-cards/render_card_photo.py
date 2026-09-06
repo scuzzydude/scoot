@@ -88,7 +88,7 @@ def source_row(h):
     return dict(hash=hash_, scoot_id=int(scoot_id), user_id=int(user_id), card_serial=card_serial or None, media_url=media_url)
 
 
-def store_render(src, data: bytes, ext: str, stage: str, extra_meta=None, status="rendering"):
+def store_render(src, data: bytes, ext: str, stage: str, extra_meta=None, status="rendered"):
     """Content-address `data` under media/card-art, insert a render row, return (hash, public_url)."""
     h = hashlib.sha256(data).hexdigest()
     dest = MEDIA_HOST_DIR / f"{h}{ext}"
