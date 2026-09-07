@@ -112,6 +112,11 @@ def blob_bytes(blob_path: str) -> bytes:
     return subprocess.run(["rclone", "cat", BLOB_REMOTE + blob_path], check=True, capture_output=True).stdout
 
 
+def fail(src, msg):
+    psql(f"UPDATE card_art SET status='failed', meta = meta || {q(json.dumps({'error': msg[:500]}))}::jsonb WHERE hash={q(src['hash'])}")
+    sys.exit(f"FAILED {src['hash'][:8]}: {msg}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("source_hash")
@@ -123,8 +128,12 @@ def main():
 
     src = source_row(args.source_hash)
     if not src["card_serial"]:
-        sys.exit("source photo has no card_serial -- link a card first ('my card' / claim code)")
+        fail(src, "source photo has no card_serial -- link a card first ('my card' / claim code)")
     card_serial = src["card_serial"]
+    if not args.describe:
+        args.describe = psql(f"SELECT coalesce(appearance,'') FROM player_cards WHERE serial={q(card_serial)}")
+        if not args.describe:
+            print("  (no appearance on file for this card -- rendering without an explicit description)")
     pipe_serial = f"{card_serial}-{src['hash'][:8]}"
     work = Path(args.work or tempfile.mkdtemp(prefix="render-card-"))
     work.mkdir(parents=True, exist_ok=True)
@@ -188,4 +197,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit:
+        raise
+    except Exception as e:  # any stage blowing up marks the source failed so the worker/notifier can act
+        h = sys.argv[1] if len(sys.argv) > 1 else ""
+        try:
+            src = source_row(h)
+            fail(src, f"{type(e).__name__}: {e}")
+        finally:
+            raise

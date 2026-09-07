@@ -8,7 +8,7 @@
 import { createHash } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { cardArt, cardLinks, playerCards, scootMembers } from "../db/schema.js";
 import { fetchTwilioMediaBytes } from "./media-download.js";
@@ -17,6 +17,10 @@ import { log } from "../log.js";
 const MEDIA_DIR = process.env.MEDIA_DIR ?? "/tmp/scoot-media";
 const CARD_ART_SUBDIR = "card-art";
 const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
+// Photos (= renders) a member may submit per rolling 24h. Cost is cents per
+// render; the limit is about queue fairness (Modal runs one at a time) and
+// approval-message volume, not money. The host worker enforces it too.
+const RENDERS_PER_DAY = Number(process.env.CARD_RENDERS_PER_DAY ?? 5);
 
 const PHOTO_LIST_PATTERN = /^(my |card |list )*(card )?(photos|pics|pictures)$/i;
 // A photo accompanied by text: only treat it as a card photo if the text
@@ -168,10 +172,17 @@ export async function tryHandleCardPhotoCommand(
     .where(and(eq(scootMembers.scootId, scootId), eq(scootMembers.userId, userId)));
   if (!member) return "Got the photo, but I can only keep card photos for Fonde Brotherhood members — check with Brandon.";
 
+  const since = new Date(Date.now() - 24 * 3600 * 1000);
+  const [{ n: todayCount }] = await db.select({ n: sql<number>`count(*)::int` }).from(cardArt)
+    .where(and(eq(cardArt.scootId, scootId), eq(cardArt.userId, userId), eq(cardArt.kind, "source"), gte(cardArt.createdAt, since)));
+  if (todayCount >= RENDERS_PER_DAY) {
+    return `You've sent ${todayCount} card photos in the last day -- that's the limit (${RENDERS_PER_DAY}). Try again tomorrow.`;
+  }
+
   const saved: string[] = [];
   const dupes: string[] = [];
   let failed = 0;
-  for (const url of mediaUrls) {
+  for (const url of mediaUrls.slice(0, RENDERS_PER_DAY - todayCount)) {
     const media = await fetchTwilioMediaBytes(url);
     if (!media) { failed++; continue; }
     if (!media.mime.startsWith("image/")) { failed++; continue; }
@@ -192,7 +203,7 @@ export async function tryHandleCardPhotoCommand(
   }
 
   const parts: string[] = [];
-  if (saved.length) parts.push(`Saved ${saved.length === 1 ? "card photo" : `${saved.length} card photos`}${cardName}: ${saved.join(", ")}. I'll render it and send the result for approval.`);
+  if (saved.length) parts.push(`Saved ${saved.length === 1 ? "card photo" : `${saved.length} card photos`}${cardName}: ${saved.join(", ")}. Give me a few minutes -- I'll text you the card to approve.`);
   if (dupes.length) parts.push(`Already had ${dupes.join(", ")} on file.`);
   if (failed) parts.push(`${failed} attachment${failed === 1 ? "" : "s"} couldn't be saved (not an image, too large, or download failed).`);
   return parts.join(" ") || "Couldn't read that attachment.";

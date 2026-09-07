@@ -127,6 +127,23 @@ export async function resolveCardCommand(
     return { kind: "text", text: `Your profile:\n${lines.join("\n")}` };
   }
 
+  const lookMatch = trimmed.match(/^set my (look|appearance):?\s*(.+)$/is);
+  if (lookMatch) {
+    const card = await getLinkedCard(scootId, userId);
+    if (!card) return { kind: "text", text: "Don't have a card linked to this number yet. Text me the code from your card first, then try again." };
+    const appearance = lookMatch[2].trim().slice(0, 300);
+    await db.update(playerCards).set({ appearance }).where(eq(playerCards.serial, card.serial));
+    log.info({ userId, serial: card.serial }, "card command: appearance updated");
+    return { kind: "text", text: `Got it. I'll describe you to the artist as: ${appearance}` };
+  }
+  if (/^(my look|my appearance|what's my look|whats my look)$/i.test(trimmed.trim())) {
+    const card = await getLinkedCard(scootId, userId);
+    if (!card) return { kind: "text", text: "Don't have a card linked to this number yet." };
+    return { kind: "text", text: card.appearance
+      ? `Your look on file: ${card.appearance}`
+      : "No look on file. Text \"set my look: <how you'd describe yourself>\" -- skin tone, hair, facial hair -- so your card comes out right." };
+  }
+
   const profileMatch = trimmed.match(/^set my profile:?\s*(.+)$/is);
   if (profileMatch) {
     const card = await getLinkedCard(scootId, userId);

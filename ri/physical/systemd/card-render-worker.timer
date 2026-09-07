@@ -1,0 +1,10 @@
+[Unit]
+Description=Check for queued card photos every 2 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=card-render-worker.service
+
+[Install]
+WantedBy=timers.target

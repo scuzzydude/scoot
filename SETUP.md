@@ -142,3 +142,24 @@ sudo systemctl daemon-reload && sudo systemctl enable --now card-art-cold-sync.t
 
 Requires `rclone` with the `azarchive:` remote configured on the host. The
 script (`scripts/card-art-cold-sync.sh`) is idempotent and never deletes.
+
+## Card render worker (host-side)
+
+When a member texts BigMo a photo it lands in `card_art` as a `source` row.
+`scripts/card-render-worker.sh` (systemd timer, every 2 min) renders the oldest
+queued photo through `tools/player-cards/render_card_photo.py` (Modal GPU +
+local rembg/reportlab), one at a time, honouring `CARD_RENDERS_PER_DAY`
+(default 5 per member per rolling day; the SMS intake enforces the same
+number). The app's `cards/render-notifier.ts` then texts the member the card
+with "approve card" / "reject card". Log: `/var/log/scoot/card-render-worker.log`.
+
+```bash
+sudo cp ri/physical/systemd/card-render-worker.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now card-render-worker.timer
+```
+
+Host needs: `modal` (token in `~/.modal.toml`), `rclone` (`azarchive:` remote),
+`pip install rembg[cpu] reportlab pillow numpy`, `pdftoppm`, passwordless sudo
+for copying into `$DATA_DIR/media/card-art`. Each card's `player_cards.appearance`
+("set my look: ..." by text) is appended to the render prompt -- set it, skin
+tone and hair drift without it.

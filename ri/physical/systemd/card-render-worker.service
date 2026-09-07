@@ -1,0 +1,12 @@
+[Unit]
+Description=Render queued Scoot card photos (one per run)
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=brandon
+Environment=HOME=/home/brandon
+Environment=PATH=/home/brandon/.local/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=/home/brandon/scoot
+ExecStart=/home/brandon/scoot/scripts/card-render-worker.sh
+TimeoutStartSec=20min
