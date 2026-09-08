@@ -60,7 +60,7 @@ Worth-keeping conversations can be saved to the repo via `npm run session:save` 
 
 - Primary developer is a C programmer. C-like syntax (JS/TS) is comfortable.
 - Not writing much code manually — Claude Code does the heavy lifting.
-- Development environment: **WSL (Ubuntu on Windows)**, will deploy to Linux server.
+- Development environment: **Claude Code runs directly on the production host `dreamlab`** (Azure VM) in `/home/brandon/scoot`. The working tree is bind-mounted into the app container and `tsx watch` reloads on save, so **an edit is a deploy** — there is no staging. WSL was the original environment (historical). See `.claude/memory/infra_claude_runs_on_dreamlab.md`.
 - Target: web first, iPhone second, Android third.
 - Claude Code runs with `--dangerously-skip-permissions` — full sudo access is expected and allowed.
 
@@ -261,7 +261,16 @@ Message format:
 
 ---
 
-## Build and Run (WSL / Local Dev)
+## Build and Run
+
+**On dreamlab (production — the normal case):** the stack runs via
+`docker compose -f ri/physical/docker-compose.yml` (`app` + `postgres`). Code changes need
+no build or restart. Schema changes are applied by hand with `ALTER TABLE` inside the
+postgres container — **never run `npm run db:push` against prod**: it proposes dropping the
+`session` table (see `.claude/memory/infra_prod_db_migrations.md`). Prod Postgres is on
+host port `5433`.
+
+**Fresh local machine (historical recipe, kept for reference):**
 
 ```bash
 # Install dependencies
