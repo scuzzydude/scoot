@@ -22,6 +22,9 @@ services:
       context: ../..
       dockerfile: ri/physical/Dockerfile.dev
     restart: unless-stopped
+    # RIM Phase 0.5 (2026-09-08): bound the app so the search container is not the
+    # only limited one on a 3.8 GB host. Observed steady state ~170 MiB.
+    mem_limit: 1g
     depends_on:
       postgres:
         condition: service_healthy
