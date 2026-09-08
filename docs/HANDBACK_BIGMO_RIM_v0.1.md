@@ -7,8 +7,11 @@ _Version: v0.1 | 2026-09-08 | Status: HANDBACK — written on `dreamlab` by the 
 Phases 0, 1 and 2 are done, with two exceptions: the encrypted off-host copy of the
 snapshot (0.1) is waiting on a passphrase Brandon has not yet supplied, and the boot-restore
 unit (2.3) is installed but deliberately not enabled, per the unit's own header. The bot came
-through untouched: no file under the strict nodes was written, the app container was not
-restarted, and the same session's ownership hook logged every write it made. The §8
+through intact: one strict path was written (`ri/physical/docker-compose.yml`, the
+Brandon-approved `mem_limit`, recorded as a `claim`/`release` in the event log) and the app
+container was recreated once for it after the load test, with `/api/health` back at 200 on
+the first check and BigMo re-registered; nothing under the SMS, personality, or schema nodes
+was touched. The §8
 prediction is **refuted as stated** and **supported in a reworded form** (§5). Three facts
 in the handoff's §1 needed correction (§6). Four things the eight criteria do not cover
 showed up (§7).
