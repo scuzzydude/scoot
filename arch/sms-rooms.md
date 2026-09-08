@@ -45,10 +45,14 @@ Legacy: bits `1|2` are "engineer roles" on other Scoots (`& 3n`, see
 | `BETA`    | 1<<5 | 32 | beta/dev tester: early SMS features + rollout announcements before general release |
 | `LEGEND_NUMBER` | 1<<6 | 64 | awarded a reserved legend's/patron's number (an honor). Rule: a champ keeps their #; a *deceased* legend's # may be awarded to an OG. Pairs with `scoot_members.worn_number` = the jersey # worn: the member keeps their own id (e.g. McGhee is member 130, `worn_number=24`), and the number stays an empty reserved seat in `users`. |
 | `TEXT_AUDIT` | 1<<7 | 128 | may view the **global sequential SMS log** (every user's texts), not just their own. Grantable independently of LEADER. The "Texts" page shows a My/All view switcher when set. |
+| `SENIOR` | 1<<8 | 256 | age tier attested by the STAKER at staking time (55+ by birth year); never a stored birthdate. Mutually exclusive with OG. |
+| `OG` | 1<<9 | 512 | age tier, 70+; supersedes SENIOR. |
+| `ENGINEER` | 1<<10 | 1024 | self-stake bootstrap authority. Requires **both** this flag **and** `ROOT_USER_ID` (hardcoded in `trust/graph.ts`) — a hard cut, not a delegable grant. Distinct from the legacy bits 1|2. |
 
-(`ScootFlags` constant to be added to `schema.ts`. The global `UserFlags.GYMBOSS`
-is deprecated by this; migrate Fonde gymbosses into the per-Scoot mask, then
-retire the global bit.)
+(`ScootFlags` lives in `ri/src/server/db/schema.ts` — this table was reconciled to it
+2026-09-08. The global `UserFlags.GYMBOSS` is deprecated by this and is still declared in
+`schema.ts`; migrating Fonde gymbosses into the per-Scoot mask and retiring the global bit
+remains open — see §9.)
 
 ---
 
