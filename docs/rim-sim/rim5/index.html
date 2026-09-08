@@ -1,0 +1,143 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RIM⁵ — Recursive Integration</title>
+<link rel="stylesheet" href="../_shared/sim_common.css">
+<link rel="stylesheet" href="../_shared/rim_selector.css">
+<style>
+  .wrap{max-width:960px;margin:0 auto;padding:28px 24px 60px;}
+  .lede{font-size:15px;line-height:1.6;max-width:70ch;}
+  .lede em{color:var(--accent);font-style:normal;font-weight:600;}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--sub);margin:34px 0 12px;}
+  .chain{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin-bottom:6px;}
+  .pos{flex:1 1 165px;background:var(--panel);border:1px solid var(--border);
+       border-radius:6px;padding:13px 14px;position:relative;}
+  .pos .n{font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.06em;}
+  .pos .m{font-size:15px;font-weight:700;color:var(--accent);margin-top:1px;}
+  .pos .who{font-size:10.5px;font-weight:600;color:var(--sub);margin-top:1px;}
+  .pos p{margin:7px 0 0;font-size:12px;line-height:1.45;}
+  .pos .req{margin-top:7px;font-size:10.5px;color:var(--hard);font-weight:600;}
+  .arrow{display:flex;align-items:center;padding:0 6px;color:var(--sub);
+         font-size:16px;font-weight:700;flex:0 0 auto;}
+  .t{border-collapse:collapse;width:100%;font-size:13px;}
+  .t th,.t td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .t th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);}
+  .t code{font-size:11.5px;color:var(--hard);}
+  .callout{margin-top:14px;padding:13px 16px;background:var(--panel);
+        border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;
+        font-size:12.5px;line-height:1.55;}
+  .callout b{color:var(--accent);}
+  .flag{margin-top:14px;padding:13px 16px;background:var(--panel);
+        border:1px solid var(--border);border-left:3px solid var(--soft);border-radius:4px;
+        font-size:12.5px;line-height:1.55;}
+  .flag b{color:var(--soft);}
+  .att{font-size:11.5px;color:var(--sub);margin-top:8px;}
+</style>
+
+<div class="tabstrip-row">
+  <div class="rim-title">
+    <!-- Home link: supply your own logo asset, or keep the wordmark alone. -->
+    <h1>RIM<sup>5</sup></h1>
+    <span class="rim-level">level 1 · the pattern</span>
+  </div>
+  <span class="tabstrip-divider"></span>
+  <span class="rim-scope-label">Scope</span>
+  <select class="rim-scope" id="rimScope" aria-label="RIM scope"></select>
+</div>
+
+<div class="wrap">
+  <p class="lede">
+    <strong>RIM</strong> — Recursive Integration. The hypothesis is that the
+    information determining whether a design works <em>is present early</em>, and
+    the flow destroys it systematically at every hand-off between tools. The answer
+    is to stop hand-off translation loss by making the hand-off unnecessary:
+    one artifact, read and written by every participant.
+  </p>
+
+  <h2>RIM⁵ — five ordered positions</h2>
+  <div class="chain">
+    <div class="pos">
+      <div class="n">POSITION 1</div><div class="m">Map</div>
+      <div class="who">positional truth</div>
+      <p>The territory as it actually is. The registry.</p>
+      <div class="req">requires nothing</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="pos">
+      <div class="n">POSITION 2</div><div class="m">Model</div>
+      <div class="who">the account</div>
+      <p>The predictive account — a story about the territory.</p>
+      <div class="req">requires a Map</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="pos">
+      <div class="n">POSITION 3</div><div class="m">Methodology</div>
+      <div class="who">both</div>
+      <p>Running Map and Model at once — that <i>is</i> the method.</p>
+      <div class="req">requires both</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="pos">
+      <div class="n">POSITION 4</div><div class="m">Machine</div>
+      <div class="who">implementation</div>
+      <p>A system is an implementation of a methodology.</p>
+      <div class="req">requires a Methodology</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="pos">
+      <div class="n">POSITION 5</div><div class="m">Mindset</div>
+      <div class="who">convergence</div>
+      <p>What convergence accumulates. Institutionalised, this is REDS.</p>
+      <div class="req">requires a Machine</div>
+    </div>
+  </div>
+  <p class="att">Each position strictly requires the one before it — the order is a dependency chain, not a list.</p>
+
+  <div class="callout">
+    <b>Why this is recursive, structurally.</b> Position 4 produces positions 1
+    and 2 one level down: a Machine emits Maps and Models. So the chain's head is
+    its own tail's output, which is what makes a RIM <i>design</i> literally a RIM
+    instance rather than an analogy. Position 5 feeds back into position 1 — which
+    is why successive turns are not identical.
+  </div>
+
+  <h2>The three levels — a projection of the chain</h2>
+  <table class="t">
+    <tr><th>Level</th><th>Positions</th><th>Instances here</th><th>Where it lives</th></tr>
+    <tr><td>1</td><td>Methodology</td><td>RIM⁵</td><td><code>/rim-sim/RIM_architecture_v0.8.md</code></td></tr>
+    <tr><td>2</td><td>Machine</td><td>dreamlab</td><td><code>/home/brandon/scoot (the authoring loop: agent sessions + git + .claude/memory/)</code></td></tr>
+    <tr><td>3</td><td>Map + Model, one turn down</td><td>Player-card pipeline</td><td><code>scoot/tools/player-cards/ + scoot/arch/player-cards.md</code></td></tr>
+  </table>
+
+  <h2>Positions 1 and 2 must be one artifact</h2>
+  <p class="lede" style="font-size:13.5px;">
+    <strong>"The registry is the model is the authority is the registry."</strong>
+    With Map holding positional truth and Model holding the predictive account,
+    this stops being a tautology and becomes a falsifiable claim: the two must be
+    the <em>same artifact</em>. Two engineers keeping them separately is the
+    failure the origin narrative depicts.
+  </p>
+
+  <h2>What makes something a RIM machine</h2>
+  <table class="t">
+    <tr><th>#</th><th>Criterion</th><th>Disqualified if</th></tr>
+    <tr><td>3.1</td><td>One artifact, many depths</td><td>a depth exists only inside a tool others cannot read</td></tr>
+    <tr><td>3.2</td><td>Positional write authority</td><td>write authority is by <i>name</i> — names drift, directories don't</td></tr>
+    <tr><td>3.2b</td><td>Halt authority by identity, non-delegable</td><td>the halt can be granted by a role, or loses input while engaged</td></tr>
+    <tr><td>3.3</td><td>Append-only history</td><td>truth is a snapshot with no history behind it</td></tr>
+    <tr><td>3.4</td><td>Non-blocking authoring</td><td><i>authoring</i> is serialized by a lock</td></tr>
+    <tr><td>3.5</td><td>Rank commits, never adjudicates — a computed fact always does</td><td>position settles a technical dispute</td></tr>
+    <tr><td>3.6</td><td>Design out, vocabulary in</td><td>the <i>design</i> is an input</td></tr>
+    <tr><td>3.7</td><td>Recall is obligatory</td><td>reading prior state is optional or best-effort</td></tr>
+  </table>
+  <p class="att">These are not a checklist. They are what a machine grows under concurrency pressure, in dependency order — which is why a Map and a log come before terminals.</p>
+
+  <div class="flag">
+    <b>Framework page.</b> This is a landing page in the house style, not the
+    document. Where this page and <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a> disagree, the document wins.
+  </div>
+</div>
+
+<script src="../_shared/rim_selector.js"></script>
+<script>mountRimSelector("rim5");</script>

@@ -1,0 +1,104 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dreamlab — a RIM machine</title>
+<link rel="stylesheet" href="../_shared/sim_common.css">
+<link rel="stylesheet" href="../_shared/rim_selector.css">
+<style>
+  .wrap{max-width:960px;margin:0 auto;padding:28px 24px 60px;}
+  .lede{font-size:15px;line-height:1.6;max-width:70ch;}
+  .lede em{color:var(--accent);font-style:normal;font-weight:600;}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--sub);margin:34px 0 12px;}
+  .layer{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;}
+  .lay{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:13px 14px;}
+  .lay .t{font-size:13px;font-weight:700;color:var(--accent);}
+  .lay p{margin:7px 0 0;font-size:12.5px;line-height:1.5;}
+  .svc{border-collapse:collapse;width:100%;font-size:13px;}
+  .svc th,.svc td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .svc th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);}
+  .svc code,.svc .port{font-size:11.5px;color:var(--hard);}
+  .note{margin-top:34px;padding:14px 16px;background:var(--panel);
+        border:1px solid var(--border);border-left:3px solid var(--soft);border-radius:4px;
+        font-size:12.5px;line-height:1.55;}
+  .note b{color:var(--soft);}
+</style>
+
+<div class="tabstrip-row">
+  <div class="rim-title">
+    <h1>dreamlab</h1>
+    <span class="rim-level">level 2 · a RIM machine</span>
+  </div>
+  <span class="tabstrip-divider"></span>
+  <span class="rim-scope-label">Scope</span>
+  <select class="rim-scope" id="rimScope" aria-label="RIM scope"></select>
+</div>
+
+<div class="wrap">
+  <p class="lede">
+    <strong>dreamlab</strong> is a <em>RIM machine</em> — an implementation of
+    Recursive Integration, not a design produced by one. It is the substrate its
+    designs execute on: the assistant, its services, and the shared artifacts that
+    let several agents work one tree without destroying each other's information at
+    the hand-off.
+  </p>
+
+  <h2>What makes it a RIM machine</h2>
+  <div class="layer">
+    <div class="lay">
+      <div class="t">One shared artifact</div>
+      <p>An append-only event log is the sole truth; current state is a fold over it, never a cached snapshot.</p>
+    </div>
+    <div class="lay">
+      <div class="t">Positional authority</div>
+      <p>The owner of a file is the session whose working directory contains it — never a session name. Names drift; directories don't.</p>
+    </div>
+    <div class="lay">
+      <div class="t">Non-blocking hand-off</div>
+      <p>Contended resources have one writer. Others don't wait — they hand off a payload and keep authoring.</p>
+    </div>
+    <div class="lay">
+      <div class="t">Recursive improvement</div>
+      <p>The machine is built to build its designs; improving a design's process immediately improves the machine.</p>
+    </div>
+  </div>
+
+  <p class="lede" style="font-size:12.5px;color:var(--sub);">
+    <strong>Status, honestly:</strong> as of 2026-09-08 these four cards describe the
+    <em>target</em>, not the state. Per RIM_architecture_v0.8 §3.8 the dreamlab loop meets
+    halt-by-identity, rank-never-adjudicates, vocabulary-in and recall (by convention), and
+    fails one-artifact, positional ownership, append-only history and non-blocking authoring.
+    Phase 2 of the current handoff installs the Map and the log.
+  </p>
+  <h2>The machine, as running services</h2>
+  <table class="svc">
+    <tr><th>Service</th><th>Port</th><th>Role</th></tr>
+    <tr><td>scoot-app (Node/Express, tsx watch over a bind mount)</td><td class="port">3000</td><td>API, web chat, and the BigMo SMS commissioner — the live bot. An edit is a deploy.</td></tr>
+    <tr><td>scoot-postgres (Postgres 16)</td><td class="port">5433</td><td>State — the Map as it exists today (users, roles, rooms, sms_state, card_art, ledgers)</td></tr>
+    <tr><td>memory-vault (Postgres + pgvector)</td><td class="port">8000</td><td>Semantic recall — BigMo's long-term member memory and the agent sessions' seeded memory</td></tr>
+    <tr><td>scoot-pmp + SearXNG</td><td class="port">4200 / 8090</td><td>Self-hosted search and research synthesis</td></tr>
+    <tr><td>Apache</td><td class="port">443</td><td>Fronts the app and serves this page</td></tr>
+    <tr><td>host timers (systemd / cron)</td><td class="port">—</td><td>card render worker, cold sync, weekly session seed</td></tr>
+    <tr><td>scoot-rim-agentd</td><td class="port">4300 (planned — Phase 2)</td><td>Session supervision — the RIM application proper</td></tr>
+  </table>
+  <p class="lede" style="font-size:12px;color:var(--sub);">Add or remove rows freely. This table is the one place a reader learns what the machine physically is, so keep it accurate rather than aspirational.</p>
+
+  <h2>Where the layers live</h2>
+  <table class="svc">
+    <tr><th>Layer</th><th>Path</th><th>What it holds</th></tr>
+    <tr><td>The machine</td><td><code>/home/brandon/scoot (the authoring loop: agent sessions + git + .claude/memory/)</code></td><td>Services, interface, runtime</td></tr>
+    <tr><td>Methodology</td><td><code>scoot/CLAUDE.md + scoot/.claude/memory/</code></td><td>How the work is done</td></tr>
+    <tr><td>The pattern</td><td><code>/rim-sim/RIM_architecture_v0.8.md</code></td><td>RIM itself, instance-independent</td></tr>
+    <tr><td>The design</td><td><code>scoot/tools/player-cards/ + scoot/arch/player-cards.md</code></td><td>Player-card pipeline</td></tr>
+  </table>
+
+  <div class="note">
+    <b>Ported page.</b> From the RIM⁵ SIM framework bundle v0.1 (2026-09-08). The
+    hierarchy it asserts — pattern → machine → design — is specified in
+    <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a>; where this page and
+    that document disagree, the document wins.
+  </div>
+</div>
+
+<script src="../_shared/rim_selector.js"></script>
+<script>mountRimSelector("machine");</script>

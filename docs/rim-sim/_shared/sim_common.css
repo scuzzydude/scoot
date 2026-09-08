@@ -1,0 +1,225 @@
+/* sim_common.css — shared design system for the RIM landing pages and any
+   single-file simulation tools built in the same house style.
+
+   PORTED FRAMEWORK BUNDLE. Rules are verbatim from the originating host;
+   only the comments were rewritten, to remove references to that host's own
+   projects, assets and directory layout. No rule was changed, added or
+   removed — so the visual result is identical. Selector count verified equal.
+
+   Fully self-contained: no @import, no url(), no webfont, no CDN. Verified by
+   scan, because the request specified no external resources.
+
+   USAGE: load this before any page-specific <style> overrides:
+     <link rel="stylesheet" href="../_shared/sim_common.css">
+
+   The palette is four semantic ink colours on a light ground, defined as
+   custom properties on :root. There is no dark mode — --panel is always
+   white — so any logo or figure assets you add must be dark-ink versions.
+*/
+
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --border:#d8dce1; --text:#111111; --sub:#555555;
+  --accent:#7030a0; --hard:#0070c0; --soft:#b45309;
+  --green:#00854a; --red:#c0392b;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+header.app-header{padding:10px 24px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;justify-content:space-between;align-items:baseline;gap:16px;}
+/* Home-link — an optional logo + wordmark pair in the header, linking back to
+   whatever this page's parent app is. Always a pair, never the logo alone; if
+   you have no logo asset, use the wordmark span alone and drop the <img>.
+   Place it as the FIRST child inside <header class="app-header">, before <h1>:
+     <a class="home-link" href="/" title="Back to home">
+       <img src="../logo/logo.svg" alt=""><span class="home-label">NAME</span>
+     </a>
+   Supply your own asset; none ships in this bundle. These pages have no dark
+   mode, so use a dark-ink logo. */
+header.app-header .home-link{display:flex;align-items:center;gap:5px;flex:0 0 auto;text-decoration:none;color:inherit;}
+header.app-header .home-link img{height:22px;width:auto;display:block;}
+header.app-header .home-link .home-label{font-weight:600;font-size:14px;color:var(--text);}
+header.app-header h1{margin:0;font-size:16px;flex:0 0 auto;}
+header.app-header .spec-ver{margin-left:8px;font-size:11px;font-weight:600;color:var(--sub);vertical-align:middle;}
+header.app-header p{margin:0;font-size:12px;color:var(--sub);text-align:right;}
+
+/* Tabstrip row — cross-tab global controls live here, read by many tabs */
+.tabstrip-row{display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.tabstrip-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#bbb;white-space:nowrap;}
+.tabstrip{display:flex;gap:2px;}
+.tabstrip button{
+  border:none;background:transparent;padding:10px 16px;font-size:13px;font-weight:600;
+  color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;
+}
+.tabstrip button.active{color:var(--text);border-bottom-color:var(--accent);}
+.tabstrip button:disabled{color:#bbb;cursor:default;}
+.tabstrip-divider{width:1px;height:22px;background:var(--border);}
+.tabstrip-select{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;background:#fff;color:var(--text);}
+
+/* Named-preset save/load group (see sim_common.js createPresetManager) */
+.preset-group{display:flex;align-items:center;gap:6px;}
+.preset-group input[type=text]{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;width:130px;}
+.preset-group .reset-btn{padding:5px 10px;}
+.preset-status{font-size:11px;color:var(--soft);white-space:nowrap;}
+.preset-status.ok{color:var(--green);}
+
+main{padding:20px 24px 8px;}
+
+/* Editable-constants panel + its controls */
+.controls{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:18px;}
+.controls.compact-panel{padding:10px 20px;}
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--sub);margin:14px 0 8px;}
+.section-label:first-child{margin-top:0;}
+.section-label-row{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 8px;}
+.section-label-row .section-label{margin:0;flex:0 0 auto;}
+.section-label-row .topo-derived, .section-label-row .die-note{margin:0;text-align:right;}
+.topo-derived{font-size:12px;color:var(--sub);margin-top:8px;}
+.topo-derived b{color:var(--text);font-family:ui-monospace,Menlo,Consolas,monospace;}
+.controls-row{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:flex-end;}
+
+/* The single most reusable widget in this file — a named, editable constant
+   with a live value readout and a provenance flag. Use for ANY slider. */
+.slider-group{display:flex;flex-direction:column;min-width:140px;flex:1 1 140px;}
+.slider-group .label-row{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:3px;}
+.slider-group .label-row .name{font-weight:700;}
+.slider-group .label-row .val{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--sub);}
+.slider-group input[type=range]{width:100%;}
+.compact-sliders{gap:6px 16px;}
+.compact-sliders .slider-group{min-width:105px;flex:1 1 105px;}
+.compact-sliders .slider-group .label-row{font-size:11px;margin-bottom:1px;}
+.compact-sliders .slider-group .cap{font-size:10px;}
+
+/* Provenance flags — bake {sourced:true/false, src:'citation'} onto every
+   constant, then render one of these next to it. Never assert a number
+   without one. */
+.flag{font-size:11px;margin-left:4px;}
+.flag.sourced{color:#00854a;}
+.flag.est{color:var(--soft);}
+.flag.lab{color:#1565c0;}
+
+.controls-toolbar{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);}
+/* N-way mode/basis switch — button group, .active marks the current choice.
+   Reused for: Model/Illustration sub-views, Pivot, %/Fixed-W split basis,
+   NAND-type-style toggles, anything with a small fixed set of mutually
+   exclusive options. */
+.basis-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.basis-toggle button{border:none;background:#eee;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.basis-toggle button.active{background:var(--accent);color:white;}
+.basis-toggle button:disabled{opacity:0.45;cursor:not-allowed;}
+.reset-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;}
+.reset-btn:hover{background:#f0f0f0;}
+details.advanced{font-size:12px;color:var(--sub);}
+details.advanced input{width:70px;margin-left:6px;}
+.die-note{font-size:11px;color:var(--soft);margin-top:8px;}
+
+/* "Show the Work" derivation sheet — closed by default (details/summary),
+   styled like a worked problem: serif body text, italic variable names, a
+   light rule under each system's final result line. Recompute it from the
+   SAME live globals the displayed numbers use, every render, so a
+   derivation can never drift from what it's explaining. */
+details.derivation{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;}
+details.derivation summary{padding:12px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--sub);cursor:pointer;}
+details.derivation[open] summary{border-bottom:1px solid var(--border);}
+.deriv-sheet{padding:18px 24px 22px;font-family:'Cambria','Georgia',serif;font-size:15px;line-height:1.9;color:var(--text);}
+.deriv-sheet h4{font-family:Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--accent);margin:22px 0 8px;}
+.deriv-sheet h4:first-child{margin-top:0;}
+.deriv-line{margin:3px 0;}
+.deriv-var{font-style:italic;color:var(--sub);}
+.deriv-given{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--sub);}
+.deriv-result{font-weight:700;border-top:1px solid var(--border);padding-top:8px;margin-top:10px;}
+.deriv-result .deriv-num{color:var(--hard);}
+.deriv-sub{font-size:0.7em;vertical-align:sub;}
+/* Same 50/50 flex split and gap as .frames below, so two derivation columns
+   line up with the side-by-side frames they lead into. */
+.deriv-cols{display:flex;gap:16px;margin-top:8px;}
+.deriv-col{flex:1 1 50%;min-width:0;}
+.deriv-col h4:first-child{margin-top:0;}
+
+/* Data table — sourced/estimated baseline rows, one highlighted as active */
+.baseline-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+.baseline-table th, .baseline-table td{border:1px solid var(--border);padding:8px 10px;text-align:right;}
+.baseline-table th:first-child, .baseline-table td:first-child{text-align:left;}
+.baseline-table thead th{background:var(--bg);font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--sub);}
+.baseline-table tbody tr.active-baseline{background:#f3ecf9;}
+.baseline-table tbody tr.active-baseline td:first-child{font-weight:700;}
+.baseline-table tbody tr.baseline-row-reference{color:var(--sub);background:#fafafa;}
+.baseline-table input[type=number]{width:84px;font:inherit;font-size:12px;border:1px solid var(--border);border-radius:4px;padding:2px 4px;text-align:right;}
+.baseline-table input.baseline-input-locked{background:#eeeeee;color:var(--sub);border-color:transparent;cursor:not-allowed;}
+
+/* Readout cards — the flat metric grid above a tab's frames/diagrams */
+.readout{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px;}
+.metric{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:0;}
+.metric .k{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;}
+.metric .v{font-size:20px;font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:2px;}
+.metric.hero{border-color:var(--hard);background:#eef6fc;}
+.metric.hero .v{color:var(--hard);}
+.metric.soft .v{color:var(--soft);}
+.metric .tag{font-size:10px;font-weight:700;margin-left:6px;padding:1px 6px;border-radius:3px;}
+.metric.hero .tag{background:var(--hard);color:#fff;}
+.metric.soft .tag{background:var(--soft);color:#fff;}
+.metric .cap{font-size:13px;font-weight:600;color:var(--sub);}
+/* Inline winner badge — right-justified green %, on the winning side of a
+   side-by-side comparison only, instead of a separate 3rd "gain" card. */
+.metric .v.v-winline{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+.metric .v .win-pct{color:var(--green);font-size:14px;}
+.metric.status-green{border-color:var(--green);background:#eafaf0;}
+.metric.status-green .v{color:var(--green);}
+.metric.status-red{border-color:var(--red);background:#fdecea;}
+.metric.status-red .v{color:var(--red);}
+.warn-banner{border:1px solid var(--red);background:#fdecea;color:var(--red);border-radius:6px;padding:6px 10px;font-size:12px;font-weight:600;margin-top:8px;}
+
+/* Obfuscation Mode — visual-only redaction for demoing with the screen
+   recorded/photographed. %-savings/status-green/status-red cards stay
+   visible; every absolute-value card and slider readout renders as a solid
+   bar. Real values stay in the DOM — only rendered pixels are blacked out.
+   A tool can exempt one specific tab from blackout, as some tools do for
+   its +Perf tab: add `body.obfuscate[data-tab="yourtab"] ...` overrides
+   locally that restore color/pointer-events, scoped to that tab's id. */
+body.obfuscate .metric:not(.status-green):not(.status-red) .v{
+  color:transparent;background:#1a1a1a;border-radius:3px;user-select:none;
+}
+body.obfuscate .cap{
+  color:transparent;background:#1a1a1a;border-radius:3px;user-select:none;
+}
+body.obfuscate .val:not(.obf-exempt), body.obfuscate .topo-derived b:not(.obf-exempt){
+  color:transparent!important;background:#1a1a1a;border-radius:2px;user-select:none;
+}
+body.obfuscate .slider-group input[type=range]:not(.obf-exempt){
+  opacity:0.5;pointer-events:none;
+}
+.obfuscate-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.obfuscate-toggle button{border:none;background:#eee;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.obfuscate-toggle button.active{background:#c0392b;color:#fff;}
+
+/* Disclosure Mode — reds out and disables whichever tabs/controls are
+   flagged `sensitive` (business/legal strategy, unreleased hypothesis math),
+   for demoing in a meeting where those sections shouldn't be shown. */
+.disclosure-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.disclosure-toggle button{border:none;background:#eee;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.disclosure-toggle button.active{background:var(--red);color:#fff;}
+body.disclosure .tabstrip button.sensitive{
+  color:var(--red)!important;border-bottom-color:var(--red)!important;cursor:not-allowed!important;
+}
+body.disclosure .basis-toggle button.sensitive{
+  background:var(--red)!important;color:#fff!important;cursor:not-allowed!important;
+}
+
+/* Document Mode — content-area only. Hides every .controls block and every
+   metric card that isn't a %-savings box, leaving just the side-by-side
+   .frames pictures and the savings/gain cards — clean enough to paste
+   straight into a doc. */
+.document-toggle{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.document-toggle button{border:none;background:#eee;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.document-toggle button.active{background:var(--hard);color:#fff;}
+body.document-mode #tabcontent .controls{display:none;}
+body.document-mode #tabcontent .readout .metric:not(.status-green):not(.status-red){display:none;}
+
+/* Side-by-side comparison frames (e.g. Baseline vs Proposed, Before vs
+   After). No CSS width/height on .frame svg on purpose — real sims size the
+   SVG in JS so both sides share one scale; size the SVG in JS if both sides
+   must share one scale. */
+.frames{display:flex;gap:16px;}
+.frame{flex:1 1 50%;background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-width:0;}
+.frame .caption{padding:8px 14px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);background:#fafafa;}
+.frame .svgwrap{padding:10px;overflow:hidden;}
+.frame svg{display:block;}
+
+.stub{padding:60px;text-align:center;color:var(--sub);font-size:14px;}

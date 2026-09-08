@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Player-card pipeline — a RIM design</title>
+<link rel="stylesheet" href="../_shared/sim_common.css">
+<link rel="stylesheet" href="../_shared/rim_selector.css">
+<style>
+  .wrap{max-width:960px;margin:0 auto;padding:28px 24px 60px;}
+  .lede{font-size:15px;line-height:1.6;max-width:70ch;}
+  .lede em{color:var(--accent);font-style:normal;font-weight:600;}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--sub);margin:34px 0 12px;}
+  .layer{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;}
+  .lay{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:13px 14px;}
+  .lay .t{font-size:13px;font-weight:700;color:var(--accent);}
+  .lay p{margin:7px 0 0;font-size:12.5px;line-height:1.5;}
+  .svc{border-collapse:collapse;width:100%;font-size:13px;}
+  .svc th,.svc td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+  .svc th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);}
+  .svc code,.svc .port{font-size:11.5px;color:var(--hard);}
+  .note{margin-top:34px;padding:14px 16px;background:var(--panel);
+        border:1px solid var(--border);border-left:3px solid var(--soft);border-radius:4px;
+        font-size:12.5px;line-height:1.55;}
+  .note b{color:var(--soft);}
+</style>
+
+<div class="tabstrip-row">
+  <div class="rim-title">
+    <h1>Player-card pipeline</h1>
+    <span class="rim-level">level 3 · a RIM design</span>
+  </div>
+  <span class="tabstrip-divider"></span>
+  <span class="rim-scope-label">Scope</span>
+  <select class="rim-scope" id="rimScope" aria-label="RIM scope"></select>
+</div>
+
+<div class="wrap">
+  <p class="lede">
+    <strong>Player-card pipeline</strong> is a <em>RIM design</em> — work executed on a RIM
+    machine. A design is not merely produced by the pattern; it <em>occupies</em>
+    positions 1 and 2 of the chain one turn down, which is why a design is
+    literally a RIM instance rather than an analogy.
+  </p>
+
+  <h2>Its Map and its Model</h2>
+  <div class="layer">
+    <div class="lay">
+      <div class="t">Map — positional truth</div>
+      <p>The <code>card_art</code> table: every source photo and every render stage is a hash-addressed row with <code>parent_hash</code> lineage and a status (received → rendering → rendered → approved / rejected). Position, not name, says what a file is. — where this design's parts actually are, and who may write them.</p>
+    </div>
+    <div class="lay">
+      <div class="t">Model — the account</div>
+      <p><code>render_card_photo.py</code>: raw (Kontext + PuLID) → jersey composite → figure → 300 dpi card front. Each stage predicts the next from the previous; every intermediate is persisted, so a stage can be re-run without re-running the ones before it. — the artifact that predicts, or that <i>is</i> the design.</p>
+    </div>
+  </div>
+  <p class="lede" style="font-size:12.5px;margin-top:12px;">
+    The invariant to hold yourself to: <strong>these two must be the same
+    artifact.</strong> If the Map lives in one place and the Model in another, the
+    hand-off loss has already been taken — and that is the failure the whole
+    pattern exists to prevent.
+  </p>
+
+  <h2>What this design is</h2>
+  <table class="svc">
+    <tr><th>Aspect</th><th>Detail</th></tr>
+    <tr><td>Domain</td><td>Scoot(34) player cards — a 31-member roster rendered as comic-style card art from member photos</td></tr>
+    <tr><td>Machine it runs on</td><td>dreamlab</td></tr>
+    <tr><td>Its X</td><td>arch/player-cards.md v1.1 — cel-shaded comic illustration, ComfyUI/Modal pipeline, hash-addressed intermediates — the domain's own design system. The pattern is <code>RIM = Recursive Integration of a REDS system as an X</code>; X is a free variable.</td></tr>
+    <tr><td>Status</td><td>converging — 33 review rounds; first SMS selfie → card end-to-end on 2026-09-06; auto-trigger 2026-09-07</td></tr>
+  </table>
+
+  <div class="note">
+    <b>Ported page.</b> From the RIM⁵ SIM framework bundle v0.1 (2026-09-08). The
+    hierarchy it asserts — pattern → machine → design — is specified in
+    <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a>; where this page and
+    that document disagree, the document wins.
+  </div>
+</div>
+
+<script src="../_shared/rim_selector.js"></script>
+<script>mountRimSelector("design");</script>
