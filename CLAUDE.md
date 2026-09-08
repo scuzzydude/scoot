@@ -20,6 +20,43 @@ If you're unsure whether the symlink exists, run `npm run setup:memory` — it's
 
 ---
 
+## Ownership and Concurrency — Read Before Editing
+
+Several agent sessions work this tree at once, the host is production, and an edit is a
+deploy (`tsx watch` over a bind mount). Added 2026-09-08 (RIM Phase 1.3); the
+machine-readable map is `~/.scoot-rim/ownership.toml`, **outside this repo** on purpose.
+
+1. **Start your session in the subtree you will work on.** Ownership is *positional*: the
+   owner of a path is the session whose working directory contains it, never a session
+   name. A session started at `/home/brandon` contains everything and therefore owns
+   everything — don't start there for feature work.
+2. **Contended paths and their policy:**
+   - **strict** (gate writes *and* side effects such as restarts): `ri/src/server/sms/**`,
+     `ri/src/server/routes/sms.ts`, `ri/src/server/llm/**`, `ri/src/server/cards/**`,
+     `ri/src/server/mail/**`, `ri/src/server/db/**`, `ri/personalities/**`,
+     `ri/physical/**`, `scripts/card-render-worker.sh`, `scripts/card-art-cold-sync.sh`,
+     `.env`. Why: writes here restart the live bot, are executed by systemd/cron on the
+     host, or hit the production schema by hand.
+   - **handoff** (one writer; everyone else hands off a payload and keeps working):
+     `arch/**`, `docs/**`, `CLAUDE.md`, `.claude/memory/MEMORY.md`.
+   - **own-subtree** (parallel-safe, no coordination): `ri/src/client/**`,
+     `scoot-chat/**`, `tools/**`, the rest of `scripts/**`, and *new* files under
+     `.claude/memory/` (a new file never collides; only the index does).
+3. **Contended writes are handed off, not waited for.** If you need a change in a path you
+   don't own, write the change as a payload — a patch or a precise description — into a
+   dated note under `docs/handoffs/`, tell the owner, and keep working. Nobody blocks.
+4. **A shipped version is never edited in place.** Numbered documents, `card-review-N`
+   pages, tagged bundles: the next change is the next number.
+5. **A finding is not a version.** Recording that something is wrong (a memory note, a
+   handback line) does not change what shipped; the fix ships as the next version.
+6. **Recall is obligatory.** Read `.claude/memory/MEMORY.md` before writing, and once
+   Phase 2 is installed, `scoot-rim-agentd open` for deferred and undecided items.
+7. **Until the pre-write gate exists these rules are advisory.** `scoot-rim-agentd check
+   <path> --cwd $PWD` reports what the map says; a warn-only hook logs it. Nothing blocks
+   yet — that is deliberate (a gate on a partial registry fails open).
+
+---
+
 ## What This Project Is
 
 Scoot is a social platform with three features:
