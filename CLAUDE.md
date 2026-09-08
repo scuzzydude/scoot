@@ -28,8 +28,11 @@ machine-readable map is `~/.scoot-rim/ownership.toml`, **outside this repo** on 
 
 1. **Start your session in the subtree you will work on.** Ownership is *positional*: the
    owner of a path is the session whose working directory contains it, never a session
-   name. A session started at `/home/brandon` contains everything and therefore owns
-   everything — don't start there for feature work.
+   name. Verified 2026-09-08: a session started at `/home/brandon` is **denied** on every
+   strict and handoff node (it is not the owner of any of them — `scoot-rim-agentd check`
+   reports "caller is at .") and allowed only in own-subtree areas. So a home-directory
+   session can plan and read, but feature work on the bot must start in
+   `ri/src/server/sms` (or the relevant strict subtree).
 2. **Contended paths and their policy:**
    - **strict** (gate writes *and* side effects such as restarts): `ri/src/server/sms/**`,
      `ri/src/server/routes/sms.ts`, `ri/src/server/llm/**`, `ri/src/server/cards/**`,
