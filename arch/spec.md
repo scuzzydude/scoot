@@ -97,6 +97,56 @@ Development starts web-only. Mobile is a future phase after web is stable.
 
 ## Folder Structure
 
+**Current layout (reconciled 2026-09-08 against the tree).** The original plan below used
+`/client`, `/server`, `/core`, `/shared` at the repo root; they became `ri/src/client`,
+`ri/src/server`, `ri/src/core`, `ri/src/shared` under the RI pass structure
+(`ri/model` = Pass 1, `ri/src` = Pass 2, `ri/sim` = Pass 3, `ri/physical` = deployment).
+Directories to depth 3, generated from disk:
+
+```
+.
+./.claude
+./.claude/memory
+./arch
+./arch/plans
+./docs
+./docs/sessions
+./ip
+./ip/inventions
+./ri
+./ri/model
+./ri/personalities
+./ri/personalities/bigmo
+./ri/personalities/claude
+./ri/physical
+./ri/physical/apache
+./ri/physical/legal
+./ri/physical/systemd
+./ri/sim
+./ri/src
+./ri/src/client
+./ri/src/core
+./ri/src/server
+./ri/src/shared
+./ri/validation
+./scoot-chat
+./scripts
+./tools
+./tools/player-cards
+./tools/player-cards/__pycache__
+./tools/player-cards/art
+./tools/player-cards/assets
+```
+
+Notable additions since the plan: `ri/src/server/sms/` (BigMo SMS commissioner),
+`ri/src/server/trust/` (staking / trust graph), `ri/src/server/scoot/` (currency ledger),
+`ri/src/server/cards/` + `tools/player-cards/` (player-card pipeline), `ri/src/server/mail/`
+(poller, digest), `ri/personalities/` (bot prompts), `scripts/` (host cron/systemd jobs),
+`docs/` (transcripts, RIM documents).
+
+### Original plan (2026-05, historical)
+
+
 ```
 /scoot
 │

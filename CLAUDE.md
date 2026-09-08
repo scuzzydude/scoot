@@ -342,7 +342,7 @@ Work through phases in order. Do not start the next phase until the current one 
 
 ## File Locations Quick Reference
 
-**RI structure:** source lives in `ri/src/`, behavioral model in `ri/model/`, tests in `ri/src/server/services/`, IP in `ip/inventions/`, spec in `arch/`.
+**RI structure:** source lives in `ri/src/`, behavioral model in `ri/model/`, tests co-located with the code (`ri/src/server/{services,sms,trust}/*.test.ts`, 21 files as of 2026-09-08), IP in `ip/inventions/`, spec in `arch/`, deployment in `ri/physical/`, host jobs in `scripts/`.
 
 | What | Where |
 |---|---|
@@ -355,6 +355,12 @@ Work through phases in order. Do not start the next phase until the current one 
 | Anthropic provider impl | `ri/src/server/llm/anthropic.ts` |
 | OpenAI-compat provider impl | `ri/src/server/llm/openai-compat.ts` |
 | Express routes | `ri/src/server/routes/` |
+| BigMo SMS commissioner (live bot) | `ri/src/server/sms/` (entry `bigmo.ts`), prompt `ri/personalities/bigmo/cotb.md` |
+| Trust graph / staking | `ri/src/server/trust/` |
+| Scoot currency ledger (DB-first) | `ri/src/server/scoot/ledger.ts` |
+| Player cards (server) / pipeline (tools) | `ri/src/server/cards/`, `tools/player-cards/` |
+| Mail poller / digest | `ri/src/server/mail/` |
+| Host jobs (systemd/cron) | `scripts/`, units in `ri/physical/systemd/` |
 | C bridge | `ri/src/server/bridge/scootd.ts` |
 | Drizzle schema | `ri/src/server/db/schema.ts` |
 | WebSocket server | `ri/src/server/ws/chat-ws.ts` |
