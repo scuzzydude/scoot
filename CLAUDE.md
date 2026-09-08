@@ -29,6 +29,8 @@ Scoot is a social platform with three features:
 
 Architecture: thin web client (React), Node/Express API layer, C core daemon (`scootd`) that owns the blockchain and database. The client does nothing but render and call the API.
 
+**Status (reconciled 2026-09-08):** that is the *target* architecture. Today the Scoot currency ledger is **Postgres-first** via `ri/src/server/scoot/ledger.ts` (Phase 5a, append-only); `scootd` exists as an unwired skeleton under `ri/src/core/` and **is not running on prod** (`pgrep scootd` → nothing). See "Build Phases" below.
+
 Read `arch/spec.md` for full detail on architecture, endpoints, folder structure, and build phases.
 
 ---
@@ -140,7 +142,7 @@ Do not add color, gradients (except `from-primary to-primary/50` on auth split s
 - Routes in `/ri/src/server/routes/` — one file per feature area
 - All routes return JSON: `{ ok: true, data: ... }` or `{ ok: false, error: "..." }`
 - Auth middleware applied at router level, not per-endpoint
-- All Scoot/blockchain operations go through the C bridge — never implement blockchain logic in Node
+- Scoot ledger writes go through `ri/src/server/scoot/ledger.ts` (append-only, DB-first, Phase 5a) — never a raw insert. Block/chain structures belong to the C core (Phase 5b); do not build chain logic in Node — the ledger tables are what `scootd` will later ingest
 - Drizzle for all Postgres queries from Node side
 
 ### C Core
