@@ -1,11 +1,12 @@
-import { MessageSquare, Wallet, Bot, FileText, Inbox, Mail, Eye, Users, type LucideIcon } from "lucide-react";
+import { MessageSquare, Wallet, Bot, FileText, Inbox, Mail, Eye, Users, Layers, type LucideIcon } from "lucide-react";
 import { useScoot } from "./use-scoot.js";
-import { hasLeader, hasStaked } from "../api/scoots.js";
+import { hasLeader, hasStaked, hasPowerUser } from "../api/scoots.js";
 
 export interface NavItemDef {
   href: string;
   label: string;
   icon: LucideIcon;
+  external?: boolean;  // plain <a> to a static page outside the SPA (opens in a new tab)
 }
 
 const FIXED_NAV: NavItemDef[] = [
@@ -33,5 +34,11 @@ export function useNavItems(): NavItemDef[] {
     ? [{ href: "/oversight", label: "Oversight", icon: Eye }]
     : [];
 
-  return [...FIXED_NAV, ...dynamicItems, ...stakedItems, ...leaderItems];
+  // RIM⁵ SIM pages (static, /var/www/html/rim-sim, see docs/rim-sim/) — for
+  // power users only: LEADER, BETA or ENGINEER. External so wouter doesn't route it.
+  const powerItems: NavItemDef[] = hasPowerUser(activeScoot?.userFlags)
+    ? [{ href: "/rim-sim/rim5/index.html", label: "RIM⁵", icon: Layers, external: true }]
+    : [];
+
+  return [...FIXED_NAV, ...dynamicItems, ...stakedItems, ...leaderItems, ...powerItems];
 }

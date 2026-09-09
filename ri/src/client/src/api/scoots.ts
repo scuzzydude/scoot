@@ -128,3 +128,10 @@ export const hasLeader = (userFlags: string | undefined | null) => hasBit(userFl
 export const hasTextAudit = (userFlags: string | undefined | null) => hasBit(userFlags, 128n);
 // Per-Scoot STAKED bit (ScootFlags.STAKED = 1<<2) — gates the staking catalog.
 export const hasStaked = (userFlags: string | undefined | null) => hasBit(userFlags, 4n);
+// Per-Scoot BETA bit (ScootFlags.BETA = 1<<5) — beta/dev tester.
+export const hasBeta = (userFlags: string | undefined | null) => hasBit(userFlags, 32n);
+// Per-Scoot ENGINEER bit (ScootFlags.ENGINEER = 1<<10) — dev access.
+export const hasEngineer = (userFlags: string | undefined | null) => hasBit(userFlags, 1024n);
+// "Power user" for nav purposes: LEADER, BETA or ENGINEER.
+export const hasPowerUser = (userFlags: string | undefined | null) =>
+  hasLeader(userFlags) || hasBeta(userFlags) || hasEngineer(userFlags);

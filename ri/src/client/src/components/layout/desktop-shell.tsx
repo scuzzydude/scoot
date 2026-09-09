@@ -77,17 +77,17 @@ function TopNav() {
   const items = useNavItems();
   return (
     <nav className="flex items-center gap-0.5">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = location.startsWith(href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            title={label}
-            className={`flex items-center justify-center h-8 w-8 rounded-lg transition-colors ${
-              active ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white"
-            }`}
-          >
+      {items.map(({ href, label, icon: Icon, external }) => {
+        const active = !external && location.startsWith(href);
+        const className = `flex items-center justify-center h-8 w-8 rounded-lg transition-colors ${
+          active ? "bg-white/10 text-white" : "text-white/50 hover:bg-white/5 hover:text-white"
+        }`;
+        return external ? (
+          <a key={href} href={href} title={label} target="_blank" rel="noopener noreferrer" className={className}>
+            <Icon className="h-4 w-4" />
+          </a>
+        ) : (
+          <Link key={href} href={href} title={label} className={className}>
             <Icon className="h-4 w-4" />
           </Link>
         );
@@ -101,19 +101,21 @@ function DefaultNavSidebar() {
   const items = useNavItems();
   return (
     <nav className="flex flex-col py-2">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = location.startsWith(href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-              active ? "bg-white/10 text-white font-medium" : "text-white/60 hover:bg-white/5 hover:text-white"
-            }`}
-          >
+      {items.map(({ href, label, icon: Icon, external }) => {
+        const active = !external && location.startsWith(href);
+        const className = `flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+          active ? "bg-white/10 text-white font-medium" : "text-white/60 hover:bg-white/5 hover:text-white"
+        }`;
+        const body = (
+          <>
             <Icon className="h-4 w-4 shrink-0" />
             {label}
-          </Link>
+          </>
+        );
+        return external ? (
+          <a key={href} href={href} target="_blank" rel="noopener noreferrer" className={className}>{body}</a>
+        ) : (
+          <Link key={href} href={href} className={className}>{body}</Link>
         );
       })}
     </nav>
