@@ -2220,3 +2220,5 @@ renders and jersey-mask bleed) automatically instead of after shipping.
 No design, script, or model/prompt chosen yet — full note in
 `tools/player-cards/PLAN_facial_likeness.md`'s new "Open backlog item"
 section.
+
+**Where the finished roster art lives (2026-09-09):** the cropped figure+mask set the production cards were built from was only in a session scratchpad (`art_r23_full_crop`); now backed up to `azarchive:media/card-art/roster-r23-crop/`. Trey-Up (34-DRAFT-23) crown-bump fix via `tools/player-cards/fix_outline_bump.py` → `roster-r24-crop/`; production front is `card-34-DRAFT-23-v2.png`. Brandon chose Nick v1 over v2 back in August, so fix v1 rather than swap.

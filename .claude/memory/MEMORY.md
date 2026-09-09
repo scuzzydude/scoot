@@ -29,7 +29,7 @@
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
 - [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 31-person roster final; back-of-card working (card-review-28), needs real stats/profile text next
 - [Always increment card-review-N, never overwrite](feedback_increment_card_reviews.md) — each round of card changes gets a fresh review-page URL, not a republish in place
-- [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — when Claude Code runs directly on a server the user controls, serve via plain HTTP there instead
+- [Prefer server-hosting review pages over Claude Artifacts](feedback_prefer_server_hosting.md) — serve from the server; link via fairchildlabs.org/card-review-N (dreamlab link failed for Brandon)
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
 - [BigMo search now via scoot-pmp](bigmo_search_scoot_pmp.md) — self-hosted SearXNG+LLM synthesis replaces dead Perplexity/Tavily/Gemini; systemd unit + shim, both on dreamlab
 - [dreamlab OOM — reboot 08-24, recurred 08-27](infra_dreamlab_oom_reboot_2026_08_24.md) — 3.8GB box; 08-27 OOM-killed `claude` directly + searxng crash-loop; fixed via mem_limit/oom_score_adj on searxng container
