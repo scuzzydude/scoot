@@ -42,25 +42,37 @@ ART_W, ART_H = TRIM_W - 2 * BAND, TRIM_H - 2 * BAND   # 168 x 240 pt
 
 STRIPE, GAP, KEEPOUT = 13.0, 13.0, 14.0       # chip edge rhythm
 
-COLS, ROWS = 3, 2                             # 6-up on letter
-PAGE_W, PAGE_H = landscape(letter)
+COLS, ROWS = 2, 2                             # set by set_layout
+PAGE_W, PAGE_H = letter
+MARKS = "corner"                              # "corner": per-card L marks in the gutters; "edge": sheet-edge marks
 
 # Impositions. "landscape-gutter" (default since 2026-09-09): cards sit apart
 # with the chip band bled 3/16 in past the trim on every side, so a cut that
 # lands up to ~3/16 in off still shows checkerboard, never white paper. The
 # gutter is exactly two bleeds wide, so neighbouring bleeds meet with no
 # overlap and no gap. "portrait-tight" is the original edge-to-edge layout.
+#
+# "portrait-4up" (default since 2026-09-09): 2x2 on a portrait letter sheet
+# with 1 in gutters, and every card carries its OWN crop marks at all four
+# corners, sitting in the gutter just outside its bleed. Brandon's problem
+# with sheet-edge marks: the first cut removes the marks the later cuts
+# need. With per-card corner marks each piece keeps its guides no matter
+# the cut order. 6-up can't fit corner marks on letter (the row gutter
+# would be under 1/8 in), hence 4.
 LAYOUTS = {
-    "landscape-gutter": dict(page=landscape(letter), bleed=0.1875 * IN, gutter=0.375 * IN),
-    "portrait-tight":   dict(page=letter,            bleed=0.125 * IN,  gutter=0.0),
+    "portrait-4up":     dict(page=letter,            cols=2, rows=2, bleed=0.1875 * IN, gutter=1.0 * IN,   marks="corner"),
+    "landscape-gutter": dict(page=landscape(letter), cols=3, rows=2, bleed=0.1875 * IN, gutter=0.375 * IN, marks="edge"),
+    "portrait-tight":   dict(page=letter,            cols=3, rows=2, bleed=0.125 * IN,  gutter=0.0,        marks="edge"),
 }
+DEFAULT_LAYOUT = "portrait-4up"
 
 
 def set_layout(name, flip="long"):
-    global PAGE_W, PAGE_H, BLEED, GUTTER, FLIP
+    global PAGE_W, PAGE_H, BLEED, GUTTER, FLIP, COLS, ROWS, MARKS
     lay = LAYOUTS[name]
     PAGE_W, PAGE_H = lay["page"]
-    BLEED, GUTTER, FLIP = lay["bleed"], lay["gutter"], flip
+    COLS, ROWS = lay["cols"], lay["rows"]
+    BLEED, GUTTER, FLIP, MARKS = lay["bleed"], lay["gutter"], flip, lay["marks"]
 
 
 def back_rotation():
@@ -727,10 +739,32 @@ def cut_lines():
     return sorted(set(xs)), sorted(set(ys))
 
 
-def draw_crop_marks(c):
-    """Cut marks at the sheet edges for every trim line, outside all bleed.
-    Each mark is a full-length guillotine cut: with cards aligned in a grid a
-    straight cut along any mark never crosses another card's live area."""
+def draw_corner_marks(c, count=None, mirror=False):
+    """Per-card crop marks: at each of a card's four corners, one horizontal
+    and one vertical hairline collinear with the trim edges, starting just
+    outside the bleed and running away from the card. Every piece keeps its
+    own guides after any other cut."""
+    c.setStrokeColor(HexColor("#000000"))
+    c.setLineWidth(0.35)
+    reach, off = 0.25 * IN, BLEED + 3.0
+    for i in range(COLS * ROWS if count is None else count):
+        x, y = cell_origin(i, mirror=mirror)
+        for cx_ in (x, x + TRIM_W):
+            c.line(cx_, y - off, cx_, y - off - reach)                       # below
+            c.line(cx_, y + TRIM_H + off, cx_, y + TRIM_H + off + reach)     # above
+        for cy_ in (y, y + TRIM_H):
+            c.line(x - off, cy_, x - off - reach, cy_)                       # left
+            c.line(x + TRIM_W + off, cy_, x + TRIM_W + off + reach, cy_)     # right
+
+
+def draw_crop_marks(c, count=None, mirror=False):
+    """Cut marks for the current layout. "corner": per-card marks (see
+    draw_corner_marks), only for the `count` cards actually on the sheet.
+    "edge": marks at the sheet edges for every trim line, outside all bleed --
+    full-length guillotine cuts."""
+    if MARKS == "corner":
+        draw_corner_marks(c, count, mirror)
+        return
     ox, oy = block_origin()
     bw, bh = block_size()
     c.setStrokeColor(HexColor("#000000"))
@@ -770,7 +804,7 @@ def build(roster_path, art_dir, out_path, mirror_backs=True):
         for i, row in enumerate(chunk):
             cx, cy = cell_origin(i)
             draw_front(c, cx, cy, row, art_dir)
-        draw_crop_marks(c)
+        draw_crop_marks(c, len(chunk))
         sheet_label(c, f"Scoot(34) · sheet {sheet_no} · FRONTS · "
                        f"trim 2.5x3.5in · print at 100%, no scaling")
         c.showPage()
@@ -782,7 +816,7 @@ def build(roster_path, art_dir, out_path, mirror_backs=True):
         for i, row in enumerate(chunk):
             cx, cy = cell_origin(i, mirror=mirror_backs)
             draw_back(c, cx, cy, row, art_dir)
-        draw_crop_marks(c)
+        draw_crop_marks(c, len(chunk), mirror=mirror_backs)
         c.restoreState()
         sheet_label(c, f"Scoot(34) · sheet {sheet_no} · BACKS"
                        f"{f' (mirrored for {FLIP}-edge flip)' if mirror_backs else ''}")
@@ -801,7 +835,7 @@ def main():
     ap.add_argument("--out", default="scoot34_cards.pdf")
     ap.add_argument("--no-mirror", action="store_true",
                     help="do not mirror back sheets (use for manual duplex)")
-    ap.add_argument("--layout", choices=sorted(LAYOUTS), default="landscape-gutter")
+    ap.add_argument("--layout", choices=sorted(LAYOUTS), default=DEFAULT_LAYOUT)
     ap.add_argument("--flip", choices=["long", "short"], default="long",
                     help="printer duplex setting the back sheet is mirrored for")
     args = ap.parse_args()
