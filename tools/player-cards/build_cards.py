@@ -45,6 +45,7 @@ STRIPE, GAP, KEEPOUT = 13.0, 13.0, 14.0       # chip edge rhythm
 COLS, ROWS = 2, 2                             # set by set_layout
 PAGE_W, PAGE_H = letter
 MARKS = "corner"                              # "corner": per-card L marks in the gutters; "edge": sheet-edge marks
+NAME_POS = "top"                              # front nameplate: "top" (stand-up slot hides the bottom) or "bottom"
 
 # Impositions. "landscape-gutter" (default since 2026-09-09): cards sit apart
 # with the chip band bled 3/16 in past the trim on every side, so a cut that
@@ -493,50 +494,67 @@ def draw_front(c, x, y, row, art_dir):
     c.setFillColor(PAPER)
     c.rect(x + BAND, y + BAND, ART_W, ART_H, stroke=0, fill=1)
 
-    # silhouette
+    # nameplate position: "top" (default since 2026-09-09 -- cards sit in a
+    # stand-up slot that hides the bottom edge) or the original "bottom".
+    bar_h = 34.0
+    top_plate = NAME_POS == "top"
+    slot_x, slot_y = x + BAND, y + BAND
+    slot_top = slot_y + ART_H
+
+    # silhouette. With the plate on top the art is shifted DOWN by the plate
+    # height and clipped to the slot: the crop's built-in headroom then sits
+    # under the plate, and the blank strip the crop reserves for a bottom
+    # plate is what gets clipped off at the bottom edge (hidden in the slot).
     art = player_art(serial, art_dir, "dark", "front")
+    c.saveState()
+    clip = c.beginPath(); clip.rect(slot_x, slot_y, ART_W, ART_H); c.clipPath(clip, stroke=0, fill=0)
+    art_y = slot_y - bar_h if top_plate else slot_y
     if art:
-        c.drawImage(art, x + BAND, y + BAND, width=ART_W, height=ART_H,
+        c.drawImage(art, slot_x, art_y, width=ART_W, height=ART_H,
                     mask="auto", preserveAspectRatio=False, anchor="c")
     else:
-        draw_placeholder_figure(c, x + BAND, y + BAND + 34, ART_W, ART_H - 34,
-                                INK)
+        draw_placeholder_figure(c, slot_x, art_y + 34, ART_W, ART_H - 34, INK)
+    c.restoreState()
 
     # nameplate
-    bar_h = 34.0
+    plate_y = slot_top - bar_h if top_plate else slot_y
     c.setFillColor(INK)
-    c.rect(x + BAND, y + BAND, ART_W, bar_h, stroke=0, fill=1)
+    c.rect(slot_x, plate_y, ART_W, bar_h, stroke=0, fill=1)
     c.setFillColor(field)
-    c.rect(x + BAND, y + BAND + bar_h - 1.6, ART_W, 1.6, stroke=0, fill=1)
+    accent_y = plate_y if top_plate else plate_y + bar_h - 1.6   # tier-colour rule on the art side of the plate
+    c.rect(slot_x, accent_y, ART_W, 1.6, stroke=0, fill=1)
 
     handle = row.get("handle", "").strip()
     tier_text = row.get("tier", "").strip()
     tier_x = x + TRIM_W - BAND - 8
     tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 7.5) if tier_text else 0
-    handle_x = x + BAND + 8
+    handle_x = slot_x + 8
     handle_avail = (tier_x - tier_w - 10) - handle_x
     handle_size = fit_font_size(handle, "CondBold", 19, handle_avail)
 
     c.setFillColor(PAPER)
     c.setFont("CondBold", handle_size)
-    c.drawString(handle_x, y + BAND + 14, handle)
+    c.drawString(handle_x, plate_y + 14, handle)
 
     c.setFillColor(field)
     c.setFont("Cond", 7.5)
-    c.drawRightString(tier_x, y + BAND + 19, tier_text)
+    c.drawRightString(tier_x, plate_y + 19, tier_text)
     c.setFillColor(MUTED)
     c.setFont("Mono", 6)
-    c.drawRightString(x + TRIM_W - BAND - 8, y + BAND + 8, edition_label(row))
+    c.drawRightString(x + TRIM_W - BAND - 8, plate_y + 8, edition_label(row))
+
+    # glyph + QR sit just under the plate when it's on top
+    corner_drop = bar_h if top_plate else 0.0
 
     # token mark
-    draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22, 14, INK, PAPER,
+    draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22 - corner_drop, 14, INK, PAPER,
                invert=True)
 
     # lookup QR, mirrored top-right of the glyph -- PLACEHOLDER: encodes
     # https://thedreamlaboratory.org/c/<code>, no /c/<code> resolver route
     # exists yet. Code is also printed as text so it can be typed into a
     # screen if scanning isn't practical (small print size, bad lighting).
-    draw_lookup_qr(c, x, y, serial)
+    draw_lookup_qr(c, x, y, serial, drop=corner_drop)
 
 
 QR_SIZE = 28.0
@@ -838,8 +856,12 @@ def main():
     ap.add_argument("--layout", choices=sorted(LAYOUTS), default=DEFAULT_LAYOUT)
     ap.add_argument("--flip", choices=["long", "short"], default="long",
                     help="printer duplex setting the back sheet is mirrored for")
+    ap.add_argument("--name-pos", choices=["top", "bottom"], default="top",
+                    help="front nameplate on the top edge (stand-up slot) or the bottom")
     args = ap.parse_args()
 
+    global NAME_POS
+    NAME_POS = args.name_pos
     set_layout(args.layout, args.flip)
     register_fonts()
     build(args.roster, args.art, args.out, mirror_backs=not args.no_mirror)
