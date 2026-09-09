@@ -139,6 +139,7 @@ def main():
     ap.add_argument("--describe", default="", help="explicit appearance sentence, e.g. 'He is Black with dark brown skin.'")
     ap.add_argument("--seed", type=int, default=552011)
     ap.add_argument("--framing", choices=["male", "female"], default=None, help="prompt block; default: player_cards.framing")
+    ap.add_argument("--identity", default=None, help="hash of a card_art SOURCE row to use as the PuLID identity reference (e.g. a tight face crop) instead of the subject photo")
     ap.add_argument("--from-raw", default=None, help="skip generation; blob path of an existing raw figure")
     ap.add_argument("--work", default=None, help="scratch dir (default: temp)")
     args = ap.parse_args()
@@ -169,14 +170,18 @@ def main():
         framing = FRAMING_FEMALE if args.framing == "female" else FRAMING_MALE
         prompt = " ".join(p for p in (STYLE_NOIR, framing, args.describe.strip(), EXPRESSION_SERIOUS) if p)
         src_url = PUBLIC_BASE + "/" + Path(src["media_url"]).name
-        payload = {"serial": pipe_serial, "subject_photo_url": src_url, "identity_photo_url": src_url,
+        id_url = src_url
+        if args.identity:
+            id_src = source_row(args.identity)
+            id_url = PUBLIC_BASE + "/" + Path(id_src["media_url"]).name
+        payload = {"serial": pipe_serial, "subject_photo_url": src_url, "identity_photo_url": id_url,
                    "prompt": prompt, "seed": args.seed, "guidance": 2.5,
                    "pulid_weight": 1.0, "pulid_start_at": 0.0, "pulid_end_at": 1.0}
         print("  generating on Modal (scoot34-kontext-pulid-test) ...", flush=True)
         gen = modal.Cls.from_name("scoot34-kontext-pulid-test", "PulidKontextGenerator")
         result = gen().generate.remote(payload)
         raw_blob = result["figure_path"]
-        gen_meta = {"seed": args.seed, "guidance": 2.5, "describe": args.describe, "framing": args.framing, "prompt_style": "noir"}
+        gen_meta = {"seed": args.seed, "guidance": 2.5, "describe": args.describe, "framing": args.framing, "prompt_style": "noir", "identity": args.identity}
     raw_png = blob_bytes(raw_blob)
     raw_hash, raw_url = store_render(src, raw_png, ".png", "raw", {"blob": raw_blob, **gen_meta})
 
