@@ -524,14 +524,29 @@ def draw_front(c, x, y, row, art_dir):
     # https://thedreamlaboratory.org/c/<code>, no /c/<code> resolver route
     # exists yet. Code is also printed as text so it can be typed into a
     # screen if scanning isn't practical (small print size, bad lighting).
+    draw_lookup_qr(c, x, y, serial)
+
+
+QR_SIZE = 28.0
+QR_INSET = 8.0   # from the inside of the chip band
+
+
+def draw_lookup_qr(c, x, y, serial, backing=False):
+    """Lookup QR + typed code, pinned to the card's top-right corner. Same
+    call on front and back (2026-09-09: Brandon wants it on both sides, same
+    corner). `backing` paints a paper square behind it first for the back,
+    where it sits over the black header bar."""
     code = short_code(serial)
-    qr_right = x + TRIM_W - BAND - 8
-    qr_top = y + TRIM_H - BAND - 8
-    qr_size = 28.0
-    draw_qr(c, qr_right, qr_top, qr_size, CARD_CODE_BASE_URL + code, INK)
+    qr_right = x + TRIM_W - BAND - QR_INSET
+    qr_top = y + TRIM_H - BAND - QR_INSET
+    if backing:
+        pad = 3.0
+        c.setFillColor(PAPER)
+        c.rect(qr_right - QR_SIZE - pad, qr_top - QR_SIZE - 12, QR_SIZE + 2 * pad, QR_SIZE + pad + 12, stroke=0, fill=1)
+    draw_qr(c, qr_right, qr_top, QR_SIZE, CARD_CODE_BASE_URL + code, INK)
     c.setFillColor(INK)
     c.setFont("MonoBold", 5.5)
-    c.drawRightString(qr_right, qr_top - qr_size - 7, code)
+    c.drawRightString(qr_right, qr_top - QR_SIZE - 7, code)
 
 
 def draw_back(c, x, y, row, art_dir):
@@ -571,7 +586,8 @@ def draw_back(c, x, y, row, art_dir):
     handle = row.get("handle", "").strip()
     tier_text = row.get("tier", "").strip()
     tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 8) if tier_text else 0
-    handle_avail = (R - tier_w - 10) - L
+    R_hdr = R - QR_SIZE - 6          # header text stops short of the QR square
+    handle_avail = (R_hdr - tier_w - 10) - L
     handle_size = fit_font_size(handle, "CondBold", 13, handle_avail, min_size=8)
 
     c.setFillColor(PAPER)
@@ -579,7 +595,11 @@ def draw_back(c, x, y, row, art_dir):
     c.drawString(L, top - hdr_h + 7, handle)
     c.setFillColor(field)
     c.setFont("Cond", 8)
-    c.drawRightString(R, top - hdr_h + 7.5, tier_text)
+    c.drawRightString(R_hdr, top - hdr_h + 7.5, tier_text)
+
+    # lookup QR, same corner as the front (paper square behind it so it
+    # reads over the header bar)
+    draw_lookup_qr(c, x, y, serial, backing=True)
 
     # vitals -- just the home gym (real first name lives in the "aka"
     # row below instead, not here)
