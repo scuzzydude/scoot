@@ -852,6 +852,7 @@ def build(roster_path, art_dir, out_path, mirror_backs=True):
 
 
 def main():
+    global NAME_POS, SERIES
     ap = argparse.ArgumentParser(description="Build Scoot(34) player cards.")
     ap.add_argument("--roster", default="roster.csv")
     ap.add_argument("--art", default="art",
@@ -867,7 +868,6 @@ def main():
     ap.add_argument("--series", type=int, default=SERIES, help="series number printed after the edition (34-2026-N)")
     args = ap.parse_args()
 
-    global NAME_POS, SERIES
     NAME_POS = args.name_pos
     SERIES = args.series
     set_layout(args.layout, args.flip)
