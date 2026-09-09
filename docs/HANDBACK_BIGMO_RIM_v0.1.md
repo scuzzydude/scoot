@@ -4,9 +4,9 @@ _Version: v0.1 | 2026-09-08 | Status: HANDBACK — written on `dreamlab` by the 
 
 ## 0. In one paragraph
 
-Phases 0, 1 and 2 are done, with two exceptions: the encrypted off-host copy of the
-snapshot (0.1) is waiting on a passphrase Brandon has not yet supplied, and the boot-restore
-unit (2.3) is installed but deliberately not enabled, per the unit's own header. The bot came
+Phases 0, 1 and 2 are done, with one exception: the boot-restore unit (2.3) is installed
+but deliberately not enabled, per the unit's own header. (The off-host snapshot, open at
+first writing, completed 2026-09-09.) The bot came
 through intact: one strict path was written (`ri/physical/docker-compose.yml`, the
 Brandon-approved `mem_limit`, recorded as a `claim`/`release` in the event log) and the app
 container was recreated once for it after the load test, with `/api/health` back at 200 on
@@ -20,7 +20,7 @@ showed up (§7).
 
 | Step | Status | Evidence |
 |---|---|---|
-| 0.1 snapshot | **done (local), deferred (off-host)** | `~/backups/scoot-2026-09-08.dump` (387 KB, `pg_dump -Fc`); restored into `scoot_restore_test`, `pg_stat_user_tables` row counts identical across 32 tables, throwaway DB dropped. Off-host: `gpg -c` + `rclone copy` to `azarchive:archive/dreamlab-snapshots/` **blocked on `~/.backup-pass`** (asked twice; not created as of 16:05 UTC). |
+| 0.1 snapshot | **done** | `~/backups/scoot-2026-09-08.dump` (387 KB, `pg_dump -Fc`); restored into `scoot_restore_test`, `pg_stat_user_tables` row counts identical across 32 tables, throwaway DB dropped. Off-host (2026-09-09): dump and `.env` encrypted with `gpg --symmetric AES256` using a passphrase Brandon supplied via a 600 file, decrypt round-trip verified with `cmp`, uploaded to `azarchive:archive/dreamlab-snapshots/2026-09-08/` (`rclone lsl` shows both), passphrase file shredded. Only Brandon holds the passphrase. |
 | 0.2 checkout memory | done | `scoot` `453f35a` — both checkouts recorded with dates; the Steve-side facts marked UNVERIFIED from dreamlab. |
 | 0.3 reconcile docs | done, 6/6 closed | `196b4a9` sim README; `ab818db` scootd status; `9fe086f` dev env; `3da1a11` flags table; `706380a` folder structure + file locations; `bd7161c` roster line. Nothing deferred. |
 | 0.4 memory number | **see §2** | `scratchpad/loadtest-2026-09-08-1556.log`, 32 samples over 16 min. |
@@ -120,7 +120,7 @@ Run before this file leaves the box: a case-insensitive grep over this file for 
 
 ## 9. Open for Brandon
 
-1. Create `~/.backup-pass` (chmod 600) so 0.1's off-host copy can complete; I delete it after upload.
+1. ~~Create `~/.backup-pass`~~ — done 2026-09-09; upload verified, file shredded.
 2. Run the 4-step selector test at `https://fairchildlabs.org/rim-sim/rim5/index.html`.
 3. Decide on restarting `scoot-pmp` to pick up the Exa commits (needs an `EXA_*` key first, UNVERIFIED which).
 4. Run `scoot-rim register` inside the `scoot-win-term` screen so its binding stops being approximate.
