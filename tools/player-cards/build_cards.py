@@ -531,14 +531,18 @@ QR_SIZE = 28.0
 QR_INSET = 8.0   # from the inside of the chip band
 
 
-def draw_lookup_qr(c, x, y, serial, backing=False):
-    """Lookup QR + typed code, pinned to the card's top-right corner. Same
-    call on front and back (2026-09-09: Brandon wants it on both sides, same
-    corner). `backing` paints a paper square behind it first for the back,
-    where it sits over the black header bar."""
+QR_BACK_DROP = 0.5 * IN   # back: sit below the header bar, inside the frame (2026-09-09)
+
+
+def draw_lookup_qr(c, x, y, serial, backing=False, drop=0.0):
+    """Lookup QR + typed code at the card's right edge. Front: pinned to the
+    top-right corner. Back: same right edge, dropped QR_BACK_DROP so it sits
+    inside the frame under the black header bar instead of over it (Brandon
+    2026-09-09). `backing` paints a paper square behind it (over the ghost
+    token) so it scans."""
     code = short_code(serial)
     qr_right = x + TRIM_W - BAND - QR_INSET
-    qr_top = y + TRIM_H - BAND - QR_INSET
+    qr_top = y + TRIM_H - BAND - QR_INSET - drop
     if backing:
         pad = 3.0
         c.setFillColor(PAPER)
@@ -586,7 +590,7 @@ def draw_back(c, x, y, row, art_dir):
     handle = row.get("handle", "").strip()
     tier_text = row.get("tier", "").strip()
     tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 8) if tier_text else 0
-    R_hdr = R - QR_SIZE - 6          # header text stops short of the QR square
+    R_hdr = R                        # QR sits below the header now, full width available
     handle_avail = (R_hdr - tier_w - 10) - L
     handle_size = fit_font_size(handle, "CondBold", 13, handle_avail, min_size=8)
 
@@ -597,9 +601,10 @@ def draw_back(c, x, y, row, art_dir):
     c.setFont("Cond", 8)
     c.drawRightString(R_hdr, top - hdr_h + 7.5, tier_text)
 
-    # lookup QR, same corner as the front (paper square behind it so it
-    # reads over the header bar)
-    draw_lookup_qr(c, x, y, serial, backing=True)
+    # lookup QR at the right edge, half an inch below the front's position
+    # so it sits inside the frame under the header (paper square behind it
+    # so it scans over the ghost token)
+    draw_lookup_qr(c, x, y, serial, backing=True, drop=QR_BACK_DROP)
 
     # vitals -- just the home gym (real first name lives in the "aka"
     # row below instead, not here)
