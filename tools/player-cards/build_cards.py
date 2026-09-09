@@ -24,7 +24,7 @@ import io
 import os
 import sys
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.colors import HexColor
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -34,14 +34,46 @@ from reportlab.pdfgen import canvas
 
 IN = 72.0
 TRIM_W, TRIM_H = 2.5 * IN, 3.5 * IN          # 180 x 252 pt
-BLEED = 0.125 * IN                            # 9 pt
+BLEED = 0.1875 * IN                           # 13.5 pt (set by set_layout)
+GUTTER = 0.375 * IN                           # space between cards (set by set_layout)
+FLIP = "long"                                 # duplex flip edge the BACK sheet is mirrored for
 BAND = 6.0                                    # chip band thickness
 ART_W, ART_H = TRIM_W - 2 * BAND, TRIM_H - 2 * BAND   # 168 x 240 pt
 
 STRIPE, GAP, KEEPOUT = 13.0, 13.0, 14.0       # chip edge rhythm
 
 COLS, ROWS = 3, 2                             # 6-up on letter
-PAGE_W, PAGE_H = letter
+PAGE_W, PAGE_H = landscape(letter)
+
+# Impositions. "landscape-gutter" (default since 2026-09-09): cards sit apart
+# with the chip band bled 3/16 in past the trim on every side, so a cut that
+# lands up to ~3/16 in off still shows checkerboard, never white paper. The
+# gutter is exactly two bleeds wide, so neighbouring bleeds meet with no
+# overlap and no gap. "portrait-tight" is the original edge-to-edge layout.
+LAYOUTS = {
+    "landscape-gutter": dict(page=landscape(letter), bleed=0.1875 * IN, gutter=0.375 * IN),
+    "portrait-tight":   dict(page=letter,            bleed=0.125 * IN,  gutter=0.0),
+}
+
+
+def set_layout(name, flip="long"):
+    global PAGE_W, PAGE_H, BLEED, GUTTER, FLIP
+    lay = LAYOUTS[name]
+    PAGE_W, PAGE_H = lay["page"]
+    BLEED, GUTTER, FLIP = lay["bleed"], lay["gutter"], flip
+
+
+def back_rotation():
+    """Backs are always laid out mirrored left<->right (so a card turned over
+    about its own vertical axis -- the way people flip a trading card -- has
+    an upright back). When the printer's duplex flip is about the sheet's
+    HORIZONTAL edge (long edge on a landscape page, short edge on portrait),
+    page 2 also has to be rotated 180 degrees or every back prints
+    upside-down relative to its front."""
+    is_landscape = PAGE_W > PAGE_H
+    horizontal_flip = (is_landscape and FLIP == "long") or (not is_landscape and FLIP == "short")
+    return 180 if horizontal_flip else 0
+
 
 # ------------------------------------------------------------------ palette ---
 
@@ -638,31 +670,52 @@ def draw_back(c, x, y, row, art_dir):
 
 # ------------------------------------------------------------- imposition ---
 
+def block_size():
+    return COLS * TRIM_W + (COLS - 1) * GUTTER, ROWS * TRIM_H + (ROWS - 1) * GUTTER
+
+
 def block_origin():
-    bw, bh = COLS * TRIM_W, ROWS * TRIM_H
+    bw, bh = block_size()
     return (PAGE_W - bw) / 2.0, (PAGE_H - bh) / 2.0
 
 
 def cell_origin(index, mirror=False):
+    """Lower-left corner of card `index` (reading order: left->right, top->bottom).
+    mirror=True places it where the BACK must go for the configured FLIP."""
     ox, oy = block_origin()
     col, rowi = index % COLS, index // COLS
     if mirror:
-        col = COLS - 1 - col
-    return ox + col * TRIM_W, oy + (ROWS - 1 - rowi) * TRIM_H
+        col = COLS - 1 - col   # see back_rotation() for the flip-edge handling
+    return ox + col * (TRIM_W + GUTTER), oy + (ROWS - 1 - rowi) * (TRIM_H + GUTTER)
+
+
+def cut_lines():
+    """Every vertical and horizontal trim line on the sheet (page coords)."""
+    ox, oy = block_origin()
+    xs, ys = [], []
+    for i in range(COLS):
+        x = ox + i * (TRIM_W + GUTTER)
+        xs += [x, x + TRIM_W]
+    for j in range(ROWS):
+        y = oy + j * (TRIM_H + GUTTER)
+        ys += [y, y + TRIM_H]
+    return sorted(set(xs)), sorted(set(ys))
 
 
 def draw_crop_marks(c):
+    """Cut marks at the sheet edges for every trim line, outside all bleed.
+    Each mark is a full-length guillotine cut: with cards aligned in a grid a
+    straight cut along any mark never crosses another card's live area."""
     ox, oy = block_origin()
-    bw, bh = COLS * TRIM_W, ROWS * TRIM_H
+    bw, bh = block_size()
     c.setStrokeColor(HexColor("#000000"))
     c.setLineWidth(0.35)
-    reach, off = 12.0, BLEED + 3.0
-    for i in range(COLS + 1):
-        gx = ox + i * TRIM_W
+    reach, off = 18.0, BLEED + 4.0
+    xs, ys = cut_lines()
+    for gx in xs:
         c.line(gx, oy - off, gx, oy - off - reach)
         c.line(gx, oy + bh + off, gx, oy + bh + off + reach)
-    for j in range(ROWS + 1):
-        gy = oy + j * TRIM_H
+    for gy in ys:
         c.line(ox - off, gy, ox - off - reach, gy)
         c.line(ox + bw + off, gy, ox + bw + off + reach, gy)
 
@@ -682,7 +735,7 @@ def build(roster_path, art_dir, out_path, mirror_backs=True):
     if not rows:
         sys.exit("roster is empty")
 
-    c = canvas.Canvas(out_path, pagesize=letter)
+    c = canvas.Canvas(out_path, pagesize=(PAGE_W, PAGE_H))
     per_sheet = COLS * ROWS
 
     for start in range(0, len(rows), per_sheet):
@@ -697,12 +750,17 @@ def build(roster_path, art_dir, out_path, mirror_backs=True):
                        f"trim 2.5x3.5in · print at 100%, no scaling")
         c.showPage()
 
+        c.saveState()
+        if mirror_backs and back_rotation():
+            c.translate(PAGE_W, PAGE_H)
+            c.rotate(180)
         for i, row in enumerate(chunk):
             cx, cy = cell_origin(i, mirror=mirror_backs)
             draw_back(c, cx, cy, row, art_dir)
         draw_crop_marks(c)
+        c.restoreState()
         sheet_label(c, f"Scoot(34) · sheet {sheet_no} · BACKS"
-                       f"{' (mirrored for long-edge flip)' if mirror_backs else ''}")
+                       f"{f' (mirrored for {FLIP}-edge flip)' if mirror_backs else ''}")
         c.showPage()
 
     c.save()
@@ -718,8 +776,12 @@ def main():
     ap.add_argument("--out", default="scoot34_cards.pdf")
     ap.add_argument("--no-mirror", action="store_true",
                     help="do not mirror back sheets (use for manual duplex)")
+    ap.add_argument("--layout", choices=sorted(LAYOUTS), default="landscape-gutter")
+    ap.add_argument("--flip", choices=["long", "short"], default="long",
+                    help="printer duplex setting the back sheet is mirrored for")
     args = ap.parse_args()
 
+    set_layout(args.layout, args.flip)
     register_fonts()
     build(args.roster, args.art, args.out, mirror_backs=not args.no_mirror)
 

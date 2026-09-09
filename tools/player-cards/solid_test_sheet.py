@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from build_cards import (BLEED, COLS, ROWS, TRIM_H, TRIM_W, cell_origin,
-                         draw_crop_marks, register_fonts, sheet_label)
+import build_cards as bc
+from build_cards import (COLS, ROWS, TRIM_H, TRIM_W, cell_origin, draw_crop_marks, register_fonts, sheet_label)
 
 COLORS = {
     "black": "#000000", "white": "#FFFFFF", "red": "#FF0000", "yellow": "#FFFF00",
@@ -29,16 +29,10 @@ DEFAULT_MIX = "black,black,white,white,red,yellow"
 
 def solid_card(c, index, color_hex, mirror=False):
     x, y = cell_origin(index, mirror=mirror)
-    col, rowi = index % COLS, index // COLS
-    if mirror:
-        col = COLS - 1 - col
-    # bleed only where this card touches the outside of the block
-    left = BLEED if col == 0 else 0.0
-    right = BLEED if col == COLS - 1 else 0.0
-    bottom = BLEED if rowi == ROWS - 1 else 0.0   # row index counts from the top
-    top = BLEED if rowi == 0 else 0.0
+    # Cards don't touch (gutter = two bleeds), so bleed every side.
+    b = bc.BLEED if bc.GUTTER > 0 else 0.0
     c.setFillColor(HexColor(color_hex))
-    c.rect(x - left, y - bottom, TRIM_W + left + right, TRIM_H + bottom + top, stroke=0, fill=1)
+    c.rect(x - b, y - b, TRIM_W + 2 * b, TRIM_H + 2 * b, stroke=0, fill=1)
 
 
 def build(out_path, names, mirror_backs=True):
@@ -48,7 +42,7 @@ def build(out_path, names, mirror_backs=True):
         if n not in COLORS:
             sys.exit(f"unknown colour {n!r}; choose from {', '.join(COLORS)}")
     register_fonts()
-    c = canvas.Canvas(out_path, pagesize=letter)
+    c = canvas.Canvas(out_path, pagesize=(bc.PAGE_W, bc.PAGE_H))
     mix = " ".join(names)
 
     for i, n in enumerate(names):
@@ -57,9 +51,14 @@ def build(out_path, names, mirror_backs=True):
     sheet_label(c, f"Scoot(34) · SOLID COLOUR TEST · FRONTS · {mix} · trim 2.5x3.5in · print at 100%, no scaling")
     c.showPage()
 
+    c.saveState()
+    if mirror_backs and bc.back_rotation():
+        c.translate(bc.PAGE_W, bc.PAGE_H)
+        c.rotate(180)
     for i, n in enumerate(names):
         solid_card(c, i, COLORS[n], mirror=mirror_backs)
     draw_crop_marks(c)
+    c.restoreState()
     sheet_label(c, f"Scoot(34) · SOLID COLOUR TEST · BACKS{' (mirrored for long-edge flip)' if mirror_backs else ''} · same colour as front")
     c.showPage()
     c.save()
@@ -71,5 +70,8 @@ if __name__ == "__main__":
     ap.add_argument("--out", default="cards_test_print_solid.pdf")
     ap.add_argument("--colors", default=DEFAULT_MIX, help="6 comma-separated names, reading order left→right, top→bottom")
     ap.add_argument("--no-mirror", action="store_true", help="do not mirror the back sheet (manual duplex)")
+    ap.add_argument("--layout", choices=sorted(bc.LAYOUTS), default="landscape-gutter")
+    ap.add_argument("--flip", choices=["long", "short"], default="long")
     a = ap.parse_args()
+    bc.set_layout(a.layout, a.flip)
     build(a.out, [s.strip().lower() for s in a.colors.split(",")], mirror_backs=not a.no_mirror)
