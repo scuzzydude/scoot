@@ -56,6 +56,20 @@ FRAMING_MALE = (
     "features from the reference photo -- do NOT change his ethnicity, do "
     "NOT invent facial hair he doesn't have or remove facial hair he does have."
 )
+FRAMING_FEMALE = (
+    "Waist-up portrait composition, cropped just above the waist -- do "
+    "not show hips, legs, or lower body. Change the clothes to a solid "
+    "dark charcoal-black basketball jersey (sleeveless, round neckline, "
+    "athletic jersey style, no cape, no collar), no logos, no text, no "
+    "numbers. This is an adult woman -- preserve her exact real age as "
+    "shown in the reference photo with a LIGHT touch on any age lines. "
+    "A strong, athletic build appropriate for a fit adult woman -- not "
+    "exaggerated. Simple plain background, nothing else in the scene. "
+    "Preserve her exact real hairstyle and hair color, her exact real "
+    "skin tone and ethnicity, and her exact real face shape and "
+    "features from the reference photo -- do NOT lighten her skin, do "
+    "NOT change her ethnicity. Keep her eyes open and clearly visible."
+)
 EXPRESSION_SERIOUS = (
     "Give the character a confident, serious game-face expression: "
     "eyes focused and slightly narrowed (not wide open), a subtle "
@@ -81,11 +95,11 @@ def q(v):  # SQL literal
 
 
 def source_row(h):
-    out = psql(f"SELECT hash, scoot_id, user_id, card_serial, media_url FROM card_art WHERE hash LIKE {q(h + '%')} AND kind='source'")
+    out = psql(f"SELECT hash, scoot_id, user_id, card_serial, media_url, coalesce(meta->>'hold','') FROM card_art WHERE hash LIKE {q(h + '%')} AND kind='source'")
     if not out:
         sys.exit(f"no source card_art row matching {h}")
-    hash_, scoot_id, user_id, card_serial, media_url = out.split("|")
-    return dict(hash=hash_, scoot_id=int(scoot_id), user_id=int(user_id), card_serial=card_serial or None, media_url=media_url)
+    hash_, scoot_id, user_id, card_serial, media_url, hold = out.split("|")
+    return dict(hash=hash_, scoot_id=int(scoot_id), user_id=int(user_id), card_serial=card_serial or None, media_url=media_url, hold=(hold == "true"))
 
 
 def store_render(src, data: bytes, ext: str, stage: str, extra_meta=None, status="rendered"):
@@ -96,6 +110,8 @@ def store_render(src, data: bytes, ext: str, stage: str, extra_meta=None, status
         tmp = Path(tempfile.mkstemp(suffix=ext)[1]); tmp.write_bytes(data)
         sh(["sudo", "cp", str(tmp), str(dest)]); sh(["sudo", "chmod", "644", str(dest)]); tmp.unlink()
     meta = {"stage": stage, **(extra_meta or {})}
+    if src.get("hold"):
+        meta["hold"] = True   # review-first: the app's notifier skips held renders
     mime = "image/png" if ext == ".png" else "image/jpeg"
     psql(
         "INSERT INTO card_art (hash, kind, scoot_id, user_id, card_serial, parent_hash, media_url, mime, bytes, origin, status, meta) "
@@ -122,6 +138,7 @@ def main():
     ap.add_argument("source_hash")
     ap.add_argument("--describe", default="", help="explicit appearance sentence, e.g. 'He is Black with dark brown skin.'")
     ap.add_argument("--seed", type=int, default=552011)
+    ap.add_argument("--framing", choices=["male", "female"], default=None, help="prompt block; default: player_cards.framing")
     ap.add_argument("--from-raw", default=None, help="skip generation; blob path of an existing raw figure")
     ap.add_argument("--work", default=None, help="scratch dir (default: temp)")
     args = ap.parse_args()
@@ -130,6 +147,8 @@ def main():
     if not src["card_serial"]:
         fail(src, "source photo has no card_serial -- link a card first ('my card' / claim code)")
     card_serial = src["card_serial"]
+    if not args.framing:
+        args.framing = psql(f"SELECT coalesce(framing,'male') FROM player_cards WHERE serial={q(card_serial)}") or "male"
     if not args.describe:
         args.describe = psql(f"SELECT coalesce(appearance,'') FROM player_cards WHERE serial={q(card_serial)}")
         if not args.describe:
@@ -147,7 +166,8 @@ def main():
         raw_blob = args.from_raw
         gen_meta = {"reused": True}
     else:
-        prompt = " ".join(p for p in (STYLE_NOIR, FRAMING_MALE, args.describe.strip(), EXPRESSION_SERIOUS) if p)
+        framing = FRAMING_FEMALE if args.framing == "female" else FRAMING_MALE
+        prompt = " ".join(p for p in (STYLE_NOIR, framing, args.describe.strip(), EXPRESSION_SERIOUS) if p)
         src_url = PUBLIC_BASE + "/" + Path(src["media_url"]).name
         payload = {"serial": pipe_serial, "subject_photo_url": src_url, "identity_photo_url": src_url,
                    "prompt": prompt, "seed": args.seed, "guidance": 2.5,
@@ -156,7 +176,7 @@ def main():
         gen = modal.Cls.from_name("scoot34-kontext-pulid-test", "PulidKontextGenerator")
         result = gen().generate.remote(payload)
         raw_blob = result["figure_path"]
-        gen_meta = {"seed": args.seed, "guidance": 2.5, "describe": args.describe, "prompt_style": "noir"}
+        gen_meta = {"seed": args.seed, "guidance": 2.5, "describe": args.describe, "framing": args.framing, "prompt_style": "noir"}
     raw_png = blob_bytes(raw_blob)
     raw_hash, raw_url = store_render(src, raw_png, ".png", "raw", {"blob": raw_blob, **gen_meta})
 

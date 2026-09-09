@@ -164,6 +164,7 @@ export const playerCards = pgTable("player_cards", {
   // Explicit appearance sentence fed to the render prompt (migration 0022);
   // "set my look: ..." by text. See tools/player-cards/render_card_photo.py.
   appearance: text("appearance"),
+  framing: text("framing").notNull().default("male"),   // 'male' | 'female' prompt block (migration 0023)
   // The 6-char hash already printed on the physical card next to its QR
   // (short_code() in tools/player-cards/build_cards.py) -- the claim token
   // for anyone whose card isn't auto-linked to a user by name match.

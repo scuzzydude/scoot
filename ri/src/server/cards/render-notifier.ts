@@ -29,6 +29,7 @@ export async function notifyRenderOutcomesOnce(): Promise<void> {
       .innerJoin(users, eq(users.id, cardArt.userId))
       .where(and(
         isNull(sql`${cardArt.meta}->>'notified'`),
+        sql`coalesce(${cardArt.meta}->>'hold','') <> 'true'`,   // review-first renders: Brandon releases them
         sql`(
           (${cardArt.kind} = 'render' AND ${cardArt.meta}->>'stage' = 'card' AND ${cardArt.status} = 'rendered')
           OR (${cardArt.kind} = 'source' AND ${cardArt.status} = 'failed')
