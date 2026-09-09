@@ -2222,3 +2222,5 @@ No design, script, or model/prompt chosen yet — full note in
 section.
 
 **Where the finished roster art lives (2026-09-09):** the cropped figure+mask set the production cards were built from was only in a session scratchpad (`art_r23_full_crop`); now backed up to `azarchive:media/card-art/roster-r23-crop/`. Trey-Up (34-DRAFT-23) crown-bump fix via `tools/player-cards/fix_outline_bump.py` → `roster-r24-crop/`; production front is `card-34-DRAFT-23-v2.png`. Brandon chose Nick v1 over v2 back in August, so fix v1 rather than swap.
+
+**Card print layout state (2026-09-09, build_cards.py defaults):** portrait 4-up, 1 in gutters, per-card corner crop marks, 3/16 in checkerboard bleed, front nameplate on the TOP edge (cards sit in a stand-up slot), lookup QR on both sides, edition label `34-2026-1` — **series 1 until Brandon says otherwise** (`SERIES` / `--series`). Backs mirrored for a long-edge flip; Brandon's 110 lb double-thick stock (~300 gsm) exceeds the Canon iR-ADV DX C5860i's 256 gsm duplex limit, so he prints two-pass from the multi-purpose tray, Heavy 7. Full roster PDF: `cards_full_4up_longflip-39.pdf` (card-review-39).

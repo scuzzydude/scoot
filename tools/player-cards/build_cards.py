@@ -46,6 +46,7 @@ COLS, ROWS = 2, 2                             # set by set_layout
 PAGE_W, PAGE_H = letter
 MARKS = "corner"                              # "corner": per-card L marks in the gutters; "edge": sheet-edge marks
 NAME_POS = "top"                              # front nameplate: "top" (stand-up slot hides the bottom) or "bottom"
+SERIES = 1                                    # printed as 34-<edition>-<series>; stays 1 until Brandon says otherwise
 
 # Impositions. "landscape-gutter" (default since 2026-09-09): cards sit apart
 # with the chip band bled 3/16 in past the trim on every side, so a cut that
@@ -388,8 +389,13 @@ def edition_label(row):
     label is just "34-<edition>" (same on every card in a print run), not
     the per-card serial. Printing the real 34-DRAFT-NN serial defeated the
     whole point of hashing it for the QR: anyone holding one card could
-    read the next sequential serial straight off the card face."""
-    return f"34-{row.get('edition', '').strip() or '2026'}"
+    read the next sequential serial straight off the card face.
+
+    2026-09-09: a series number is appended -- "34-2026-1". Series 1 stays
+    until Brandon says otherwise; bump SERIES (or pass --series / a
+    `series` roster column) when the card design changes within an edition."""
+    series = (row.get("series") or "").strip() or str(SERIES)
+    return f"34-{row.get('edition', '').strip() or '2026'}-{series}"
 
 
 def draw_glyph(c, cx, cy, r, disc_color, ink_color, invert=False):
@@ -858,10 +864,12 @@ def main():
                     help="printer duplex setting the back sheet is mirrored for")
     ap.add_argument("--name-pos", choices=["top", "bottom"], default="top",
                     help="front nameplate on the top edge (stand-up slot) or the bottom")
+    ap.add_argument("--series", type=int, default=SERIES, help="series number printed after the edition (34-2026-N)")
     args = ap.parse_args()
 
-    global NAME_POS
+    global NAME_POS, SERIES
     NAME_POS = args.name_pos
+    SERIES = args.series
     set_layout(args.layout, args.flip)
     register_fonts()
     build(args.roster, args.art, args.out, mirror_backs=not args.no_mirror)
