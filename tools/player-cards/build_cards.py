@@ -526,11 +526,11 @@ def draw_front(c, x, y, row, art_dir):
         # until its owner writes a name on the plate.
         code = short_code(serial)
         c.setFillColor(INK)
-        c.setFont("CondBold", 44)
-        cy_ = slot_y + ART_H * 0.42
+        c.setFont("CondBold", 22)
+        cy_ = slot_top - bar_h - 62          # just under the glyph / QR row
         c.drawCentredString(slot_x + ART_W / 2.0, cy_, code)
-        c.setFillColor(MUTED); c.setFont("Cond", 8)
-        c.drawCentredString(slot_x + ART_W / 2.0, cy_ - 16, "guest card  ·  text this code to BigMo")
+        c.setFillColor(HAIR); c.setFont("Cond", 9)
+        c.drawCentredString(slot_x + ART_W / 2.0, cy_ - 16, "name, nickname or initials")
     elif art:
         c.drawImage(art, slot_x, art_y, width=ART_W, height=ART_H,
                     mask="auto", preserveAspectRatio=False, anchor="c")
@@ -707,16 +707,12 @@ def draw_back(c, x, y, row, art_dir):
     # Snake", Black -> "B1").
     dx = px + pw + 10
     dy = top - hdr_h - 28
-    for label, value in (("Name" if is_guest(row) else "Aka", row.get("aka", "")),
+    for label, value in (("Aka", row.get("aka", "")),
                          ("Joined", row.get("joined", ""))):
         c.setFillColor(MUTED); c.setFont("Cond", 6.5)
         c.drawString(dx, dy, label.lower())
-        if is_guest(row) and label == "Name":
-            c.setStrokeColor(INK); c.setLineWidth(0.5)
-            c.line(dx, dy - 12, R - QR_SIZE - 14, dy - 12)   # write-in line, clear of the QR
-        else:
-            c.setFillColor(INK); c.setFont("CondBold", 9)
-            c.drawString(dx, dy - 11, value.strip())
+        c.setFillColor(INK); c.setFont("CondBold", 9)
+        c.drawString(dx, dy - 11, value.strip())
         dy -= 26
 
     # season table
@@ -751,15 +747,23 @@ def draw_back(c, x, y, row, art_dir):
             c.line(L, ry - 5, R, ry - 5)
         ry -= 13
 
-    # profile
+    # profile (guest card: this block is the write-in name area instead)
     py2 = ty - th - 12
     c.setFillColor(MUTED); c.setFont("Cond", 6.5)
-    c.drawString(L, py2, "profile")
-    c.setFillColor(INK); c.setFont("Cond", 7.5)
-    for i in (1, 2, 3):
-        line = row.get(f"profile_{i}", "").strip()
-        if line:
-            c.drawString(L, py2 - 10 * i, line)
+    if is_guest(row):
+        c.drawString(L, py2, "name")
+        c.setStrokeColor(INK); c.setLineWidth(0.5)
+        for i in (1, 2):
+            c.line(L, py2 - 16 * i, R, py2 - 16 * i)
+        c.setFillColor(HAIR); c.setFont("Cond", 7)
+        c.drawString(L, py2 - 16 * 2 - 9, "name, nickname or initials")
+    else:
+        c.drawString(L, py2, "profile")
+        c.setFillColor(INK); c.setFont("Cond", 7.5)
+        for i in (1, 2, 3):
+            line = row.get(f"profile_{i}", "").strip()
+            if line:
+                c.drawString(L, py2 - 10 * i, line)
 
     # edition (not the per-card serial -- see edition_label())
     c.setFillColor(MUTED); c.setFont("Mono", 6)
