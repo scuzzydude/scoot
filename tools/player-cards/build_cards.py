@@ -112,6 +112,7 @@ TIERS = {
     "Triple OG":  ("#A79BE0", "#1A1A18"),   # periwinkle
     "Legend":     ("#C9B037", "#1A1A18"),   # antique gold
     "Starter":    ("#FFFFFF", "#1A1A18"),   # bare token white
+    "Guest":      ("#E3DFD2", "#1A1A18"),   # bone -- write-in guest cards
 }
 DEFAULT_TIER = ("#E3DFD2", "#1A1A18")
 
@@ -490,6 +491,10 @@ def draw_placeholder_figure(c, x, y, w, h, ink_color):
 
 # -------------------------------------------------------------- card faces ---
 
+def is_guest(row):
+    return (row.get("guest") or "").strip() in ("1", "true", "yes")
+
+
 def draw_front(c, x, y, row, art_dir):
     field, on_field = tier_colors(row.get("tier"))
     serial = row.get("serial", "").strip()
@@ -511,11 +516,22 @@ def draw_front(c, x, y, row, art_dir):
     # height and clipped to the slot: the crop's built-in headroom then sits
     # under the plate, and the blank strip the crop reserves for a bottom
     # plate is what gets clipped off at the bottom edge (hidden in the slot).
-    art = player_art(serial, art_dir, "dark", "front")
+    art = None if is_guest(row) else player_art(serial, art_dir, "dark", "front")
     c.saveState()
     clip = c.beginPath(); clip.rect(slot_x, slot_y, ART_W, ART_H); c.clipPath(clip, stroke=0, fill=0)
     art_y = slot_y - bar_h if top_plate else slot_y
-    if art:
+    if is_guest(row):
+        # Guest card (2026-09-14): no figure -- the lookup code, big, where
+        # the picture goes, so the card is identifiable at arm's length
+        # until its owner writes a name on the plate.
+        code = short_code(serial)
+        c.setFillColor(INK)
+        c.setFont("CondBold", 44)
+        cy_ = slot_y + ART_H * 0.42
+        c.drawCentredString(slot_x + ART_W / 2.0, cy_, code)
+        c.setFillColor(MUTED); c.setFont("Cond", 8)
+        c.drawCentredString(slot_x + ART_W / 2.0, cy_ - 16, "guest card  ·  text this code to BigMo")
+    elif art:
         c.drawImage(art, slot_x, art_y, width=ART_W, height=ART_H,
                     mask="auto", preserveAspectRatio=False, anchor="c")
     else:
@@ -524,11 +540,27 @@ def draw_front(c, x, y, row, art_dir):
 
     # nameplate
     plate_y = slot_top - bar_h if top_plate else slot_y
-    c.setFillColor(INK)
+    c.setFillColor(PAPER if is_guest(row) else INK)
     c.rect(slot_x, plate_y, ART_W, bar_h, stroke=0, fill=1)
     c.setFillColor(field)
     accent_y = plate_y if top_plate else plate_y + bar_h - 1.6   # tier-colour rule on the art side of the plate
     c.rect(slot_x, accent_y, ART_W, 1.6, stroke=0, fill=1)
+
+    if is_guest(row):
+        # blank plate: a write-in line and a faint "name" cue, tier + edition as usual
+        c.setStrokeColor(INK); c.setLineWidth(0.6)
+        c.line(slot_x + 8, plate_y + 11, x + TRIM_W - BAND - 44, plate_y + 11)
+        c.setFillColor(MUTED); c.setFont("Cond", 6)
+        c.drawString(slot_x + 8, plate_y + 4, "name")
+        tier_text = row.get("tier", "").strip()
+        c.setFillColor(SUBTLE); c.setFont("Cond", 7.5)
+        c.drawRightString(x + TRIM_W - BAND - 8, plate_y + 19, tier_text)
+        c.setFillColor(MUTED); c.setFont("Mono", 6)
+        c.drawRightString(x + TRIM_W - BAND - 8, plate_y + 8, edition_label(row))
+        corner_drop = bar_h if top_plate else 0.0
+        draw_glyph(c, x + BAND + 22, y + TRIM_H - BAND - 22 - corner_drop, 14, INK, PAPER, invert=True)
+        draw_lookup_qr(c, x, y, serial, drop=corner_drop)
+        return
 
     handle = row.get("handle", "").strip()
     tier_text = row.get("tier", "").strip()
@@ -623,7 +655,7 @@ def draw_back(c, x, y, row, art_dir):
     hdr_h = 22.0
     c.setFillColor(INK)
     c.rect(ix, top - hdr_h, ART_W, hdr_h, stroke=0, fill=1)
-    handle = row.get("handle", "").strip()
+    handle = "GUEST" if is_guest(row) else row.get("handle", "").strip()
     tier_text = row.get("tier", "").strip()
     tier_w = pdfmetrics.stringWidth(tier_text, "Cond", 8) if tier_text else 0
     R_hdr = R                        # QR sits below the header now, full width available
@@ -657,8 +689,11 @@ def draw_back(c, x, y, row, art_dir):
     px, py = L, top - hdr_h - 20 - ph
     c.setFillColor(SLATE)
     c.rect(px, py, pw, ph, stroke=0, fill=1)
-    side = head_crop(serial, art_dir, "light", pw, ph)
-    if side:
+    side = None if is_guest(row) else head_crop(serial, art_dir, "light", pw, ph)
+    if is_guest(row):
+        c.setFillColor(PAPER); c.setFont("CondBold", 13)
+        c.drawCentredString(px + pw / 2.0, py + ph / 2.0 - 4, short_code(serial))
+    elif side:
         c.drawImage(side, px, py, width=pw, height=ph,
                     mask="auto", preserveAspectRatio=False, anchor="c")
     else:
@@ -672,12 +707,16 @@ def draw_back(c, x, y, row, art_dir):
     # Snake", Black -> "B1").
     dx = px + pw + 10
     dy = top - hdr_h - 28
-    for label, value in (("Aka", row.get("aka", "")),
+    for label, value in (("Name" if is_guest(row) else "Aka", row.get("aka", "")),
                          ("Joined", row.get("joined", ""))):
         c.setFillColor(MUTED); c.setFont("Cond", 6.5)
         c.drawString(dx, dy, label.lower())
-        c.setFillColor(INK); c.setFont("CondBold", 9)
-        c.drawString(dx, dy - 11, value.strip())
+        if is_guest(row) and label == "Name":
+            c.setStrokeColor(INK); c.setLineWidth(0.5)
+            c.line(dx, dy - 12, R - QR_SIZE - 14, dy - 12)   # write-in line, clear of the QR
+        else:
+            c.setFillColor(INK); c.setFont("CondBold", 9)
+            c.drawString(dx, dy - 11, value.strip())
         dy -= 26
 
     # season table
