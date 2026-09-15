@@ -63,9 +63,9 @@
   <table class="score">
     <tr><th>#</th><th>Criterion</th><th>BigMo</th><th>Note</th></tr>
     <tr><td>3.1</td><td>One artifact, many depths</td><td class="no">fails</td><td>five or more representations; a vector store no human reads</td></tr>
-    <tr><td>3.2</td><td>Positional write authority</td><td class="part">partial</td><td>a positional map now exists and is consulted (26 nodes; the owner of a path is the session whose working directory contains it, never a session name). The gate is warn-only, and a shell write bypasses it entirely — it only sees the editor's own file tools. Product authority stays by identity, which is 3.2b and correct.</td></tr>
+    <tr><td>3.2</td><td>Positional write authority</td><td class="part">partial</td><td>a positional map exists and is consulted (26 nodes; the owner of a path is the session whose working directory contains it, never a session name), and as of 2026-09-15 the session registry is complete — the one unbound session was bound after its recorded directory was corrected from the value adopt had inferred from its <em>name</em>, which is the criterion demonstrating itself. What remains is enforcement: the gate is warn-only, and a shell write bypasses it because it sees only the editor's file tools. Product authority stays by identity, which is 3.2b and correct.</td></tr>
     <tr><td>3.2b</td><td>Halt authority by identity</td><td class="yes">meets</td><td>the kill switch is non-delegable — <b>and named this criterion first</b></td></tr>
-    <tr><td>3.3</td><td>Append-only history</td><td class="part">partial</td><td>the authoring loop now keeps an append-only event log, and the live, tree and doctor views are folds over it with no cached snapshot; recovery replays from it. The designs it runs still keep snapshot state, and the two product ledgers are append-only by contract but nearly empty.</td></tr>
+    <tr><td>3.3</td><td>Append-only history</td><td class="part">partial</td><td>the authoring loop keeps an append-only event log and its views are folds over it with no cached snapshot. On 2026-09-15 the two things v0.8 names were closed: the per-member deferred slot, which used to let a second flow destroy the first with no trace, now has an append-only log behind it and answers <em>deferred and never resumed</em>; and an optional dependency's absence is now logged and surfaced rather than degrading invisibly, which v0.8 added as a requirement after our own thirteen-hour outage. Other product state is still snapshot, so this stays partial pending an outside ruling.</td></tr>
     <tr><td>3.4</td><td>Non-blocking authoring</td><td class="part">partial</td><td>renders and schedule conflicts hand off; the SMS reply path waits</td></tr>
     <tr><td>3.5</td><td>Rank commits / a fact adjudicates</td><td class="yes">meets</td><td>a computed schedule fact overrides both the model and the user — <b>named this half first</b></td></tr>
     <tr><td>3.6</td><td>Design out, vocabulary in</td><td class="yes">meets</td><td>the book fixed the ontology; behaviour converged through use</td></tr>
@@ -73,7 +73,11 @@
   </table>
   <p class="lede" style="font-size:12px;color:var(--sub);">
     <b>Four meets, three partial, one fail</b> — rescored 2026-09-15 against the host, from
-    four meets and three fails a week earlier. Phase 2 of the instantiation handoff moved
+    four meets and three fails a week earlier. Three concrete gaps were closed the same day
+    (the deferred slot, dependency-absence logging, and the incomplete session registry);
+    whether any of them moves a verdict from partial to meets is deliberately left to the
+    pattern document's author, because scoring your own machine upward is the one direction
+    that needs an outside check. Phase 2 of the instantiation handoff moved
     exactly the two the bundle predicted would move, 3.2 and 3.3, and it moved them to
     partial rather than to meets: a map that is consulted but not enforced, and a log that is
     authoritative for the machine but not for the designs on top of it. The one outright fail

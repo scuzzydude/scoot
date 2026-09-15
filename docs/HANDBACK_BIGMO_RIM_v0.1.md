@@ -131,6 +131,55 @@ moved, and both to **partial** rather than to meets — which is the more useful
 **Four meets, three partial, one fail** (was four meets, one partial, three fails). The single
 outright fail is 3.1, one artifact, which is the one concurrency has not yet forced.
 
+## 9b. Three compliance gaps closed, 2026-09-15
+
+Rescoring against v0.8 rather than the questionnaire-era notes showed that two criteria had
+been judged against text the document has since retracted or narrowed, and that the real
+remaining work was three specific items rather than a general push for eight of eight. All
+three are done.
+
+**1. The deferred slot that overwrote (§3.3's named example).** `sms_state.pending` was one
+upserted column per member, so a second parked flow destroyed the first with no record and
+*"deferred and never resumed"* was unanswerable — the exact column v0.8 cites. Migration
+`0024` adds `sms_pending_events`, append-only, written in the same transaction as the slot:
+`defer`, `advance`, `resume`, and `displaced`. A cross-kind overwrite now keeps the
+destroyed flow's payload, so lost member progress is recoverable rather than silent. The
+snapshot stays, because §3.3's own narrowing says a derived snapshot is required, not
+forbidden — the disqualifier is about which one is the truth. Four integration tests,
+fixtures cleaned up (`80fef6f`).
+
+**2. Absence must be logged, not merely survived.** v0.8 added this requirement by
+correcting our own framing, after our Memory Vault outage ran roughly thirteen hours with
+recall silently no-op'ing. `lib/dependency-health.ts` keeps one warn per failure as before,
+emits a single error when an outage is established, logs recovery, and surfaces a snapshot
+on `/api/health`, where `ok` stays true but a `degraded` list names what is missing. Five
+unit tests, and verified end to end against the live vault: a cold start recorded as down,
+recovery recorded on the next successful call (`abd9d91`).
+
+**3. The session registry was incomplete**, so any future gate would have failed open. The
+unbound session had been adopted with a working directory inferred from its *name*
+(`~/scoot-win-term`) while `/proc` showed its shell and its agent both in `~/scoot`.
+Correcting the recorded position raised the binding from medium to high confidence and it
+bound cleanly. `doctor` now reports the log internally consistent with every live session
+restorable. **This is the criterion demonstrating itself**: a name-derived fact was wrong,
+the positional fact was right, and correcting the position is what made the system
+recoverable.
+
+**One bug caught in the making.** The first version of the health tracker declared a local
+`body`, shadowing `post()`'s own `body` parameter, which would have thrown on every memory
+call — breaking the very dependency the change exists to monitor. The end-to-end test
+against a dead endpoint caught it before it shipped. Unit tests alone would not have.
+
+**Not done, deliberately.** The enforcement gate stays warn-only: v0.8's §3.2 disqualifier
+is authority *by name*, which we do not do, and the handoff is explicit that a gate must not
+ship before the registry is trusted — it is trusted only as of today. One artifact (§3.1)
+stays open because v0.8 says plainly that its cost is proportional to the number of
+participants who must agree, near zero at one author, and **"not a virtue to buy early."**
+
+**The rescore is not ours to make.** Whether any of the three moves a verdict from partial
+to meets is left to the pattern document's author. Scoring your own machine upward is the
+one direction that needs an outside check, and §3.0 names that trap itself.
+
 ## 9. Open for Brandon
 
 1. ~~Create `~/.backup-pass`~~ — done 2026-09-09; upload verified, file shredded.
