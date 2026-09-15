@@ -17,6 +17,7 @@ import scootsRouter from "./routes/scoots.js";
 import botRouter from "./routes/bot.js";
 import mediaRouter from "./routes/media.js";
 import rcWebhookRouter from "./routes/rc-webhook.js";
+import { healthSnapshot } from "./lib/dependency-health.js";
 import smsRouter from "./routes/sms.js";
 import mailRouter from "./routes/mail.js";
 
@@ -87,7 +88,12 @@ app.use(
 );
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, ts: Date.now() });
+  // `ok` stays true while an OPTIONAL dependency is down -- that is the point of it being
+  // optional, and BigMo keeps replying. `degraded` is how the absence stops being
+  // invisible (RIM_architecture_v0.8 §3.3; see lib/dependency-health.ts).
+  const dependencies = healthSnapshot();
+  const degraded = Object.entries(dependencies).filter(([, d]) => !d.ok).map(([name]) => name);
+  res.json({ ok: true, ts: Date.now(), degraded, dependencies });
 });
 
 app.use("/api/v1/auth", authRouter);

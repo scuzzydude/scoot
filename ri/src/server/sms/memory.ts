@@ -9,6 +9,7 @@
 // exactly as it would without it. A memory lookup is never allowed to break or
 // delay an SMS reply. See .claude/memory/infra_memory_vault.md.
 import { log } from "../log.js";
+import { recordFailure, recordOk } from "../lib/dependency-health.js";
 
 const BASE_URL = process.env.MEMORY_VAULT_URL ?? "";
 const TOKEN = process.env.MEMORY_VAULT_TOKEN ?? "";
@@ -39,11 +40,15 @@ async function post(path: string, body: unknown): Promise<unknown | null> {
     });
     if (!res.ok) {
       log.warn({ path, status: res.status }, "memory-vault: non-OK response (degrading)");
+      recordFailure("memory-vault", `HTTP ${res.status}`);
       return null;
     }
-    return await res.json();
+    const payload = await res.json();
+    recordOk("memory-vault");
+    return payload;
   } catch (err) {
     log.warn({ err, path }, "memory-vault: call failed (degrading)");
+    recordFailure("memory-vault", err instanceof Error ? err.message : String(err));
     return null;
   } finally {
     clearTimeout(timer);
