@@ -455,6 +455,21 @@ export const smsState = pgTable("sms_state", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Append-only history behind `sms_state.pending` (migration 0024). The snapshot above is
+// one slot per user, so a second deferred flow used to destroy the first with no trace.
+// This log is now the truth and the slot is derived from it, which is what lets the system
+// answer "deferred and never resumed". Always write via sms/pending.ts's setPending(),
+// never a raw insert — same discipline as trust/ledger.ts and scoot/ledger.ts.
+export const smsPendingEvents = pgTable("sms_pending_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  // 'defer' | 'advance' | 'resume' | 'displaced'
+  event: text("event").notNull(),
+  kind: text("kind"),
+  payload: jsonb("payload"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Per-user SMS log — truthful record of what actually went over the wire.
 export const smsDeliveries = pgTable("sms_deliveries", {
   id: serial("id").primaryKey(),
