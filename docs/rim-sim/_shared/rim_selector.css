@@ -1,5 +1,5 @@
 /* rim_selector.css — styling for the RIM^5 scope selector. Kept separate from
-   sim_common.css because that file is shared with other tools and its
+   sim_common.css because that file is shared with the PPA-family sims and its
    scope note says to add tool-specific vocabulary locally, not into it. */
 .rim-title{display:flex;align-items:center;gap:10px;flex:0 0 auto;}
 .rim-title h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.01em;}

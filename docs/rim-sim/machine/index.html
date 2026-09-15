@@ -1,15 +1,14 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>dreamlab — a RIM machine</title>
+<title>BigMo — a RIM machine</title>
 <link rel="stylesheet" href="../_shared/sim_common.css">
 <link rel="stylesheet" href="../_shared/rim_selector.css">
 <style>
   .wrap{max-width:960px;margin:0 auto;padding:28px 24px 60px;}
   .lede{font-size:15px;line-height:1.6;max-width:70ch;}
   .lede em{color:var(--accent);font-style:normal;font-weight:600;}
-  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-     color:var(--sub);margin:34px 0 12px;}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sub);margin:34px 0 12px;}
   .layer{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;}
   .lay{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:13px 14px;}
   .lay .t{font-size:13px;font-weight:700;color:var(--accent);}
@@ -18,15 +17,21 @@
   .svc th,.svc td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
   .svc th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);}
   .svc code,.svc .port{font-size:11.5px;color:var(--hard);}
-  .note{margin-top:34px;padding:14px 16px;background:var(--panel);
-        border:1px solid var(--border);border-left:3px solid var(--soft);border-radius:4px;
-        font-size:12.5px;line-height:1.55;}
+  .svc code{overflow-wrap:anywhere;}
+  .note{margin-top:34px;padding:14px 16px;background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--soft);border-radius:4px;font-size:12.5px;line-height:1.55;}
   .note b{color:var(--soft);}
+  .score{border-collapse:collapse;width:100%;font-size:12.5px;}
+  .score th,.score td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--border);}
+  .score th{font-size:10px;text-transform:uppercase;color:var(--sub);}
+  .yes{color:var(--green);font-weight:700;} .no{color:var(--red);font-weight:700;} .part{color:var(--soft);font-weight:700;}
 </style>
 
 <div class="tabstrip-row">
   <div class="rim-title">
-    <h1>dreamlab</h1>
+    <a class="home-link" href="/" title="Back to home" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:inherit;">
+      <span style="font-weight:600;font-size:14px;">BigMo</span>
+    </a>
+    <h1>BigMo</h1>
     <span class="rim-level">level 2 · a RIM machine</span>
   </div>
   <span class="tabstrip-divider"></span>
@@ -36,67 +41,83 @@
 
 <div class="wrap">
   <p class="lede">
-    <strong>dreamlab</strong> is a <em>RIM machine</em> — an implementation of
-    Recursive Integration, not a design produced by one. It is the substrate its
-    designs execute on: the assistant, its services, and the shared artifacts that
-    let several agents work one tree without destroying each other's information at
-    the hand-off.
+    <strong>BigMo</strong> is a <em>RIM machine</em> — an implementation of Recursive
+    Integration, not a design produced by one. It is the substrate its Scoots execute on:
+    the assistant, its services, and the shared artifacts that let several agents work one
+    tree without destroying each other's information at the hand-off.
   </p>
 
-  <h2>What makes it a RIM machine</h2>
+  <h2>What would make it a RIM machine</h2>
   <div class="layer">
-    <div class="lay">
-      <div class="t">One shared artifact</div>
-      <p>An append-only event log is the sole truth; current state is a fold over it, never a cached snapshot.</p>
-    </div>
-    <div class="lay">
-      <div class="t">Positional authority</div>
-      <p>The owner of a file is the session whose working directory contains it — never a session name. Names drift; directories don't.</p>
-    </div>
-    <div class="lay">
-      <div class="t">Non-blocking hand-off</div>
-      <p>Contended resources have one writer. Others don't wait — they hand off a payload and keep authoring.</p>
-    </div>
-    <div class="lay">
-      <div class="t">Recursive improvement</div>
-      <p>The machine is built to build its designs; improving a design's process immediately improves the machine.</p>
-    </div>
+    <div class="lay"><div class="t">One shared artifact</div>
+      <p>An append-only event log as sole truth; current state a fold over it, never a cached snapshot.</p></div>
+    <div class="lay"><div class="t">Positional authority</div>
+      <p>The owner of a file is the session whose working directory contains it — never a session name. Names drift; directories don't.</p></div>
+    <div class="lay"><div class="t">Non-blocking hand-off</div>
+      <p>Contended resources have one writer. Others don't wait — they hand off a payload and keep authoring.</p></div>
+    <div class="lay"><div class="t">Recursive improvement</div>
+      <p>The machine is built to build its Scoots; improving a Scoot's process improves the machine.</p></div>
   </div>
 
-  <p class="lede" style="font-size:12.5px;color:var(--sub);">
-    <strong>Status, honestly:</strong> as of 2026-09-08 these four cards describe the
-    <em>target</em>, not the state. Per RIM_architecture_v0.8 §3.8 the dreamlab loop meets
-    halt-by-identity, rank-never-adjudicates, vocabulary-in and recall (by convention), and
-    fails one-artifact, positional ownership, append-only history and non-blocking authoring.
-    Phase 2 of the current handoff installs the Map and the log.
+  <h2>Honest score, from the characterisation questionnaire</h2>
+  <table class="score">
+    <tr><th>#</th><th>Criterion</th><th>BigMo</th><th>Note</th></tr>
+    <tr><td>3.1</td><td>One artifact, many depths</td><td class="no">fails</td><td>five or more representations; a vector store no human reads</td></tr>
+    <tr><td>3.2</td><td>Positional write authority</td><td class="part">partial</td><td>a positional map now exists and is consulted (26 nodes; the owner of a path is the session whose working directory contains it, never a session name). The gate is warn-only, and a shell write bypasses it entirely — it only sees the editor's own file tools. Product authority stays by identity, which is 3.2b and correct.</td></tr>
+    <tr><td>3.2b</td><td>Halt authority by identity</td><td class="yes">meets</td><td>the kill switch is non-delegable — <b>and named this criterion first</b></td></tr>
+    <tr><td>3.3</td><td>Append-only history</td><td class="part">partial</td><td>the authoring loop now keeps an append-only event log, and the live, tree and doctor views are folds over it with no cached snapshot; recovery replays from it. The designs it runs still keep snapshot state, and the two product ledgers are append-only by contract but nearly empty.</td></tr>
+    <tr><td>3.4</td><td>Non-blocking authoring</td><td class="part">partial</td><td>renders and schedule conflicts hand off; the SMS reply path waits</td></tr>
+    <tr><td>3.5</td><td>Rank commits / a fact adjudicates</td><td class="yes">meets</td><td>a computed schedule fact overrides both the model and the user — <b>named this half first</b></td></tr>
+    <tr><td>3.6</td><td>Design out, vocabulary in</td><td class="yes">meets</td><td>the book fixed the ontology; behaviour converged through use</td></tr>
+    <tr><td>3.7</td><td>Recall obligatory</td><td class="yes">meets</td><td>every session begins by reading its predecessors' memory</td></tr>
+  </table>
+  <p class="lede" style="font-size:12px;color:var(--sub);">
+    <b>Four meets, three partial, one fail</b> — rescored 2026-09-15 against the host, from
+    four meets and three fails a week earlier. Phase 2 of the instantiation handoff moved
+    exactly the two the bundle predicted would move, 3.2 and 3.3, and it moved them to
+    partial rather than to meets: a map that is consulted but not enforced, and a log that is
+    authoritative for the machine but not for the designs on top of it. The one outright fail
+    is the one concurrency has not yet forced — one author, one tenant. That is a reason not
+    to buy it early rather than a deficiency, and this table is supposed to keep moving.
   </p>
+
   <h2>The machine, as running services</h2>
   <table class="svc">
     <tr><th>Service</th><th>Port</th><th>Role</th></tr>
-    <tr><td>scoot-app (Node/Express, tsx watch over a bind mount)</td><td class="port">3000</td><td>API, web chat, and the BigMo SMS commissioner — the live bot. An edit is a deploy.</td></tr>
-    <tr><td>scoot-postgres (Postgres 16)</td><td class="port">5433</td><td>State — the Map as it exists today (users, roles, rooms, sms_state, card_art, ledgers)</td></tr>
-    <tr><td>memory-vault (Postgres + pgvector)</td><td class="port">8000</td><td>Semantic recall — BigMo's long-term member memory and the agent sessions' seeded memory</td></tr>
-    <tr><td>scoot-pmp + SearXNG</td><td class="port">4200 / 8090</td><td>Self-hosted search and research synthesis</td></tr>
-    <tr><td>Apache</td><td class="port">443</td><td>Fronts the app and serves this page</td></tr>
-    <tr><td>host timers (systemd / cron)</td><td class="port">—</td><td>card render worker, cold sync, weekly session seed</td></tr>
-    <tr><td>scoot-rim-agentd</td><td class="port">4300 (planned — Phase 2)</td><td>Session supervision — the RIM application proper</td></tr>
+    <tr><td>scoot-app-1</td><td class="port">3000 · 5175</td><td>Express API and Vite client, <code>tsx watch</code> over a bind-mounted repo</td></tr>
+    <tr><td>scoot-postgres-1</td><td class="port">5433</td><td>Postgres 16 — the live state</td></tr>
+    <tr><td>anthropic shim</td><td class="port">4001</td><td>in-container LLM path</td></tr>
+    <tr><td>memory-vault-app-1</td><td class="port">8000</td><td>pgvector long-term memory</td></tr>
+    <tr><td>scoot-pmp</td><td class="port">4200</td><td>search and synthesis daemon, under systemd rather than Docker</td></tr>
+    <tr><td>scoot-pmp-searxng</td><td class="port">8090</td><td>the search backend it queries, capped at 512 MiB</td></tr>
+    <tr><td>memory-vault-db-1</td><td class="port">54320</td><td>Postgres with pgvector, behind the memory service</td></tr>
+    <tr><td>scoot-rim-agentd</td><td class="port">—</td><td>session supervision — <b>installed 2026-09-08</b>. Reconcile runs on a five-minute timer; boot restore is installed but deliberately left disabled, and the read-only view is not served.</td></tr>
+    <tr><td>host timers</td><td class="port">—</td><td>card render every two minutes, cold sync every ten, session reconcile every five, and the Monday schedule seeder under cron</td></tr>
   </table>
-  <p class="lede" style="font-size:12px;color:var(--sub);">Add or remove rows freely. This table is the one place a reader learns what the machine physically is, so keep it accurate rather than aspirational.</p>
+  <p class="lede" style="font-size:12px;color:var(--sub);">
+    Verified against the running host on 2026-09-15. Everything on loopback only — the
+    shim, both memory services and the search backend — is reachable from this box alone.
+    The machine runs on <code>dreamlab</code>, an Azure virtual machine that is also
+    production; editing a file in the working tree is the deploy.
+  </p>
 
   <h2>Where the layers live</h2>
   <table class="svc">
     <tr><th>Layer</th><th>Path</th><th>What it holds</th></tr>
-    <tr><td>The machine</td><td><code>/home/brandon/scoot (the authoring loop: agent sessions + git + .claude/memory/)</code></td><td>Services, interface, runtime</td></tr>
-    <tr><td>Methodology</td><td><code>scoot/CLAUDE.md + scoot/.claude/memory/</code></td><td>How the work is done</td></tr>
-    <tr><td>The pattern</td><td><code>/rim-sim/RIM_architecture_v0.8.md</code></td><td>RIM itself, instance-independent</td></tr>
-    <tr><td>The design</td><td><code>scoot/tools/player-cards/ + scoot/arch/player-cards.md</code></td><td>Player-card pipeline</td></tr>
+    <tr><td>The machine</td><td><code>~/scoot</code> + <code>~/.scoot-rim/</code></td><td>services, client and runtime; the ownership map and event log sit outside every repository on purpose, so the engine stays portable</td></tr>
+    <tr><td>Its supervisor</td><td><code>~/scoot-rim-agentd</code></td><td>the generic session engine, plus <code>~/scoot-win-term</code> which starts named sessions and writes the log</td></tr>
+    <tr><td>Methodology</td><td><code>scoot/CLAUDE.md</code>, <code>scoot/.claude/memory/</code></td><td>the instruction path every session loads, and the memory it must read before acting</td></tr>
+    <tr><td>The pattern</td><td><a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a></td><td>RIM⁵ — identical everywhere, because it is open methodology</td></tr>
+    <tr><td>The designs</td><td><code>scoot/ri/src/</code>, <code>scoot/tools/</code></td><td>Scoot(34) and its implementations</td></tr>
   </table>
 
   <div class="note">
-    <b>Ported page.</b> From the RIM⁵ SIM framework bundle v0.1 (2026-09-08). The
-    hierarchy it asserts — pattern → machine → design — is specified in
-    <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a>; where this page and
-    that document disagree, the document wins.
+    <b>Checked, not aspirational.</b> Every row above was verified against the running host
+    on 2026-09-15; the score table was rescored the same day. A landing page that overstates
+    the machine is worse than one admitting where it stands, so the honest reading is that
+    three of the eight criteria are half-built and one has not been needed yet. Where this
+    page and <a href="../RIM_architecture_v0.8.md">the pattern document</a> disagree, the
+    document wins.
   </div>
 </div>
 

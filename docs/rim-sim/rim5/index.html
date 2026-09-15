@@ -24,6 +24,11 @@
   .t th,.t td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
   .t th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--sub);}
   .t code{font-size:11.5px;color:var(--hard);}
+  /* Long unbreakable paths in the "where it lives" column pushed the document
+     sideways by 53px at phone width. Pre-existing; fixed here because the page
+     was open. Break inside the path rather than scrolling the whole page. */
+  .t code{overflow-wrap:anywhere;}
+  .t td,.t th{word-break:normal;}
   .callout{margin-top:14px;padding:13px 16px;background:var(--panel);
         border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;
         font-size:12.5px;line-height:1.55;}
@@ -33,11 +38,33 @@
         font-size:12.5px;line-height:1.55;}
   .flag b{color:var(--soft);}
   .att{font-size:11.5px;color:var(--sub);margin-top:8px;}
+  /* Figure cards for the original hand-drawn / spreadsheet visualisations.
+     Local to this page rather than in sim_common.css: these are RI-vocabulary
+     figures, not reusable mechanism. */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;}
+  .fig{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+       padding:12px 14px 14px;min-width:0;}
+  .fig h3{margin:0 0 2px;font-size:12.5px;font-weight:700;color:var(--accent);}
+  .fig .src{font-size:10.5px;color:var(--sub);margin-bottom:9px;}
+  .fig img{display:block;width:100%;height:auto;border:1px solid var(--border);
+           border-radius:4px;background:#fff;}
+  .fig p{margin:9px 0 0;font-size:12px;line-height:1.5;}
+  .fig p b{color:var(--hard);}
+  .figwide{grid-column:1/-1;}
+  /* The diagram is wider than a phone. It scrolls inside its own box rather
+     than pushing the document sideways -- max-width:100% is what pins the
+     scroll container so the min-width child can overflow *into* it. */
+  .diagram{background:var(--panel);border:1px solid var(--border);border-radius:6px;
+           padding:10px 12px;overflow-x:auto;max-width:100%;}
+  .diagram svg{display:block;height:auto;min-width:640px;max-width:980px;width:100%;margin:0 auto;}
 </style>
 
 <div class="tabstrip-row">
   <div class="rim-title">
-    <!-- Home link: supply your own logo asset, or keep the wordmark alone. -->
+    <a class="home-link" href="/" title="Back to home"
+       style="display:flex;align-items:center;gap:5px;text-decoration:none;color:inherit;">
+      <span style="font-weight:600;font-size:14px;">BigMo</span>
+    </a>
     <h1>RIM<sup>5</sup></h1>
     <span class="rim-level">level 1 · the pattern</span>
   </div>
@@ -51,22 +78,21 @@
     <strong>RIM</strong> — Recursive Integration. The hypothesis is that the
     information determining whether a design works <em>is present early</em>, and
     the flow destroys it systematically at every hand-off between tools. The answer
-    is to stop hand-off translation loss by making the hand-off unnecessary:
-    one artifact, read and written by every participant.
+    is to stop hand-off translation loss by making the hand-off unnecessary.
   </p>
 
   <h2>RIM⁵ — five ordered positions</h2>
   <div class="chain">
     <div class="pos">
       <div class="n">POSITION 1</div><div class="m">Map</div>
-      <div class="who">positional truth</div>
-      <p>The territory as it actually is. The registry.</p>
+      <div class="who">Henry</div>
+      <p>Positional truth — the territory as it actually is. The registry.</p>
       <div class="req">requires nothing</div>
     </div>
     <div class="arrow">→</div>
     <div class="pos">
       <div class="n">POSITION 2</div><div class="m">Model</div>
-      <div class="who">the account</div>
+      <div class="who">Brandon</div>
       <p>The predictive account — a story about the territory.</p>
       <div class="req">requires a Map</div>
     </div>
@@ -81,7 +107,7 @@
     <div class="pos">
       <div class="n">POSITION 4</div><div class="m">Machine</div>
       <div class="who">implementation</div>
-      <p>A system is an implementation of a methodology.</p>
+      <p>A system is an implementation of a methodology. BigMo is one; other hosts are others.</p>
       <div class="req">requires a Methodology</div>
     </div>
     <div class="arrow">→</div>
@@ -102,12 +128,119 @@
     is why successive turns are not identical.
   </div>
 
+  <h2>The recursion, drawn</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 980 392" role="img"
+         aria-label="Two turns of the RIM chain. Position 4 of turn n emits positions 1 and 2 of turn n+1; position 5 of turn n feeds back into position 1 of turn n+1.">
+      <defs>
+        <marker id="ahEmit" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#7030a0"/>
+        </marker>
+        <marker id="ahFeed" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#b45309"/>
+        </marker>
+        <marker id="ahStep" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#555555"/>
+        </marker>
+      </defs>
+
+      <!-- ============ TURN n ============ -->
+      <text x="40" y="34" font-size="11" font-weight="700" fill="#555555"
+            letter-spacing="0.06em">TURN n</text>
+
+      <g font-family="Helvetica,Arial,sans-serif">
+        <!-- boxes: x = 40, 212, 384, 556, 728 (w 150) -->
+        <g>
+          <rect x="40"  y="48" width="150" height="52" rx="5" fill="#ffffff" stroke="#d8dce1"/>
+          <text x="52" y="66" font-size="9.5" font-weight="700" fill="#555555">POSITION 1</text>
+          <text x="52" y="86" font-size="15" font-weight="700" fill="#7030a0">Map</text>
+        </g>
+        <g>
+          <rect x="212" y="48" width="150" height="52" rx="5" fill="#ffffff" stroke="#d8dce1"/>
+          <text x="224" y="66" font-size="9.5" font-weight="700" fill="#555555">POSITION 2</text>
+          <text x="224" y="86" font-size="15" font-weight="700" fill="#7030a0">Model</text>
+        </g>
+        <g>
+          <rect x="384" y="48" width="150" height="52" rx="5" fill="#ffffff" stroke="#d8dce1"/>
+          <text x="396" y="66" font-size="9.5" font-weight="700" fill="#555555">POSITION 3</text>
+          <text x="396" y="86" font-size="15" font-weight="700" fill="#7030a0">Methodology</text>
+        </g>
+        <g>
+          <rect x="556" y="48" width="150" height="52" rx="5" fill="#ffffff" stroke="#7030a0" stroke-width="1.8"/>
+          <text x="568" y="66" font-size="9.5" font-weight="700" fill="#555555">POSITION 4</text>
+          <text x="568" y="86" font-size="15" font-weight="700" fill="#7030a0">Machine</text>
+        </g>
+        <g>
+          <rect x="728" y="48" width="150" height="52" rx="5" fill="#ffffff" stroke="#b45309" stroke-width="1.8"/>
+          <text x="740" y="66" font-size="9.5" font-weight="700" fill="#555555">POSITION 5</text>
+          <text x="740" y="86" font-size="15" font-weight="700" fill="#b45309">Mindset</text>
+        </g>
+
+        <!-- chain steps -->
+        <line x1="192" y1="74" x2="208" y2="74" stroke="#555555" marker-end="url(#ahStep)"/>
+        <line x1="364" y1="74" x2="380" y2="74" stroke="#555555" marker-end="url(#ahStep)"/>
+        <line x1="536" y1="74" x2="552" y2="74" stroke="#555555" marker-end="url(#ahStep)"/>
+        <line x1="708" y1="74" x2="724" y2="74" stroke="#555555" marker-end="url(#ahStep)"/>
+
+        <!-- ============ TURN n+1 (indented: the same chain, one level down) ============ -->
+        <text x="212" y="248" font-size="11" font-weight="700" fill="#555555"
+              letter-spacing="0.06em">TURN n+1</text>
+        <g>
+          <rect x="212" y="262" width="150" height="52" rx="5" fill="#fafafa" stroke="#7030a0" stroke-width="1.8"/>
+          <text x="224" y="280" font-size="9.5" font-weight="700" fill="#555555">POSITION 1</text>
+          <text x="224" y="300" font-size="15" font-weight="700" fill="#7030a0">Map</text>
+        </g>
+        <g>
+          <rect x="384" y="262" width="150" height="52" rx="5" fill="#fafafa" stroke="#7030a0" stroke-width="1.8"/>
+          <text x="396" y="280" font-size="9.5" font-weight="700" fill="#555555">POSITION 2</text>
+          <text x="396" y="300" font-size="15" font-weight="700" fill="#7030a0">Model</text>
+        </g>
+        <g>
+          <rect x="556" y="262" width="150" height="52" rx="5" fill="#fafafa" stroke="#d8dce1" stroke-dasharray="4 3"/>
+          <text x="568" y="280" font-size="9.5" font-weight="700" fill="#555555">POSITION 3</text>
+          <text x="568" y="300" font-size="13" font-weight="700" fill="#999999">Methodology</text>
+        </g>
+        <text x="728" y="296" font-size="15" font-weight="700" fill="#999999">…and so on</text>
+        <line x1="364" y1="288" x2="380" y2="288" stroke="#555555" marker-end="url(#ahStep)"/>
+        <line x1="536" y1="288" x2="552" y2="288" stroke="#555555" marker-end="url(#ahStep)"/>
+
+        <!-- ============ EDGE 1: position 4 EMITS positions 1 and 2 ============ -->
+        <!-- down from box 4, fork left/right into the two boxes below -->
+        <path d="M631,100 L631,176" stroke="#7030a0" stroke-width="2" fill="none"/>
+        <path d="M631,176 L287,176 L287,258" stroke="#7030a0" stroke-width="2" fill="none"
+              marker-end="url(#ahEmit)"/>
+        <path d="M631,176 L459,176 L459,258" stroke="#7030a0" stroke-width="2" fill="none"
+              marker-end="url(#ahEmit)"/>
+        <rect x="466" y="150" width="250" height="20" rx="3" fill="#ffffff" opacity="0.92"/>
+        <text x="470" y="164" font-size="11.5" fill="#7030a0"><tspan font-weight="700">emits</tspan> — a Machine outputs a Map + a Model</text>
+
+        <!-- ============ EDGE 2: position 5 FEEDS BACK into position 1 ============ -->
+        <path d="M803,100 L803,120 L940,120 L940,356 L287,356 L287,318"
+              stroke="#b45309" stroke-width="2" fill="none" stroke-dasharray="6 4"
+              marker-end="url(#ahFeed)"/>
+        <rect x="330" y="346" width="392" height="20" rx="3" fill="#ffffff" opacity="0.92"/>
+        <text x="334" y="360" font-size="11.5" font-weight="700" fill="#b45309">feeds back</text>
+        <text x="404" y="360" font-size="11.5" fill="#b45309">— accumulated judgment, so the next turn starts higher</text>
+      </g>
+    </svg>
+  </div>
+  <p class="att">
+    <b>The head is the tail's output.</b> Position 4 is the only position that can
+    be built, and what it builds is another turn's positions 1 and 2 — so a RIM
+    <i>design</i> is not like a RIM instance, it is one. The dashed amber edge is
+    what stops this being a loop: without position 5 the second turn would be a
+    copy of the first, and the climb in <i>rate of recursion</i> would be flat.
+  </p>
+
   <h2>The three levels — a projection of the chain</h2>
   <table class="t">
     <tr><th>Level</th><th>Positions</th><th>Instances here</th><th>Where it lives</th></tr>
-    <tr><td>1</td><td>Methodology</td><td>RIM⁵</td><td><code>/rim-sim/RIM_architecture_v0.8.md</code></td></tr>
-    <tr><td>2</td><td>Machine</td><td>dreamlab</td><td><code>/home/brandon/scoot (the authoring loop: agent sessions + git + .claude/memory/)</code></td></tr>
-    <tr><td>3</td><td>Map + Model, one turn down</td><td>Player-card pipeline</td><td><code>scoot/tools/player-cards/ + scoot/arch/player-cards.md</code></td></tr>
+    <tr><td>1</td><td>Methodology</td><td>RIM⁵</td><td><a href="../RIM_architecture_v0.8.md">served beside this page</a></td></tr>
+    <tr><td>2</td><td>Machine</td><td>BigMo</td><td><code>~/scoot</code> + <code>~/.scoot-rim/</code>, on the host <code>dreamlab</code></td></tr>
+    <tr><td>3</td><td>Map + Model, one turn down</td><td>Scoot(34) - The Dream Laboratory</td><td><code>scoot/ri/src/</code>, per-Scoot</td></tr>
   </table>
 
   <h2>Positions 1 and 2 must be one artifact</h2>
@@ -116,26 +249,111 @@
     With Map holding positional truth and Model holding the predictive account,
     this stops being a tautology and becomes a falsifiable claim: the two must be
     the <em>same artifact</em>. Two engineers keeping them separately is the
-    failure the origin narrative depicts.
+    failure the Shafted opening depicts.
   </p>
 
-  <h2>What makes something a RIM machine</h2>
+  <h2>Recursive Integration — the original figures</h2>
+  <p class="lede" style="font-size:13px;">
+    RIM⁵ names positions; <em>Recursive Integration</em> names the motion through
+    them. These are the original drawings from the methodology, reproduced as
+    drawn — the vocabulary the five positions are built on.
+  </p>
+
+  <div class="figs">
+    <div class="fig figwide">
+      <h3>Positive and negative recursive integration</h3>
+      <div class="src">Original hand drawing — <i>Recursive Integration, Lesson One</i></div>
+      <img src="media/ri_spirals.jpg"
+           alt="Two hand-drawn spirals. Positive recursive integration unwinds outward from the centre with an arrow leaving the coil. Negative recursive integration winds inward with an arrow arriving at the centre.">
+      <p>
+        <b>Positive</b> unwinds outward — expanding scope, solving more or
+        different problems. <b>Negative</b> winds inward — making the solution
+        smaller, faster, more efficient. Mathematical signs, not value judgments.
+        In RIM⁵ terms these are the two directions <i>position 3</i> runs at once:
+        architecture pushes outward while design pulls inward, and refusing to
+        choose between them is the method.
+      </p>
+    </div>
+
+    <div class="fig">
+      <h3>Linear integration — the conventional flow</h3>
+      <div class="src">Original figure — <i>Lesson One</i></div>
+      <img src="media/ri_linear_integration.png"
+           alt="Eight problem-and-solution blocks in a row on a plus-or-minus-seven grid, each growing in only one direction, alternating downward then upward.">
+      <p>
+        One direction per iteration. Each pass either deepens the solution or
+        widens the problem, never both — <b>problem → solution → problem →
+        solution</b>, flat and alternating. Eight iterations here and the shapes
+        stay small: the scope you can reach is bounded by the direction you
+        happened to pick.
+      </p>
+    </div>
+
+    <div class="fig">
+      <h3>Recursive integration — both at once</h3>
+      <div class="src">Original figure — <i>Lesson One</i></div>
+      <img src="media/ri_recursive_integration.png"
+           alt="Five problem-and-solution figures on the same grid, each an hourglass expanding above and below the axis simultaneously, growing larger each iteration.">
+      <p>
+        Both directions, every iteration, each one leveraging what the last
+        learned. Five iterations reach further than the eight beside them —
+        <b>compound acceleration</b> rather than addition. This is the shape the
+        whole pattern is an argument for, and the reason <i>rate of recursion</i>
+        is the quantity REDS measures.
+      </p>
+    </div>
+
+    <div class="fig">
+      <h3>The design cycle</h3>
+      <div class="src">Original figure — <i>Lesson One</i></div>
+      <img src="media/ri_design_cycle.png"
+           alt="A ring of three curved arrows: Code in blue, Test in green, Debug in red, circling the label Digital Design Cycle.">
+      <p>
+        <b>Code → Test → Debug</b>, repeat. The unit of iteration, and the thing
+        the spirals are made of. We learn more from the shots we miss than the
+        ones we make, so the faster this ring turns the larger the problem it can
+        resolve — which is what the machine at position 4 exists to accelerate.
+      </p>
+    </div>
+
+    <div class="fig">
+      <h3>REDS — the two axes</h3>
+      <div class="src">Original figure — <i>REDS</i>, 2024-04-29</div>
+      <img src="media/reds_two_axes.png"
+           alt="REDS structure: a vertical education system axis of MSC, HWS and UML tiers, crossed with a horizontal cointegration axis across Digital, Analog, Chemistry and other engineering disciplines.">
+      <p>
+        Position 5 institutionalised. The vertical axis carries a student up
+        through the tiers; the horizontal axis carries the method across
+        disciplines. Note the digital UML tier's own name — <b>Recursive
+        Integration Methodology Lab</b> — which is where <i>Methodology</i> is
+        attested in the corpus rather than coined.
+      </p>
+    </div>
+  </div>
+
+  <h2>Where the pieces sit</h2>
   <table class="t">
-    <tr><th>#</th><th>Criterion</th><th>Disqualified if</th></tr>
-    <tr><td>3.1</td><td>One artifact, many depths</td><td>a depth exists only inside a tool others cannot read</td></tr>
-    <tr><td>3.2</td><td>Positional write authority</td><td>write authority is by <i>name</i> — names drift, directories don't</td></tr>
-    <tr><td>3.2b</td><td>Halt authority by identity, non-delegable</td><td>the halt can be granted by a role, or loses input while engaged</td></tr>
-    <tr><td>3.3</td><td>Append-only history</td><td>truth is a snapshot with no history behind it</td></tr>
-    <tr><td>3.4</td><td>Non-blocking authoring</td><td><i>authoring</i> is serialized by a lock</td></tr>
-    <tr><td>3.5</td><td>Rank commits, never adjudicates — a computed fact always does</td><td>position settles a technical dispute</td></tr>
-    <tr><td>3.6</td><td>Design out, vocabulary in</td><td>the <i>design</i> is an input</td></tr>
-    <tr><td>3.7</td><td>Recall is obligatory</td><td>reading prior state is optional or best-effort</td></tr>
+    <tr><th>Piece</th><th>Position</th><th>Where</th></tr>
+    <tr><td>scoot-rim-agentd</td><td>4 - a machine's supervisor of sessions</td><td><code>~/scoot-rim-agentd</code>, installed 2026-09-08</td></tr>
+    <tr><td>REDS</td><td>5 - Mindset institutionalised; governs the rate of recursion</td><td>methodology, host-independent</td></tr>
+    <tr><td>Scoot platform</td><td>4 - the substrate Scoot(34) runs on</td><td><code>~/scoot</code></td></tr>
   </table>
-  <p class="att">These are not a checklist. They are what a machine grows under concurrency pressure, in dependency order — which is why a Map and a log come before terminals.</p>
 
   <div class="flag">
-    <b>Framework page.</b> This is a landing page in the house style, not the
-    document. Where this page and <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a> disagree, the document wins.
+    <b>Settled, and still open.</b>
+    <i>Map</i> as position 1 is adopted, and its taking over registry and
+    positional truth was <b>ratified</b> 2026-09-08 — so using <i>Model</i> for a
+    registry is now wrong, and "supervisor of all RIM Models" is a well-formed
+    phrase: an orchestrator of designs, governed by a Map. Whether <i>CDS</i> is a synonym for RIM or a level-4
+    domain-specific machine was <b>settled 2026-09-08</b>: CDS is one
+    <i>codomain</i> of the formula — RIM = Recursive Integration of a REDS system
+    as an X — the original one, because chips are where the work started, not
+    because the operation is chip-shaped. Attested in the corpus:
+    only <b>Machine</b> and <b>Methodology</b> — Map, Model and Mindset are coined,
+    so each earns its slot against something the system already <i>does</i> rather
+    than something it already <i>says</i>.
+    Canonical source: <a href="../RIM_architecture_v0.8.md">RIM_architecture_v0.8.md</a>, served beside this page; this page is a
+    landing page, not the doc — where they disagree, the doc wins.
   </div>
 </div>
 

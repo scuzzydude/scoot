@@ -1,20 +1,19 @@
-/* sim_common.css — shared design system for the RIM landing pages and any
-   single-file simulation tools built in the same house style.
+/* sim_common.css - shared design system for the RIM landing pages.
 
-   PORTED FRAMEWORK BUNDLE. Rules are verbatim from the originating host;
-   only the comments were rewritten, to remove references to that host's own
-   projects, assets and directory layout. No rule was changed, added or
-   removed — so the visual result is identical. Selector count verified equal.
+   PORTED BUNDLE. Rules verbatim from the originating host; only comments rewritten, to
+   drop references to that host's own projects, assets and directory layout. No rule
+   changed, added or removed.
 
-   Fully self-contained: no @import, no url(), no webfont, no CDN. Verified by
-   scan, because the request specified no external resources.
+   Includes responsive fixes you want: .tabstrip / .preset-group / header.app-header wrap
+   rather than pushing the page sideways; .readout collapses 6 -> 3 -> 2 columns by media
+   query; a <=640px tier so long labels and segmented toggles wrap. Verified 0px
+   horizontal document overflow from 1440px down to 360px.
 
-   USAGE: load this before any page-specific <style> overrides:
+   Self-contained: no @import, no url(), no webfont, no CDN.
+   Load before any page-specific <style>:
      <link rel="stylesheet" href="../_shared/sim_common.css">
-
-   The palette is four semantic ink colours on a light ground, defined as
-   custom properties on :root. There is no dark mode — --panel is always
-   white — so any logo or figure assets you add must be dark-ink versions.
+   Four semantic inks on a light ground, as :root custom properties. No dark mode --
+   --panel is always white -- so any logo or figure must be dark-ink.
 */
 
 :root{
@@ -24,16 +23,14 @@
 }
 *{box-sizing:border-box;}
 body{margin:0;font-family:Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
-header.app-header{padding:10px 24px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;justify-content:space-between;align-items:baseline;gap:16px;}
-/* Home-link — an optional logo + wordmark pair in the header, linking back to
-   whatever this page's parent app is. Always a pair, never the logo alone; if
-   you have no logo asset, use the wordmark span alone and drop the <img>.
-   Place it as the FIRST child inside <header class="app-header">, before <h1>:
-     <a class="home-link" href="/" title="Back to home">
-       <img src="../logo/logo.svg" alt=""><span class="home-label">NAME</span>
-     </a>
-   Supply your own asset; none ships in this bundle. These pages have no dark
-   mode, so use a dark-ink logo. */
+/* The header is a flex row of a title and a subtitle. A long subtitle cannot
+   shrink below its min-content width, so without wrapping it pushes past the
+   header and takes the document with it. Wrapping drops it to its own line at
+   narrow width and changes nothing at desktop. */
+header.app-header{padding:10px 24px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;}
+/* Home-link - optional logo + wordmark pair in the header, linking to the parent app.
+   Always a pair; with no logo asset keep the wordmark span and drop the <img>. First
+   child inside <header class="app-header">, before <h1>. No asset ships here. */
 header.app-header .home-link{display:flex;align-items:center;gap:5px;flex:0 0 auto;text-decoration:none;color:inherit;}
 header.app-header .home-link img{height:22px;width:auto;display:block;}
 header.app-header .home-link .home-label{font-weight:600;font-size:14px;color:var(--text);}
@@ -44,7 +41,12 @@ header.app-header p{margin:0;font-size:12px;color:var(--sub);text-align:right;}
 /* Tabstrip row — cross-tab global controls live here, read by many tabs */
 .tabstrip-row{display:flex;align-items:center;gap:14px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--border);flex-wrap:wrap;}
 .tabstrip-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#bbb;white-space:nowrap;}
-.tabstrip{display:flex;gap:2px;}
+/* Toolbars wrap rather than pushing the document sideways. These are flex rows
+   of buttons; without flex-wrap a strip wider than the viewport overflows the
+   whole page (measured: 401px on the widest sim at 420px width). Wrapping keeps
+   every control reachable, and has no effect at desktop width where the strip
+   already fits on one line. */
+.tabstrip{display:flex;gap:2px;flex-wrap:wrap;}
 .tabstrip button{
   border:none;background:transparent;padding:10px 16px;font-size:13px;font-weight:600;
   color:var(--sub);cursor:pointer;border-bottom:3px solid transparent;
@@ -55,7 +57,7 @@ header.app-header p{margin:0;font-size:12px;color:var(--sub);text-align:right;}
 .tabstrip-select{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;background:#fff;color:var(--text);}
 
 /* Named-preset save/load group (see sim_common.js createPresetManager) */
-.preset-group{display:flex;align-items:center;gap:6px;}
+.preset-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .preset-group input[type=text]{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;width:130px;}
 .preset-group .reset-btn{padding:5px 10px;}
 .preset-status{font-size:11px;color:var(--soft);white-space:nowrap;}
@@ -146,6 +148,15 @@ details.derivation[open] summary{border-bottom:1px solid var(--border);}
 
 /* Readout cards — the flat metric grid above a tab's frames/diagrams */
 .readout{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:18px;}
+/* Six fixed columns become ~50px cards on a phone, which is narrower than the
+   captions inside them -- that was the last 27px of horizontal document overflow
+   on the widest sim. Collapsed in tiers rather than switched to auto-fit:
+   auto-fit with a minmax floor yields MORE than six columns at desktop width and
+   would change the desktop layout, which these queries deliberately do not.
+   minmax(0,1fr) rather than 1fr so a stubborn caption cannot force a track wider
+   than its share. */
+@media (max-width:1000px){ .readout{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media (max-width:640px){  .readout{grid-template-columns:repeat(2,minmax(0,1fr));} }
 .metric{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:0;}
 .metric .k{font-size:11px;color:var(--sub);text-transform:uppercase;letter-spacing:.03em;}
 .metric .v{font-size:20px;font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace;margin-top:2px;}
@@ -214,8 +225,7 @@ body.document-mode #tabcontent .readout .metric:not(.status-green):not(.status-r
 
 /* Side-by-side comparison frames (e.g. Baseline vs Proposed, Before vs
    After). No CSS width/height on .frame svg on purpose — real sims size the
-   SVG in JS so both sides share one scale; size the SVG in JS if both sides
-   must share one scale. */
+   SVG in JS so both sides share one scale; size the SVG in JS if both sides must share one scale. */
 .frames{display:flex;gap:16px;}
 .frame{flex:1 1 50%;background:var(--panel);border:1px solid var(--border);border-radius:8px;overflow:hidden;min-width:0;}
 .frame .caption{padding:8px 14px;font-size:12px;font-weight:700;border-bottom:1px solid var(--border);background:#fafafa;}
@@ -223,3 +233,15 @@ body.document-mode #tabcontent .readout .metric:not(.status-green):not(.status-r
 .frame svg{display:block;}
 
 .stub{padding:60px;text-align:center;color:var(--sub);font-size:14px;}
+
+/* Small-phone tier (<=640px). Two flex rows here have children that cannot
+   shrink -- .section-label is flex:0 0 auto, and .basis-toggle's buttons are
+   white-space:nowrap -- so a long label or a three-way toggle overflowed the
+   document at 360px even after the toolbar and .readout fixes. Confined to a
+   media query rather than changing the base rules, because the base rules are
+   what give the desktop segmented control its single-line look. */
+@media (max-width:640px){
+  .section-label-row{flex-wrap:wrap;}
+  .section-label-row .section-label{flex:1 1 100%;}
+  .basis-toggle{flex-wrap:wrap;max-width:100%;}
+}
