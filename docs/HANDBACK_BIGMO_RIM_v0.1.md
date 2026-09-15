@@ -27,7 +27,7 @@ showed up (§7).
 | 0.5 search container | done | limit confirmed 512 MiB (`docker inspect scoot-pmp-searxng`); **no cache** by decision (SearXNG needs a redis container for one); citation convention + limit recorded in `scoot-pmp` README (`d3b2cb5`). `mem_limit` staged for `scoot-app` (1 GiB) and both memory-vault containers (512 MiB) in their compose files; **applied after the load test** so as not to confound it (see §2). |
 | 0.6 test tenants | done — deleted | Brandon's decision. `scoots 78, 80` + their 2 `scoot_members` rows removed in one transaction after every FK to `scoots` was checked (`player_cards`, `card_links`, `card_art`, `scoot_sessions`, …: 0 dependents). Recorded `0ba55f4`. Root cause (integration tests hitting prod) **not** fixed. |
 | 1.1 `sn` | done | `scoot-win-term` was already cloned (`b965e70`) but **behind origin by 4 commits** that add the event log; fast-forwarded to `341f20f`. Hand-rolled `sn()` at `~/.bashrc:127` replaced by `source …/shell-integration.bash`. `sn`/`sls` resolve; `~/.scoot-rim/events.jsonl` now written. |
-| 1.2 SIM pages | done | Bundle verified (leak scan clean, no external resources), tokens replaced, served at `https://fairchildlabs.org/rim-sim/{rim5,machine,design}/` (HTTP 200 ×6 incl. `RIM_architecture_v0.8.md`). Level 3 = player-card pipeline. Brandon ran the 4-step selector done-when in a browser 2026-09-09: **all four pass**. 2026-09-09 follow-up: `/rim-sim/` also served on `thedreamlaboratory.org` (Apache `ProxyPass /rim-sim !`) and linked from the app nav for LEADER/BETA/ENGINEER members. |
+| 1.2 SIM pages | done | Bundle verified (leak scan clean, no external resources), tokens replaced, served at `https://fairchildlabs.org/rim-sim/{rim5,machine,design}/` (HTTP 200 ×6 incl. `RIM_architecture_v0.8.md`). Level 3 = player-card pipeline. Brandon ran the 4-step selector done-when in a browser 2026-09-09: **all four pass**. 2026-09-09: `/rim-sim/` also served on `thedreamlaboratory.org` (Apache `ProxyPass /rim-sim !`) and linked from the app nav for LEADER/BETA/ENGINEER members. **2026-09-15: superseded by bundle v0.2** — level 1 now carries the five original Recursive Integration figures and the recursion section (143 → 361 lines), level 3 became Scoot(34) with its implementations beneath it rather than the player-card pipeline alone, and the stylesheet gained three media queries. v0.2 arrived pre-filled from the 2026-09-07 questionnaire, so five stale claims were corrected against the running host before serving: agentd described as "not yet installed" (installed 09-08), a service table missing the search daemon on 4200 and all four host timers, placeholder paths in the layers table, six Map/Model disagreements cited as live (closed 09-08), and the score. Deployed, committed `e151b13`, verified by **content type** rather than status code on both vhosts — the trap the bundle's §5 warns about — with no symlinks anywhere in the tree. |
 | 1.3 instruction path | done | `CLAUDE.md` "Ownership and Concurrency — Read Before Editing" (`2ff252c`, corrected `a7e794b`); `docs/handoffs/` created for payloads. |
 | 1.4 scoot-pmp | done, with a finding | Citation convention added. **Finding:** the running daemon started 2026-08-24 from `dist/` built that day; the repo has 4 commits to `src/` since (Exa deep-search integration, cost logging) and `.env` has no `EXA_*` keys. The service is behind its own repo. **Not restarted** — a restart would load code that may need a key that is not there. Brandon's call. |
 | 2.1 agentd | done | `~/scoot-rim-agentd` at `e386aa4`; `python3 -m unittest discover -s tests` → 49 tests OK (README says 41). |
@@ -117,6 +117,19 @@ showed up (§7).
 ## 8. Redaction check
 
 Run before this file leaves the box: a case-insensitive grep over this file for the employer's name and short code, the work-LAN address prefix, the share-drive name, the author's surname, the usual secret words, PEM headers, and any dotted-quad IP. Hits: the word "tokens" (template tokens, §1 row 1.2) and the word "passphrase" in prose about the backup (no values). The term list itself is not reproduced here for the reason the framework README §6 gives. No hostnames beyond `dreamlab` and public domains. No `.env` contents.
+
+## 9a. Rescore, 2026-09-15 (what Phase 2 actually moved)
+
+The v0.2 bundle predicted that 3.2 and 3.3 were the two criteria Phase 2 would move. Both
+moved, and both to **partial** rather than to meets — which is the more useful result.
+
+| # | Was (09-07) | Now (09-15) | Evidence |
+|---|---|---|---|
+| 3.2 Positional write authority | fails | **partial** | `~/.scoot-rim/ownership.toml`, 26 nodes, genuinely positional — `check` denies a session whose cwd is outside the owning node, including the home-directory session that authored the map. But the gate is warn-only and sees only the editor's file tools, so any shell write bypasses it. |
+| 3.3 Append-only history | fails | **partial** | `~/.scoot-rim/events.jsonl`, 24 events across 7 types; `live`, `tree` and `doctor` are folds with no cached snapshot; `restore-plan` replays from it. The designs running on the machine still keep snapshot state, and the two product ledgers hold 1 and 0 rows. |
+
+**Four meets, three partial, one fail** (was four meets, one partial, three fails). The single
+outright fail is 3.1, one artifact, which is the one concurrency has not yet forced.
 
 ## 9. Open for Brandon
 
