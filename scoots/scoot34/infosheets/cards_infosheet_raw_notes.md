@@ -19,3 +19,7 @@ Okay, more background.  Rather than use a list, which while simple, never really
 ## Turn 4 — 2026-09-16
 
 The one unfairness to the list is the "sub".   Peopleare hestiant to 'sub' because if it happens in the first game, you would get less than 2 full games.  I think we need to reward next-up subs, when they sub they get to follow the team for the remainder of the play, and still go to the front of the list.  So taking a sub becomes a reward rather than a hardship.   There are other ules which we need to decide.   Only th escorekeeper would be allowed to move the cards and call out the next up.  Your ownly ability to move a card is to go to the ednd of the list.
+
+## Turn 5 — 2026-09-16
+
+Let's call the slider stand "The Rail"
