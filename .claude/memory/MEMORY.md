@@ -35,3 +35,6 @@
 - [Archive share-drive files after use](feedback_archive_share_after_use.md) — move to azarchive:archive/var-www/shared/<date>/ once viewed/used, keep the share clean, don't wait to be asked
 - [BigMo search now via scoot-pmp](bigmo_search_scoot_pmp.md) — self-hosted SearXNG+LLM synthesis replaces dead Perplexity/Tavily/Gemini; systemd unit + shim, both on dreamlab
 - [dreamlab OOM — reboot 08-24, recurred 08-27](infra_dreamlab_oom_reboot_2026_08_24.md) — 3.8GB box; 08-27 OOM-killed `claude` directly + searxng crash-loop; fixed via mem_limit/oom_score_adj on searxng container
+- [BigMo RIM questionnaire answered](project_bigmo_rim_questionnaire.md) — ~/BigMo_RIM_QA_v0.1.md filled in 2026-09-07; destined for RIM_architecture_v0.1.md on the steveai host
+- [RIM Phases 0–2 executed on dreamlab](project_bigmo_rim_execution.md) — 2026-09-08: ownership map + event log + warn-only hook installed under ~/.scoot-rim; RIM compliance fixes + Steve ruling 2026-09-15; see docs/ for the exchange
+- [Google MCP connectors are on-demand, not resident](infra_google_mcp_on_demand.md) — removed from user scope 2026-09-15 (~490MB); use `claude-google`; the mail poller never used MCP
