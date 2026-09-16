@@ -28,6 +28,7 @@
 - [Cold archive — /var/www on Azure Blob](infra_cold_archive.md) — azarchive rclone remote; local bulk deleted 2026-07-03 (~6.3G freed), restore on demand; key1 rotated
 - [Memory Vault MCP on dreamlab](infra_memory_vault.md) — Postgres+pgvector semantic-recall MCP ALONGSIDE git-file memory; loopback-only DB :54320 / dashboard :8000; venv + PYTHONPATH; user-scope MCP (per-machine); seeded into space `scoot`
 - [Card set #1 = 34-2026-1 frozen 2026-09-14](project_card_release_set1.md) — 34 players + 12 guest write-in cards; release/34-2026-1 on share + blob; manifest pins codes→art hashes; changes = set #2
+- [Card set #2 = 34-2026-2 started 2026-09-16](project_card_release_set2.md) — 12 more guest cards 34-GUEST-13..24 (review 45), rows live in player_cards; not frozen yet
 - [Player-cards: facial likeness blocker + plan](project_player_cards_facial_likeness.md) — 31-person roster final; back-of-card working (card-review-28), needs real stats/profile text next
 - [Version print PDFs with the review number](feedback_version_print_pdfs.md) — `..._longflip-35.pdf` matches card-review-35; never overwrite an earlier number
 - [Always increment card-review-N, never overwrite](feedback_increment_card_reviews.md) — each round of card changes gets a fresh review-page URL, not a republish in place
