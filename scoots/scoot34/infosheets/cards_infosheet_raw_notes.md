@@ -47,3 +47,7 @@ Another factor.  Keeping the Roster book by year allows us to remember the broth
 ## Turn 11 — 2026-09-16
 
 Also, we need a paragraph about bigMo.   I haven't rolled that out yet.  So BigMo right now will just procatively send out a notice if there is change from normal hours.  We just need to introduce it as such, and what it is and that like.
+
+## Turn 12 — 2026-09-16
+
+SMS - BigMo - we aren't going to introduce the app yet.
