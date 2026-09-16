@@ -1,0 +1,172 @@
+# dreamlab ownership map — RIM Phase 2.2, authored 2026-09-08.
+# Site configuration for scoot-rim-agentd ($SCOOT_RIM_OWNERSHIP). NOT in any repo.
+# Ownership is positional: the owner of a path is the session whose working
+# directory contains it. Policies: own-subtree | handoff | strict.
+# Prose twin: scoot/CLAUDE.md "Ownership and Concurrency".
+
+root = "/home/brandon"
+
+# --- the live bot and everything the host executes: strict -------------------
+[[node]]
+path   = "scoot/ri/src/server/sms"
+policy = "strict"
+note   = "BigMo SMS commissioner — tsx watch restarts the live bot on write"
+
+[[node]]
+path   = "scoot/ri/src/server/routes"
+owns   = ["sms.ts"]
+policy = "strict"
+note   = "Twilio inbound webhook"
+
+[[node]]
+path   = "scoot/ri/src/server/llm"
+policy = "strict"
+note   = "provider chain + deterministic schedule facts (wrong time to a senior is the cardinal sin)"
+
+[[node]]
+path   = "scoot/ri/src/server/cards"
+policy = "strict"
+note   = "render notifier — sends real MMS"
+
+[[node]]
+path   = "scoot/ri/src/server/mail"
+policy = "strict"
+note   = "poller — crashed the whole app once (a85ce14)"
+
+[[node]]
+path   = "scoot/ri/src/server/db"
+policy = "strict"
+note   = "schema + migrations applied to prod by hand; never db:push"
+
+[[node]]
+path   = "scoot/ri/personalities"
+policy = "strict"
+note   = "the personality is the product"
+
+[[node]]
+path   = "scoot/ri/physical"
+policy = "strict"
+note   = "compose + systemd units; side effects are container recreates"
+
+[[node]]
+path   = "scoot/scripts"
+owns   = ["card-render-worker.sh", "card-art-cold-sync.sh"]
+policy = "strict"
+note   = "executed by systemd timers on the host every 2 / 10 min"
+
+[[node]]
+path   = "scoot"
+owns   = [".env"]
+policy = "strict"
+note   = "secrets; gitignored; changing it needs an app recreate"
+
+[[node]]
+path   = "scoot-pmp"
+owns   = ["docker-compose.yml"]
+policy = "strict"
+note   = "search container limits"
+
+# --- shared documents: handoff (one writer, others hand off a payload) --------
+[[node]]
+path   = "scoot/arch"
+policy = "handoff"
+note   = "design docs — several sessions need these"
+
+[[node]]
+path   = "scoot/docs"
+policy = "handoff"
+note   = "handbacks, transcripts, RIM documents"
+
+[[node]]
+path   = "scoot"
+owns   = ["CLAUDE.md"]
+policy = "handoff"
+note   = "the instruction path — contended by every session"
+
+[[node]]
+path   = "scoot/.claude/memory"
+owns   = ["MEMORY.md"]
+policy = "handoff"
+note   = "the index is the only collision point; new memory files are free (see below)"
+
+# --- parallel-safe subtrees: own-subtree -------------------------------------
+[[node]]
+path   = "scoot/.claude/memory"
+policy = "own-subtree"
+note   = "a NEW file never collides; MEMORY.md above is the exception (most specific wins)"
+
+[[node]]
+path   = "scoot/ri/src/client"
+policy = "own-subtree"
+
+[[node]]
+path   = "scoot/scoot-chat"
+policy = "own-subtree"
+
+[[node]]
+path   = "scoot/tools"
+policy = "own-subtree"
+note   = "player-card pipeline — runs on Modal / by hand, not by the live bot"
+
+[[node]]
+path   = "scoot/scripts"
+policy = "own-subtree"
+note   = "everything not named strict above"
+
+[[node]]
+path   = "scoot-pmp/src"
+policy = "own-subtree"
+
+[[node]]
+path   = "scoot-win-term"
+policy = "own-subtree"
+
+[[node]]
+path   = "scoot-rim-agentd"
+policy = "own-subtree"
+note   = "generic engine — do not fork; site config lives here in ~/.scoot-rim"
+
+# --- level-3 designs / research streams: one node each, no contention --------
+[[node]]
+path   = "research/transportation"
+policy = "own-subtree"
+note   = "directory created on first use"
+
+[[node]]
+path   = "research/scoot-system"
+policy = "own-subtree"
+note   = "directory created on first use"
+
+# --- catch-all for the scoot repo: anything not named above is parallel-safe ---
+[[node]]
+path   = "scoot"
+policy = "own-subtree"
+note   = "fallback for unmanaged files (README, routes other than sms.ts, shared/...); most specific node wins"
+
+# --- positions added 2026-09-16: one start point per level, so a session's cwd
+# --- says which level it is working at and `sls` shows a useful name.
+
+# Level 1 + methodology. Above the machine: the pattern, the exchange with Steve,
+# handbacks. Owns nothing inside the repo, which is deliberate -- a supervisor
+# session should be able to read the whole host and write none of it.
+[[node]]
+path   = "RIM"
+policy = "own-subtree"
+note   = "RIM methodology root. Start RIM/supervisor sessions here."
+
+# Level 3 implementations under Scoot(34). Each gets its own position so two
+# sessions on two implementations never contend.
+[[node]]
+path   = "scoot/tools/player-cards"
+policy = "own-subtree"
+note   = "Scoot(34) implementation: the card pipeline"
+
+[[node]]
+path   = "scoot/ri/src/server/trust"
+policy = "own-subtree"
+note   = "Scoot(34) implementation: staking / trust graph"
+
+[[node]]
+path   = "scoot/ri/src/server/scoot"
+policy = "own-subtree"
+note   = "Scoot(34) implementation: the currency ledger"
