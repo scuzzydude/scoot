@@ -35,3 +35,7 @@ That's how we play.  You play two, win or lose, unless it's the first game(s) of
 ## Turn 8 — 2026-09-16
 
 At start of the day, the player - and only th eplayer - takes his card out of the roster book and puts in the Rail - at the end.
+
+## Turn 9 — 2026-09-16
+
+card blanks are used, we will print out enough of them.

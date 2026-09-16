@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 4 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 5 · 2026-09-16*
 
 ## Why this matters
 
@@ -34,7 +34,7 @@ Texas means being the best game in the universe.
 3. Anyone can look at The Rail and see who is on which team and where they sit in line. When a team's turn is over, its cards go to **the end of The Rail, in the same order**. Nobody re-signs anything.
 4. Want to sit out or leave? **Pull your card and put it back in the roster book.**
 
-Not everyone has a card yet. The first set was made from Nick's video.
+Not everyone has a card yet — the first set was made from Nick's video. **No card? Use a blank card and write your name on it.** We'll print plenty of blanks.
 
 ## Experiment #1
 
@@ -73,14 +73,15 @@ Not everyone has a card yet. The first set was made from Nick's video.
 ## The cards
 
 8. **Your card on The Rail is your place in line.** There is no sign-up list.
-9. **You put your own card on The Rail.** When you arrive, take your card out of the roster book and put it at the end of The Rail. Only you can do this. Nobody puts in a card for someone else.
-10. **After that, only the scorekeeper moves cards and calls next-up.**
-11. **Other than that, a player can do only two things with their own card:** move it to the end of the line, or pull it and put it back in the roster book.
-12. **When a team's turn ends, its cards go to the end of The Rail in the same order.**
+9. **No card yet? Use a blank card with your name written on it.** Blanks are kept with the roster book, and we print enough of them.
+10. **You put your own card on The Rail.** When you arrive, take your card out of the roster book and put it at the end of The Rail. Only you can do this. Nobody puts in a card for someone else.
+11. **After that, only the scorekeeper moves cards and calls next-up.**
+12. **Other than that, a player can do only two things with their own card:** move it to the end of the line, or pull it and put it back in the roster book.
+13. **When a team's turn ends, its cards go to the end of The Rail in the same order.**
 
 ## Subs
 
-13. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
+14. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
 
 ## Open questions
 
@@ -88,5 +89,4 @@ Not everyone has a card yet. The first set was made from Nick's video.
 - What happens when the score is tied at the buzzer?
 - Who picks the scorekeeper? Does the job rotate? What if the scorekeeper doesn't show up?
 - When do "first games of the day" end and the two-game run begin? After one game, or once The Rail has a full team waiting?
-- Players without a card yet: use the 12 blank guest cards from set #1, with names written in?
 - Where do the scores go once they're recorded?
