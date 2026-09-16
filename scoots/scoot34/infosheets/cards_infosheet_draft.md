@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Senior Basketball at Fonde** · *Working draft 12 · 2026-09-16*
+**Senior Basketball at Fonde** · *Working draft 13 · 2026-09-16*
 
 ## Why this matters
 
@@ -55,7 +55,7 @@ a locked gym. More will come later.
 
 This is the first in a series of experiments. If we can get the game running smoothly, we keep improving
 it, and we make good on what the Chairman said: *"You ain't done it, till you've done it at Fonde."*
-Next in line: **line judges**, **competitive pick-'em and bring-'em games**, and **growing the game while
+Next in line: **line judges**, **statistics and contests**, **competitive pick-'em and bring-'em games**, and **growing the game while
 keeping our OGs involved, even after they hang up their kicks.**
 
 <div class="pagebreak"></div>

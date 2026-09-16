@@ -73,3 +73,7 @@ okay, we can add an Experiment Section iun th ewhilte space at the end after BIG
 (Checked: BigMo does not push schedule-change notices today — status is pull-only, no sms_mirror rooms, A2P campaign is 2FA-only.) Brandon chose option 3: say it is coming.
 
 #3 for now.
+
+## Turn 18 — 2026-09-16
+
+line judges, statistics and contests, competiteve...
