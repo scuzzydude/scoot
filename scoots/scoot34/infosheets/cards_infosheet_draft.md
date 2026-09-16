@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 2 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 3 · 2026-09-16*
 
 ## Why this matters
 
@@ -59,22 +59,27 @@ Not everyone has a card yet. The first set was made from Nick's video.
 1. **All senior basketball at Fonde runs a clock.**
 2. **The time limit is [__] minutes.** 15 may be too long and 10 too short. We start somewhere in that range and adjust from experience.
 
+## A team's run
+
+3. **Every team plays two games, win or lose.**
+4. **Except the first game(s) of the day:** the winner stays on and the loser's cards go to the end of The Rail.
+
 ## The scorekeeper
 
-3. **Each day has one scorekeeper.** The scorekeeper manages next-up, calls players to the court, starts and stops the clock, and records the scores.
-4. **The scorekeeper normally doesn't play that day.** Playing isn't forbidden, but the line has a way of changing when nobody is watching it.
-5. **The scorekeeper holds authority we all agree on.** It should be an OG, or someone who has the respect of most of the Brotherhood.
+5. **Each day has one scorekeeper.** The scorekeeper manages next-up, calls players to the court, starts and stops the clock, and records the scores.
+6. **The scorekeeper normally doesn't play that day.** Playing isn't forbidden, but the line has a way of changing when nobody is watching it.
+7. **The scorekeeper holds authority we all agree on.** It should be an OG, or someone who has the respect of most of the Brotherhood.
 
 ## The cards
 
-6. **Your card on The Rail is your place in line.** There is no sign-up list.
-7. **Only the scorekeeper moves cards and calls next-up.**
-8. **A player can do only two things with their own card:** move it to the end of the line, or pull it and put it back in the roster book.
-9. **When a team's turn ends, its cards go to the end of The Rail in the same order.**
+8. **Your card on The Rail is your place in line.** There is no sign-up list.
+9. **Only the scorekeeper moves cards and calls next-up.**
+10. **A player can do only two things with their own card:** move it to the end of the line, or pull it and put it back in the roster book.
+11. **When a team's turn ends, its cards go to the end of The Rail in the same order.**
 
 ## Subs
 
-10. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
+12. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
 
 ## Open questions
 
@@ -82,6 +87,6 @@ Not everyone has a card yet. The first set was made from Nick's video.
 - What happens when the score is tied at the buzzer?
 - Who picks the scorekeeper? Does the job rotate? What if the scorekeeper doesn't show up?
 - How does The Rail get filled at the start of the day — in the order people arrive?
-- Do winners stay on? If they do, where do the losers' cards go?
+- When do "first games of the day" end and the two-game run begin? After one game, or once The Rail has a full team waiting?
 - Players without a card yet: use the 12 blank guest cards from set #1, with names written in?
 - Where do the scores go once they're recorded?

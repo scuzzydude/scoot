@@ -27,3 +27,7 @@ Let's call the slider stand "The Rail"
 ## Turn 6 — 2026-09-16
 
 Front of the line means right after the team's run.  This means a sub could get nearly 4 games in a row (if the playser was subed in the first minute of the first game).
+
+## Turn 7 — 2026-09-16
+
+That's how we play.  You play two, win or lose, unless it's the first game(s) of the day, then winner stays, loser goes to end of list.
