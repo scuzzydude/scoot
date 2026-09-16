@@ -6,12 +6,14 @@ Print-first: US Letter, black on white, Arial. Page 1 = info sheet,
 page 2 = proposed rules. Body text is placeholder until the content lands.
 
   python3 build_infosheet_template.py OUT.docx [--version 1] [--date 2026-09-16]
+  python3 build_infosheet_template.py OUT.docx --md cards_infosheet_draft.md --version 10
 
 Needs python-docx + Pillow.
 """
 
 import argparse
 import io
+import re
 import os
 
 from PIL import Image
@@ -150,7 +152,7 @@ def setup_styles(doc):
     normal.font.size = Pt(10.5)
     normal.font.color.rgb = BLACK
     normal.paragraph_format.space_after = Pt(5)
-    normal.paragraph_format.line_spacing = 1.1
+    normal.paragraph_format.line_spacing = 1.0
 
     # Sheet title: bold italic caps, echoing the wordmark, heavy rule below.
     title = st["Title"]
@@ -183,7 +185,7 @@ def setup_styles(doc):
     h1.font.italic = False
     h1.font.all_caps = True
     h1.font.color.rgb = BLACK
-    h1.paragraph_format.space_before = Pt(12)
+    h1.paragraph_format.space_before = Pt(10)
     h1.paragraph_format.space_after = Pt(4)
     h1.paragraph_format.keep_with_next = True
     border(h1.element.get_or_add_pPr(), "w:pBdr", ["bottom"], sz=4, space=2)
@@ -352,6 +354,99 @@ def build_body(doc):
     run(p, "[Question for the Brotherhood]", italic=True, color=PLACEHOLDER)
 
 
+# ---------------------------------------------------------------- markdown
+
+INLINE = re.compile(r"(\*\*.+?\*\*|\*.+?\*)")
+
+
+def inline(p, text, **kw):
+    """**bold** and *italic* spans; [bracketed] text renders as placeholder."""
+    for part in INLINE.split(text):
+        if not part:
+            continue
+        if part.startswith("**"):
+            run(p, part[2:-2], bold=True, **kw)
+        elif part.startswith("*"):
+            run(p, part[1:-1], italic=True, **kw)
+        elif part.startswith("[") and part.endswith("]"):
+            run(p, part, italic=True, color=PLACEHOLDER)
+        else:
+            run(p, part, **kw)
+
+
+def build_from_md(doc, path):
+    """Render the working-draft markdown subset: # title (+ next paragraph as
+    subtitle), ## heads, paragraphs, - bullets, N. rules, pagebreak div.
+    Page-2 rules keep their hand numbers so they match the web draft."""
+    blocks, cur = [], []
+    for line in open(path, encoding="utf-8").read().splitlines():
+        if not line.strip():
+            if cur:
+                blocks.append(cur)
+                cur = []
+            continue
+        starts_item = re.match(r"^(- |\d+\. |#)", line) or "pagebreak" in line
+        if cur and starts_item:
+            blocks.append(cur)
+            cur = []
+        cur.append(line)
+    if cur:
+        blocks.append(cur)
+
+    subtitle_next = False
+    page = 1
+    for b in blocks:
+        head = b[0]
+        text = " ".join(l.rstrip("\\").strip() for l in b)
+        if "pagebreak" in head:
+            br = doc.add_paragraph()
+            br.add_run().add_break(WD_BREAK.PAGE)
+            br.paragraph_format.space_after = Pt(0)
+            page += 1
+        elif head.startswith("# "):
+            doc.add_paragraph(head[2:].strip(), style="Title")
+            subtitle_next = True
+            continue
+        elif head.startswith("## "):
+            doc.add_heading(head[3:].strip(), level=1)
+        elif subtitle_next:
+            p = doc.add_paragraph(style="Subtitle")
+            # drop the web-only "Working draft N" tag; the footer carries it
+            inline(p, re.split(r"\s+·\s+\*Working draft", text)[0])
+        elif head.startswith("- "):
+            p = doc.add_paragraph(style="List Bullet")
+            inline(p, text[2:])
+        elif re.match(r"^\d+\. ", head):
+            num, body = text.split(" ", 1)
+            if page == 1:
+                p = doc.add_paragraph(style="List Number")
+            else:
+                p = doc.add_paragraph()
+                p.paragraph_format.left_indent = Inches(0.3)
+                p.paragraph_format.first_line_indent = Inches(-0.3)
+                p.paragraph_format.space_after = Pt(2)
+                p.paragraph_format.tab_stops.add_tab_stop(Inches(0.3))
+                run(p, num + "\t", bold=True)
+            inline(p, body)
+        else:
+            p = doc.add_paragraph()
+            # join soft-wrapped lines first so **spans** can cross them;
+            # a trailing "\\" is a hard line break
+            segs, buf = [], []
+            for l in b:
+                buf.append(l.rstrip("\\").strip())
+                if l.endswith("\\"):
+                    segs.append(" ".join(buf))
+                    buf = []
+            if buf:
+                segs.append(" ".join(buf))
+            for i, seg in enumerate(segs):
+                if i:
+                    p.add_run().add_break()
+                inline(p, seg)
+        subtitle_next = False
+
+
 # ---------------------------------------------------------------- main
 
 def main():
@@ -359,6 +454,8 @@ def main():
     ap.add_argument("out")
     ap.add_argument("--version", default="1")
     ap.add_argument("--date", default="2026-09-16")
+    ap.add_argument("--md", help="build from a working-draft markdown file "
+                                 "instead of the placeholder template")
     a = ap.parse_args()
 
     doc = Document()
@@ -372,7 +469,10 @@ def main():
 
     setup_styles(doc)
     build_footer(sec, a.version, a.date)
-    build_body(doc)
+    if a.md:
+        build_from_md(doc, a.md)
+    else:
+        build_body(doc)
 
     doc.core_properties.title = "Player Cards for List Management"
     doc.core_properties.author = "The Dream Laboratory"

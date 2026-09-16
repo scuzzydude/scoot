@@ -59,3 +59,7 @@ Hours are right, leave text BigMo as is.   Don't text BigMo to join.   Talk to B
 ## Turn 14 — 2026-09-16
 
 . Nobody re-signs anything == No list to sign.
+
+## Turn 15 — 2026-09-16
+
+We can get rid of Expertin #1 and How you can help.  Let's see how much room we have to work with in a word doc now.

@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 9 · 2026-09-16*
+**Senior Basketball at Fonde** · *Working draft 10 · 2026-09-16*
 
 ## Why this matters
 
@@ -50,18 +50,6 @@ changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon)
 so nobody drives to a locked gym. More will come later.
 
 **To get on BigMo's list, talk to Brandon.**
-
-## Experiment #1
-
-**When:** [TBD]\
-**Where:** Fonde\
-**Who:** [TBD]
-
-## How you can help
-
-1. [TBD — what you need from the Brotherhood]
-
-**Questions?** Text BigMo at (361) 423-2253.
 
 <div class="pagebreak"></div>
 
