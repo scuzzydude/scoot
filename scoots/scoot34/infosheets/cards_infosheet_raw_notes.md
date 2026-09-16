@@ -55,3 +55,7 @@ SMS - BigMo - we aren't going to introduce the app yet.
 ## Turn 13 — 2026-09-16
 
 Hours are right, leave text BigMo as is.   Don't text BigMo to join.   Talk to Brandon to get on the list.
+
+## Turn 14 — 2026-09-16
+
+. Nobody re-signs anything == No list to sign.

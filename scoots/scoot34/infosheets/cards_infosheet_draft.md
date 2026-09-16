@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 8 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 9 · 2026-09-16*
 
 ## Why this matters
 
@@ -31,7 +31,7 @@ Texas means being the best game in the universe.
 
 1. Everyone's player card lives in the **roster book**.
 2. When you arrive, **you take your own card out of the roster book and put it at the end of The Rail** (the card stand). Nobody does this for you.
-3. Anyone can look at The Rail and see who is on which team and where they sit in line. When a team's turn is over, its cards go to **the end of The Rail, in the same order**. Nobody re-signs anything.
+3. Anyone can look at The Rail and see who is on which team and where they sit in line. When a team's turn is over, its cards go to **the end of The Rail, in the same order**. No list to sign.
 4. Want to sit out or leave? **Pull your card and put it back in the roster book.**
 
 Not everyone has a card yet — the first set was made from Nick's video. **No card? Use a blank card and write your name on it.** We'll print plenty of blanks.
