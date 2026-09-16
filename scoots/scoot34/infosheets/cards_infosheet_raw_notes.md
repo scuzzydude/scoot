@@ -39,3 +39,7 @@ At start of the day, the player - and only th eplayer - takes his card out of th
 ## Turn 9 — 2026-09-16
 
 card blanks are used, we will print out enough of them.
+
+## Turn 10 — 2026-09-16
+
+Another factor.  Keeping the Roster book by year allows us to remember the brother's we lost.  We can always review a book (for example, when a new book is formed in2027) and reach out to the players we might not have seen in awhile.  They may need help.

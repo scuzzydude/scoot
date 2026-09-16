@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 5 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 6 · 2026-09-16*
 
 ## Why this matters
 
@@ -35,6 +35,12 @@ Texas means being the best game in the universe.
 4. Want to sit out or leave? **Pull your card and put it back in the roster book.**
 
 Not everyone has a card yet — the first set was made from Nick's video. **No card? Use a blank card and write your name on it.** We'll print plenty of blanks.
+
+## More than a list
+
+We keep a new roster book each year. A book is a record of who played with us that year, and it helps us
+remember the brothers we have lost. When a new book starts (for example in 2027), we can go through the
+old one and reach out to anyone we haven't seen in a while. They may need help.
 
 ## Experiment #1
 
@@ -79,9 +85,12 @@ Not everyone has a card yet — the first set was made from Nick's video. **No c
 12. **Other than that, a player can do only two things with their own card:** move it to the end of the line, or pull it and put it back in the roster book.
 13. **When a team's turn ends, its cards go to the end of The Rail in the same order.**
 
+## The roster book
+
+14. **Each year gets its own roster book, and old books are kept.** When a new book starts, we go through the old one and check on anyone we haven't seen in a while.
 ## Subs
 
-14. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
+15. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
 
 ## Open questions
 
