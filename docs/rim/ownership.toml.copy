@@ -154,19 +154,27 @@ path   = "RIM"
 policy = "own-subtree"
 note   = "RIM methodology root. Start RIM/supervisor sessions here."
 
-# Level 3 implementations under Scoot(34). Each gets its own position so two
-# sessions on two implementations never contend.
+# Level 3 implementations shared by every Scoot (cards, staking, currency). Each gets its
+# own position so two sessions on two implementations never contend.
 [[node]]
 path   = "scoot/tools/player-cards"
 policy = "own-subtree"
-note   = "Scoot(34) implementation: the card pipeline"
+note   = "cross-Scoot implementation: the card pipeline"
 
 [[node]]
 path   = "scoot/ri/src/server/trust"
 policy = "own-subtree"
-note   = "Scoot(34) implementation: staking / trust graph"
+note   = "cross-Scoot implementation: staking / trust graph"
 
 [[node]]
 path   = "scoot/ri/src/server/scoot"
 policy = "own-subtree"
-note   = "Scoot(34) implementation: the currency ledger"
+note   = "cross-Scoot implementation: the currency ledger"
+
+# Level 2: one Scoot, at the design level (added 2026-09-16). Work specific to a single
+# Scoot -- brand, charter, label map. The three implementations above are cross-Scoot.
+# A second Scoot gets a sibling node (scoot/scoots/scootNN).
+[[node]]
+path   = "scoot/scoots/scoot34"
+policy = "own-subtree"
+note   = "Scoot(34) The Dream Laboratory: Scoot-specific design, brand, charter"

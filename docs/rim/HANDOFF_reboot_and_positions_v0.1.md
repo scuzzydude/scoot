@@ -14,9 +14,10 @@ write. Start in the wrong place and the gate has nothing useful to say.
 |---|---|---|---|
 | **RIM** — the method, the exchange with Steve, supervision | `~/RIM` | `RIM` | its own tree only, **nothing in the repo** |
 | **BigMo** — the machine: platform, bot, services, infrastructure | `~/scoot` | `scoot` | the repo, minus the protected nodes below |
-| **Scoot(34) — cards** | `~/scoot/tools/player-cards` | `player-cards` | the card pipeline |
-| **Scoot(34) — staking** | `~/scoot/ri/src/server/trust` | `trust` | the trust graph |
-| **Scoot(34) — currency** | `~/scoot/ri/src/server/scoot` | `scoot` * | the ledger |
+| **Scoot(34)** — The Dream Lab itself: brand, charter, label map, anything only this Scoot uses | `~/scoot/scoots/scoot34` | `scoot34` | its own subtree (added 2026-09-16) |
+| **Scoot — cards** (any Scoot) | `~/scoot/tools/player-cards` | `player-cards` | the card pipeline |
+| **Scoot — staking** (any Scoot) | `~/scoot/ri/src/server/trust` | `trust` | the trust graph |
+| **Scoot — currency** (any Scoot) | `~/scoot/ri/src/server/scoot` | `scoot` * | the ledger |
 
 \* clashes with the repo root's name — type a better one at `sn`'s prompt, e.g. `ledger`.
 `sn` offers the directory name as a default and lets you edit it.
@@ -26,13 +27,14 @@ the machine; it should read everything and write almost none of it. Verified jus
 session at `~/RIM` asking to edit the bot is refused, and told which position to hand the
 change to. Supervision by position rather than by good intentions.
 
-**Adding a Scoot.** Scoot(34) sits at the design level with implementations beneath it. A
-second Scoot gets its own sibling positions and a node each in the ownership map — not a
-rewrite of anything.
+**Adding a Scoot.** Cards, staking and the ledger are cross-Scoot: any Scoot may use them,
+so they are not duplicated per Scoot. What is specific to one Scoot lives under
+`~/scoot/scoots/scootNN`. A second Scoot gets a sibling directory there and one node in
+the ownership map — not a rewrite of anything.
 
 **Two implementations are deliberately gated.** The SMS commissioner and the room routing
 both live in the bot's own tree, which is `strict`, because editing them restarts the live
-bot. Cards, staking and the ledger are free to work on in parallel. So "Scoot(34) work" is
+bot. Cards, staking and the ledger are free to work on in parallel. So Scoot work is
 mostly unrestricted, and the part that is not is the part members are actually texting.
 
 ---
