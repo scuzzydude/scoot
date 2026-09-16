@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 1 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 2 · 2026-09-16*
 
 ## Why this matters
 
@@ -74,7 +74,7 @@ Not everyone has a card yet. The first set was made from Nick's video.
 
 ## Subs
 
-10. **A next-up player who subs in follows that team for the rest of its play and still goes to the front of the line.**
+10. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
 
 ## Open questions
 

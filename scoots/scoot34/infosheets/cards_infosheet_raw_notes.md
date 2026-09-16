@@ -23,3 +23,7 @@ The one unfairness to the list is the "sub".   Peopleare hestiant to 'sub' becau
 ## Turn 5 — 2026-09-16
 
 Let's call the slider stand "The Rail"
+
+## Turn 6 — 2026-09-16
+
+Front of the line means right after the team's run.  This means a sub could get nearly 4 games in a row (if the playser was subed in the first minute of the first game).
