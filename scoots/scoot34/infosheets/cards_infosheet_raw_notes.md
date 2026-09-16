@@ -67,3 +67,9 @@ We can get rid of Expertin #1 and How you can help.  Let's see how much room we 
 ## Turn 16 — 2026-09-16
 
 okay, we can add an Experiment Section iun th ewhilte space at the end after BIGMO.  This is the first stage of a series of experiment.  If we can get the game running sommothly, we can continue to improve and make "You ain't done it, till you've done it at Fonde." true, like the Chairman said.  Next in line in experimetns, line judges, competitive pick-em and bring-em games, and expanding the game and keeping OG's involved, even after they hang up their kicks.
+
+## Turn 17 — 2026-09-16
+
+(Checked: BigMo does not push schedule-change notices today — status is pull-only, no sms_mirror rooms, A2P campaign is 2FA-only.) Brandon chose option 3: say it is coming.
+
+#3 for now.

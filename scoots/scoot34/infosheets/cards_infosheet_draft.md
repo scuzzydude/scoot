@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Senior Basketball at Fonde** · *Working draft 11 · 2026-09-16*
+**Senior Basketball at Fonde** · *Working draft 12 · 2026-09-16*
 
 ## Why this matters
 
@@ -45,9 +45,9 @@ old one and reach out to anyone we haven't seen in a while. They may need help.
 ## Meet BigMo
 
 BigMo is the Brotherhood's AI Commissioner, a text-message assistant at **(361) 423-2253**, named for
-Moses Malone, the Chairman of the Boards. We're starting small. For now BigMo does one job: **if Fonde
-changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon), BigMo texts you a heads-up**,
-so nobody drives to a locked gym. More will come later.
+Moses Malone, the Chairman of the Boards. We're starting small. **Soon, BigMo will text you a heads-up when
+Fonde changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon)**, so nobody drives to
+a locked gym. More will come later.
 
 **To get on BigMo's list, talk to Brandon.**
 
