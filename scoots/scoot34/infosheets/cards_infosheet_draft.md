@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 7 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 8 · 2026-09-16*
 
 ## Why this matters
 
@@ -49,7 +49,7 @@ Moses Malone, the Chairman of the Boards. We're starting small. For now BigMo do
 changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon), BigMo texts you a heads-up**,
 so nobody drives to a locked gym. More will come later.
 
-[How to get on BigMo's list — TBD]
+**To get on BigMo's list, talk to Brandon.**
 
 ## Experiment #1
 

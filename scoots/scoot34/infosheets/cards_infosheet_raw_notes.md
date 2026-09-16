@@ -51,3 +51,7 @@ Also, we need a paragraph about bigMo.   I haven't rolled that out yet.  So BigM
 ## Turn 12 — 2026-09-16
 
 SMS - BigMo - we aren't going to introduce the app yet.
+
+## Turn 13 — 2026-09-16
+
+Hours are right, leave text BigMo as is.   Don't text BigMo to join.   Talk to Brandon to get on the list.
