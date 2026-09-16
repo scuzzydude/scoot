@@ -88,6 +88,7 @@ old one and reach out to anyone we haven't seen in a while. They may need help.
 ## The roster book
 
 14. **Each year gets its own roster book, and old books are kept.** When a new book starts, we go through the old one and check on anyone we haven't seen in a while.
+
 ## Subs
 
 15. **A next-up player who subs in plays out the rest of that team's run. Then their card goes to the front of The Rail, not the end.** Sub in during the first minute of the first game and you could play nearly four games in a row. Taking a sub becomes a reward, not a hardship.
