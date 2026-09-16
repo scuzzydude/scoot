@@ -63,3 +63,7 @@ Hours are right, leave text BigMo as is.   Don't text BigMo to join.   Talk to B
 ## Turn 15 — 2026-09-16
 
 We can get rid of Expertin #1 and How you can help.  Let's see how much room we have to work with in a word doc now.
+
+## Turn 16 — 2026-09-16
+
+okay, we can add an Experiment Section iun th ewhilte space at the end after BIGMO.  This is the first stage of a series of experiment.  If we can get the game running sommothly, we can continue to improve and make "You ain't done it, till you've done it at Fonde." true, like the Chairman said.  Next in line in experimetns, line judges, competitive pick-em and bring-em games, and expanding the game and keeping OG's involved, even after they hang up their kicks.

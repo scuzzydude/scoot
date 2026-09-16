@@ -394,17 +394,21 @@ def build_from_md(doc, path):
         blocks.append(cur)
 
     subtitle_next = False
+    break_next = False
     page = 1
     for b in blocks:
         head = b[0]
         text = " ".join(l.rstrip("\\").strip() for l in b)
         if "pagebreak" in head:
-            br = doc.add_paragraph()
-            br.add_run().add_break(WD_BREAK.PAGE)
-            br.paragraph_format.space_after = Pt(0)
+            # break *before* the next title, not a break paragraph: a full
+            # page 1 would otherwise push that empty paragraph to a blank page
             page += 1
+            break_next = True
+            continue
         elif head.startswith("# "):
-            doc.add_paragraph(head[2:].strip(), style="Title")
+            t = doc.add_paragraph(head[2:].strip(), style="Title")
+            t.paragraph_format.page_break_before = break_next
+            break_next = False
             subtitle_next = True
             continue
         elif head.startswith("## "):

@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Senior Basketball at Fonde** · *Working draft 10 · 2026-09-16*
+**Senior Basketball at Fonde** · *Working draft 11 · 2026-09-16*
 
 ## Why this matters
 
@@ -50,6 +50,13 @@ changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon)
 so nobody drives to a locked gym. More will come later.
 
 **To get on BigMo's list, talk to Brandon.**
+
+## Experiment #1 — and what comes next
+
+This is the first in a series of experiments. If we can get the game running smoothly, we keep improving
+it, and we make good on what the Chairman said: *"You ain't done it, till you've done it at Fonde."*
+Next in line: **line judges**, **competitive pick-'em and bring-'em games**, and **growing the game while
+keeping our OGs involved, even after they hang up their kicks.**
 
 <div class="pagebreak"></div>
 
