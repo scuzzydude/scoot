@@ -1,6 +1,6 @@
 # Player Cards for List Management
 
-**Experiment #1 — Senior Basketball at Fonde** · *Working draft 6 · 2026-09-16*
+**Experiment #1 — Senior Basketball at Fonde** · *Working draft 7 · 2026-09-16*
 
 ## Why this matters
 
@@ -41,6 +41,15 @@ Not everyone has a card yet — the first set was made from Nick's video. **No c
 We keep a new roster book each year. A book is a record of who played with us that year, and it helps us
 remember the brothers we have lost. When a new book starts (for example in 2027), we can go through the
 old one and reach out to anyone we haven't seen in a while. They may need help.
+
+## Meet BigMo
+
+BigMo is the Brotherhood's AI Commissioner, a text-message assistant at **(361) 423-2253**, named for
+Moses Malone, the Chairman of the Boards. We're starting small. For now BigMo does one job: **if Fonde
+changes from our normal hours (Tuesday 3:30–6:00 PM, Saturday 10:00 AM–noon), BigMo texts you a heads-up**,
+so nobody drives to a locked gym. More will come later.
+
+[How to get on BigMo's list — TBD]
 
 ## Experiment #1
 

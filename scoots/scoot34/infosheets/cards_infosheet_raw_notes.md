@@ -43,3 +43,7 @@ card blanks are used, we will print out enough of them.
 ## Turn 10 — 2026-09-16
 
 Another factor.  Keeping the Roster book by year allows us to remember the brother's we lost.  We can always review a book (for example, when a new book is formed in2027) and reach out to the players we might not have seen in awhile.  They may need help.
+
+## Turn 11 — 2026-09-16
+
+Also, we need a paragraph about bigMo.   I haven't rolled that out yet.  So BigMo right now will just procatively send out a notice if there is change from normal hours.  We just need to introduce it as such, and what it is and that like.
