@@ -31,3 +31,7 @@ Front of the line means right after the team's run.  This means a sub could get 
 ## Turn 7 — 2026-09-16
 
 That's how we play.  You play two, win or lose, unless it's the first game(s) of the day, then winner stays, loser goes to end of list.
+
+## Turn 8 — 2026-09-16
+
+At start of the day, the player - and only th eplayer - takes his card out of the roster book and puts in the Rail - at the end.
