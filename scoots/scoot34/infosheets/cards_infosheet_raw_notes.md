@@ -15,3 +15,7 @@ We need more orgnaization.  First-to-21 games can run 30mintues or more.  We've 
 ## Turn 3 — 2026-09-16
 
 Okay, more background.  Rather than use a list, which while simple, never really works.   I suggest we have a roster book.  I used AI to create cards from Nick's video, so I don't have everybody's card yet.   Also, order is not maintained when we run ove reach other to go resign the list after our turn is up.   We can use the cards, and the slider stand I made, you can visually see who is on what tieam, and where you sit on the list.   When a team in done with their turn, the cards go to the end of the slider in the same order.  No need to re-sign the list.  If you want to sit or leave, you pull your card, put it back in the roster book.
+
+## Turn 4 — 2026-09-16
+
+The one unfairness to the list is the "sub".   Peopleare hestiant to 'sub' because if it happens in the first game, you would get less than 2 full games.  I think we need to reward next-up subs, when they sub they get to follow the team for the remainder of the play, and still go to the front of the list.  So taking a sub becomes a reward rather than a hardship.   There are other ules which we need to decide.   Only th escorekeeper would be allowed to move the cards and call out the next up.  Your ownly ability to move a card is to go to the ednd of the list.
