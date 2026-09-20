@@ -77,3 +77,10 @@ okay, we can add an Experiment Section iun th ewhilte space at the end after BIG
 ## Turn 18 — 2026-09-16
 
 line judges, statistics and contests, competiteve...
+
+## Turn 19 — 2026-09-20
+
+okay, lance is id 919 - 845 238 1805 nickname crookedbeard - Nixi nickname is Miss Semi-colon 832 797 7726 and her iD should be 213
+
+Created in prod: users 919 crookedbeard / "Lance" / 8452381805, and 213 nixi / "Nixi" / 8327977726.
+Nicknames ("Crooked Beard", "Miss Semi-colon") have nowhere to live until each has a player_cards row — aka is a card column, not a user column.
