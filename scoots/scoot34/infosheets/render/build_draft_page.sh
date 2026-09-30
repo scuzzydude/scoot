@@ -1,10 +1,12 @@
 #!/bin/sh
-# Render the working draft to fairchildlabs.org/cards-infosheet/
-# usage: render/build_draft_page.sh DRAFT_NUMBER
+# Render a working draft to fairchildlabs.org/<slug>/
+# usage: render/build_draft_page.sh N [MARKDOWN] [SLUG]
 set -e
 N=${1:?draft number}
+MD=${2:-cards_infosheet_draft.md}          # markdown file, relative to infosheets/
+SLUG=${3:-cards-infosheet}                 # published under fairchildlabs.org/$SLUG/
 HERE=$(cd "$(dirname "$0")/.." && pwd)
-OUT=/var/www/html/cards-infosheet
+OUT=/var/www/html/$SLUG
 TMP=$(mktemp -d)
 python3 - "$HERE/../brand/name-variants/the_dream_laboratory_oneline_black.png" "$TMP/logo.png" <<'PY'
 import sys; from PIL import Image
@@ -15,7 +17,7 @@ cat > "$TMP/footer.html" <<HTML
 <div class="c"><b>Fonde Brotherhood</b><br>Text BigMo: (361) 423-2253</div>
 <div class="r"><b>WORKING DRAFT $N — $(date +%F)</b><br><a href="draft-$N.md">markdown source</a></div></footer>
 HTML
-pandoc "$HERE/cards_infosheet_draft.md" -f markdown -t html5 -s \
+pandoc "$HERE/$MD" -f markdown -t html5 -s \
   --metadata pagetitle="Cards Info Sheet" --css draft.css \
   -V header-includes='<meta name="viewport" content="width=device-width,initial-scale=1">' \
   -A "$TMP/footer.html" -o "$TMP/body.html"
@@ -29,6 +31,6 @@ PY
 sudo mkdir -p "$OUT"
 sudo cp "$TMP/body.html" "$OUT/index.html"
 sudo cp "$HERE/render/draft.css" "$TMP/logo.png" "$OUT/"
-sudo cp "$HERE/cards_infosheet_draft.md" "$OUT/draft-$N.md"
+sudo cp "$HERE/$MD" "$OUT/draft-$N.md"
 rm -rf "$TMP"
-echo "https://fairchildlabs.org/cards-infosheet/"
+echo "https://fairchildlabs.org/$SLUG/"
