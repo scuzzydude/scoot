@@ -17,6 +17,7 @@ import { tryHandleSelfStakeCommand } from "./self-stake-commands.js";
 import { tryHandleTrustQuery } from "./trust-commands.js";
 import { tryHandleCardCommand } from "./card-commands.js";
 import { tryHandleCardPhotoCommand } from "./card-photo-commands.js";
+import { tryHandleRulesCommand } from "./rules-commands.js";
 import { tryHandleMailDigestCommand } from "./mail-digest-commands.js";
 import { tryHandleRevokeCommand } from "./revoke-commands.js";
 import { tryHandleShutdownGate } from "./shutdown.js";
@@ -235,6 +236,13 @@ export async function handleSmsMessage(from: string, body: string, mediaUrls: st
     if (cardReply != null) {
       log.info({ phone, sender: sender.username }, "bigmo sms card command");
       return finish(cardReply, roomId);
+    }
+
+    // "rules" → text the Fonde rules sheet (MMS + link). See rules-commands.ts.
+    const rulesSheet = await tryHandleRulesCommand(phone, trimmed);
+    if (rulesSheet != null) {
+      log.info({ phone, sender: sender.username }, "bigmo sms rules command");
+      return finish(rulesSheet, roomId);
     }
 
     // Email digest query: "my digest", "email digest", "critical emails" — see mail-digest-commands.ts.
