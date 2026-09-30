@@ -1,6 +1,6 @@
 # Fonde Senior Basketball
 
-**Rules of the Game** · *Draft 11 · 2026-09-30*
+**Rules of the Game** · *Draft 12 · 2026-09-30*
 
 ## The rules
 1. **Gratitude.** We are all blessed to have our health and to be able to play basketball with our brothers and sisters. Gratitude comes before Game.
@@ -18,6 +18,8 @@
 13. **Players on the list must be ready to play when their name is called.**
 14. **After you play two and sit, you re-sign the list yourself.** Nobody signs it for you.
 15. **Courtesy: the losing team signs back in the same order they played.** No fighting over who signs first.
+
+16. **First possession goes to the team that won the last game, if they're still up.** Otherwise somebody shoots for it.
 
 <div class="pagebreak"></div>
 
