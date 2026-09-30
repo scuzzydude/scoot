@@ -1,6 +1,6 @@
 # Fonde Senior Basketball
 
-**Rules of the Game** · *Draft 10 · 2026-09-30*
+**Rules of the Game** · *Draft 11 · 2026-09-30*
 
 ## The rules
 1. **Gratitude.** We are all blessed to have our health and to be able to play basketball with our brothers and sisters. Gratitude comes before Game.
@@ -18,3 +18,17 @@
 13. **Players on the list must be ready to play when their name is called.**
 14. **After you play two and sit, you re-sign the list yourself.** Nobody signs it for you.
 15. **Courtesy: the losing team signs back in the same order they played.** No fighting over who signs first.
+
+<div class="pagebreak"></div>
+
+# Proposed Rules
+
+**Special Situations** · *For discussion — not in effect*
+
+## Open for a decision
+
+A. **Substitutions.** A player who can't finish a game is subbed by — **next up** or **last up**? (we decide which)
+
+B. **Pickleball.** Players playing pickleball **can** / **cannot** sign the basketball list while they're still playing pickleball. (we decide which)
+
+C. **In-game disputes.** A dispute over a foul, a violation or possession gets no more than **20 seconds** of deliberation between the teams. If it isn't settled by then, somebody shoots for it.
