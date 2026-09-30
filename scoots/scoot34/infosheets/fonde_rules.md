@@ -1,6 +1,6 @@
 # Fonde Senior Basketball
 
-**Rules of the Game** · *Draft 7 · 2026-09-30*
+**Rules of the Game** · *Draft 8 · 2026-09-30*
 
 ## The rules
 
@@ -14,3 +14,5 @@
 8. **Both courts are used when 17 or more players are on the list at 10:00 AM.**
 9. **Both courts play to the same clock.**
 10. **A game that reaches 21 before the clock runs out ends there, and those players rest early.** The next games still start at the same time on both courts.
+11. **Saturday morning games start no later than 10:10 AM.**
+12. **Players on the list must be ready to play when their name is called.**
