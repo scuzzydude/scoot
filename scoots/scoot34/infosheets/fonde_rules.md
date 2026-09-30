@@ -1,6 +1,6 @@
 # Fonde Senior Basketball
 
-**Rules of the Game** · *Draft 6 · 2026-09-30*
+**Rules of the Game** · *Draft 7 · 2026-09-30*
 
 ## The rules
 
@@ -12,3 +12,5 @@
 6. **First game: the loser sits and can re-sign the list.**
 7. **Every game after that: play two and sit.**
 8. **Both courts are used when 17 or more players are on the list at 10:00 AM.**
+9. **Both courts play to the same clock.**
+10. **A game that reaches 21 before the clock runs out ends there, and those players rest early.** The next games still start at the same time on both courts.
