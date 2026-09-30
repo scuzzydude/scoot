@@ -1,6 +1,6 @@
 # Fonde Senior Basketball
 
-**Rules of the Game** · *Draft 4 · 2026-09-30*
+**Rules of the Game** · *Draft 5 · 2026-09-30*
 
 ## The rules
 
@@ -9,3 +9,5 @@
 3. **Saturday morning games are timed at 12 minutes.**
 4. **A tie is a tie. No overtime.**
 5. **Two minutes between games.**
+6. **First game: the loser sits and can re-sign the list.**
+7. **Every game after that: play two and sit.**
